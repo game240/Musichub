@@ -1,9 +1,9 @@
 # Music Hub 프로젝트 기획서 (R2 기반 개정판)
 
-> **문서 버전:** 0.2 (R2 Edition)\
-> **작성일:** 2026-11-12\
-> **상태:** Cloudflare R2 저장소 전면 채택 및 아키텍처 간소화 반영\
-> **목적:** Google Drive를 완전히 제거하고 Cloudflare R2(무료 플랜: 10GB, 트래픽 0원)를 기본 저장소로 채택하여 불필요한 OAuth 심사 및 권한 복잡도를 제거하고 실용적인 MVP를 구축한다.
+> **문서 버전:** 0.3 (Local-First MVP & Deferred Extraction Edition)\
+> **작성일:** 2026-11-15\
+> **상태:** 방안 B(개인 소장 음원 업로드 & 클라우드 스트리밍) 중심 MVP 확정, URL 추출 기능 비활성화 및 추후 과제로 분류\
+> **목적:** 법적 리스크(저작권 침해 방조, 기술적 보호조치 무력화 위험) 및 앱 스토어 심사 거절 요소를 사전에 배제하고, 순수 개인 소장 음원 보관함(Personal Cloud Music Locker)에 집중하여 안전하고 실용적인 MVP를 구축한다. (기존 구현된 백엔드 추출 코드는 보존하되 비활성화/백로그로 격리)
 
 ---
 
@@ -15,12 +15,14 @@ Music Hub는 사용자의 개인 음악 파일을 안전하게 보관하고 웹/
 기존 Google Drive 연동 방식의 복잡한 권한 및 심사 문제를 해결하기 위해, S3와 100% 호환되면서 **트래픽(Egress) 비용이 0원**이고 **영구 10GB 무료 저장소**를 제공하는 **Cloudflare R2**를 전용 스토리지로 사용한다.
 
 ### 1.2 핵심 방향
+- **MVP 핵심 범위 (방안 B)**: 사용자가 직접 소장한 오디오 파일을 클라우드(R2)에 업로드하고 스트리밍 재생하는 '개인 음악 보관함'에 집중.
 - **스토리지**: Cloudflare R2 단독 사용 (AWS S3 SDK 호환).
 - **비용 최적화 (0원 플랜)**: R2 무료 티어(10GB 스토리지, Egress 0원, 월 1000만 읽기 요청) 범위 내에서 완전 무료 운영.
 - **아키텍처 단순화**: Google Drive OAuth, `drive.file` 권한, Google 앱 검수(Verification/CASA), 동기화(Sync) 복합 로직 전면 제거.
 - **스트리밍 최적화**: 브라우저의 오디오 탐색(Seek) 및 스트리밍을 지원하기 위해 **Presigned URL 기반 Range Request** 지원.
 - **메타데이터**: MP3 등 오디오 파일의 태그(ID3/Vorbis)를 Source of Truth로 하며, PostgreSQL은 검색/목록 조회를 위한 인덱스로 사용.
 - **인증**: Google OIDC(순수 신원 확인용, 검수 불필요) + Music Hub 자체 Access JWT(메모리) / Refresh Token(httpOnly Cookie).
+- **URL 추출 기능 정책 [비활성화 / 추후 태스크]**: yt-dlp 기반 외부 URL 음원 추출 모듈은 백엔드 코드를 보존하되, MVP 단계에서는 UI 노출 및 기본 실행을 비활성화하고 추후 백로그 과제로 이관한다.
 
 ---
 
@@ -35,7 +37,7 @@ Music Hub는 사용자의 개인 음악 파일을 안전하게 보관하고 웹/
 │  - Google OIDC 로그인                                  │
 │  - 오디오 플레이어 (HTML5 Audio / Presigned URL 직접 재생)│
 │  - 파일 직접 업로드 (Presigned PUT URL로 R2에 직접 전송)   │
-│  - URL 추출 요청 및 진행 상태 모니터링                  │
+│  - [보류/비활성] URL 추출 요청 및 진행 상태 모니터링   │
 └──────────────┬───────────────────────────▲─────────────┘
                │                           │
                │ API 요청 (Music Hub JWT)  │ 오디오 스트리밍 / 파일 업로드
@@ -46,8 +48,8 @@ Music Hub는 사용자의 개인 음악 파일을 안전하게 보관하고 웹/
 │  - 사용자 인증 및 JWT 관리                              │
 │  - Presigned URL 생성 (S3 SDK 기반)                    │
 │  - 메타데이터 추출 및 관리 (jaudiotagger)              │
-│  - 비동기 미디어 추출 (yt-dlp + DB Polling 스케줄러)     │
 │  - 사용자별 R2 용량(할당량) 모니터링                     │
+│  - [보류/비활성] 비동기 미디어 추출 (yt-dlp + 스케줄러) │
 └──────────────┬───────────────────────────┬─────────────┘
                │                           │
                ▼                           ▼
@@ -57,8 +59,9 @@ Music Hub는 사용자의 개인 음악 파일을 안전하게 보관하고 웹/
        │ User           │         │                    │
        │ RefreshToken   │         │ /users/{userId}/   │
        │ MusicFile      │         │   ├── audio/       │
-       │ ExtractionJob  │         │   └── artwork/     │
+       │ ExtractionJob* │         │   └── artwork/     │
        └────────────────┘         └────────────────────┘
+       (*ExtractionJob: 추후 활성화 대비 코드/스키마 보존)
 ```
 
 ### 2.2 기술 스택
@@ -70,7 +73,7 @@ Music Hub는 사용자의 개인 음악 파일을 안전하게 보관하고 웹/
 | **Database** | PostgreSQL | 메타데이터 인덱싱, 트랜잭션 보장 |
 | **Storage** | **Cloudflare R2** | **영구 무료 10GB, 다운로드 트래픽 $0, S3 호환** |
 | **Media Tagging** | jaudiotagger (3.x) | MP3(ID3v2.3), FLAC, M4A 메타데이터 추출/편집 |
-| **Media Extraction**| yt-dlp + FFmpeg | 백그라운드 오디오 추출 및 변환 |
+| **Media Extraction**| yt-dlp + FFmpeg | **[비활성화 / 추후 태스크]** 백엔드 코드는 보존하되 MVP 서비스 범위에서는 비활성화 |
 | **Authentication** | Google OIDC + 자체 JWT | OIDC로 신원만 확인, Access(메모리)+Refresh(Cookie) |
 
 ---
@@ -277,8 +280,14 @@ Client (Web Audio Player)            Backend                 Cloudflare R2
 - 브라우저의 기본 `<audio>` 플레이어가 해당 URL로 Range Request를 직접 날려 버퍼링 및 구간 탐색 수행.
 - **R2의 Egress 요금이 0원**이므로 백엔드 대역폭 낭비 없이 완벽한 무료 스트리밍 실현.
 
-### 6.3 비동기 URL 추출 (yt-dlp)
-기존에 확정했던 **DB Polling + `@Scheduled`** 방식을 그대로 유지한다.
+### 6.3 비동기 URL 추출 (yt-dlp) [비활성화 및 백로그 과제로 분류]
+
+> ⚠️ **정책 안내 (현재 비활성화 및 추후 과제로 분류)**
+> - **사유:** 외부 플랫폼(유튜브 등) 음원 스트림 추출 시 발생하는 법적 리스크(저작권 침해 방조, 저작권법 제104조의2 기술적 보호조치 무력화 금지 위반 등) 및 구글 플레이/애플 앱스토어 심사 거절, 플랫폼 알고리즘 변경에 따른 유지보수 문제를 예방하기 위함.
+> - **현재 상태:** 기작성된 백엔드 추출 파이프라인(`domain/extraction`, `ExtractionJob`, `MediaExtractor`)은 코드 자산으로 보존하되, MVP 클라이언트 UI 연동 대상에서 제외하고 비활성화(백로그 태스크)로 유지한다.
+> - **추후 활성화 검토 조건:** 사전에 이용 허락이 명시된 플랫폼(Creative Commons 라이선스 음원 플랫폼, 퍼블릭 도메인 아카이브) 연동 또는 데스크톱 로컬 도구 분리 등 법적 안정성이 확보된 후 재논의.
+
+기존에 설계 및 구현된 백엔드 처리 파이프라인 흐름(보존용):
 
 ```text
 1. 사용자가 URL 제출 → POST /api/extractions → ExtractionJob(PENDING) 생성
@@ -333,20 +342,23 @@ interface StorageService {
 
 ---
 
-## 9. 즉시 구현 로드맵 (Action Plan)
+## 9. 단계별 구현 로드맵 (Action Plan)
 
-1. **Cloudflare R2 버킷 생성 및 API Key 발급**
-   - Cloudflare 대시보드에서 R2 버킷 1개 생성 (예: `musichub-storage`).
-   - S3 호환 API 토큰(Access Key ID, Secret Access Key, Account ID Endpoint) 발급.
-2. **Spring Boot 프로젝트 기본 뼈대 설정**
-   - AWS S3 SDK v2 (`software.amazon.awssdk:s3`) 의존성 추가.
-   - `application.yml`에 R2 Endpoint 및 자격 증명 설정.
-3. **Database DDL 실행 (V1__init.sql)**
-   - 5.2절의 단순화된 스키마(Users, RefreshToken, MusicFile, ExtractionJob) 반영.
-4. **JWT 인증 & Google OIDC 구현**
-   - 프론트 구글 로그인 연동 및 백엔드 JWT 발급/쿠키 설정.
-5. **업로드 및 스트리밍 API 구현**
-   - Presigned URL 기반 음원 업로드/재생 엔드포인트 개설.
-   - jaudiotagger 연동 메타데이터 자동 추출.
-6. **yt-dlp 비동기 추출 모듈 구현**
-   - 스케줄러 기반 백그라운드 다운로드 및 R2 적재.
+### Phase 1: MVP 완성 (개인 소장 음원 보관함 - 방안 B)
+1. **Cloudflare R2 버킷 및 자격 증명 연동**
+   - Cloudflare R2 버킷 생성 및 S3 호환 자격 증명 연동.
+2. **Spring Boot 백엔드 핵심 기능 검증 [구현 완료]**
+   - Google OIDC 및 JWT 인증 체계.
+   - Presigned PUT 기반 로컬 음원 직접 업로드 및 백엔드 프록시 업로드.
+   - jaudiotagger 기반 ID3/Vorbis 메타데이터 및 앨범 커버 자동 파싱/R2 적재.
+   - Presigned GET 기반 HTTP Range 스트리밍 및 용량 쿼터 관리.
+3. **React 프론트엔드 구축 [진행 예정]**
+   - Google 로그인 연동.
+   - 로컬 오디오 파일 드래그 앤 드롭 업로드 UI (진행률 표시).
+   - HTML5 Audio 기반 스트리밍 플레이어 (Seek, 볼륨, 재생목록 관리).
+   - 라이브러리 목록 및 메타데이터(곡명, 아티스트, 앨범아트) 조회.
+
+### Phase 2: 추후 검토 과제 (Post-MVP Backlog)
+1. **미디어 추출 모듈(yt-dlp) 활성화 여부 재검토**
+   - 저작권 프리 음원 플랫폼(CC/Royalty-free) 전용 다운로더로의 전환 또는 독립 유틸리티 분리 검토.
+2. **소셜 및 플레이리스트 공유 기능**
