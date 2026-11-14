@@ -1,6 +1,7 @@
 package com.musichub.backend.domain.auth
 
 import jakarta.servlet.http.HttpServletResponse
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseCookie
 import org.springframework.http.ResponseEntity
@@ -28,7 +29,8 @@ data class UserDto(
 @RestController
 @RequestMapping("/api/auth")
 class AuthController(
-    private val authService: AuthService
+    private val authService: AuthService,
+    @Value("\${musichub.auth.cookie-secure:false}") private val cookieSecure: Boolean
 ) {
 
     @PostMapping("/google")
@@ -92,7 +94,7 @@ class AuthController(
     private fun setRefreshTokenCookie(response: HttpServletResponse, token: String, maxAge: Duration) {
         val cookie = ResponseCookie.from("refresh_token", token)
             .httpOnly(true)
-            .secure(false) // 프로덕션 배포 시 true (HTTPS 환경)
+            .secure(cookieSecure)
             .sameSite("Strict")
             .path("/api/auth/refresh")
             .maxAge(maxAge)

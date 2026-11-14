@@ -40,6 +40,7 @@ musichub:
       per-user-max-bytes: 2147483648 # 2.0 GB
 
   auth:
+    cookie-secure: ${COOKIE_SECURE:false}
     jwt:
       secret: ${JWT_SECRET:dGhpc2lzYXZlcnlsb25nc2VjcmV0a2V5Zm9ybXVzaWNodWJqd3RhdXRoZW50aWNhdGlvbjEyMzQ1Njc4OTA=}
       access-token-validity-ms: 900000 # 15 minutes

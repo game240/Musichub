@@ -30,7 +30,6 @@ class SecurityConfig(
             .authorizeHttpRequests { auth ->
                 auth
                     .requestMatchers("/api/auth/**").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/music-files/*/stream").permitAll() // Presigned URL 리다이렉트 지원
                     .requestMatchers("/error").permitAll()
                     .anyRequest().authenticated()
             }

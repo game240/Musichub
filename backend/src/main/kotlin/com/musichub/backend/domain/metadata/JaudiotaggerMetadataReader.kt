@@ -5,6 +5,7 @@ import org.jaudiotagger.tag.FieldKey
 import org.jaudiotagger.tag.TagOptionSingleton
 import org.jaudiotagger.tag.id3.ID3v23Tag
 import org.jaudiotagger.tag.id3.ID3v24Tag
+import org.jaudiotagger.tag.reference.ID3V2Version
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.io.File
@@ -24,7 +25,7 @@ class JaudiotaggerMetadataReader : MetadataReader {
     init {
         // ID3v2.3으로 표준 고정 설정 (광범위 호환성)
         TagOptionSingleton.getInstance().apply {
-            id3V2Version = TagOptionSingleton.ID3V2_VERSION_23
+            setID3V2Version(ID3V2Version.ID3_V23)
             isId3v2PaddingWillShorten = true
         }
     }

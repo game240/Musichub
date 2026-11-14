@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.multipart.MultipartFile
 import java.io.ByteArrayInputStream
+import java.nio.file.Files
 import java.util.*
 
 data class UploadInitResult(
@@ -118,50 +119,61 @@ class MusicFileService(
         val uniqueId = UUID.randomUUID().toString()
         val storageKey = "users/$userId/audio/$uniqueId.$extension"
 
-        // 1. R2 업로드
-        val mimeType = file.contentType ?: "audio/mpeg"
-        storageService.upload(storageKey, file.inputStream, fileSize, mimeType)
+        val tempFile = Files.createTempFile("musichub-proxy-", ".$extension").toFile()
+        try {
+            file.transferTo(tempFile)
 
-        // 2. 메타데이터 파싱
-        val metadata = metadataReader.read(file.inputStream, extension)
+            // 1. 메타데이터 파싱
+            val metadata = metadataReader.read(tempFile)
 
-        // 3. 아트워크 업로드
-        var artworkKey: String? = null
-        var artworkMime: String? = null
-        if (metadata.artwork != null && metadata.artwork.isNotEmpty()) {
-            val artUniqueId = UUID.randomUUID().toString()
-            val artExt = if (metadata.artworkMimeType?.contains("png") == true) "png" else "jpg"
-            artworkKey = "users/$userId/artwork/$artUniqueId.$artExt"
-            artworkMime = metadata.artworkMimeType ?: "image/jpeg"
+            // 2. R2 업로드
+            val mimeType = file.contentType ?: "audio/mpeg"
+            tempFile.inputStream().use { stream ->
+                storageService.upload(storageKey, stream, fileSize, mimeType)
+            }
 
-            storageService.upload(
-                key = artworkKey,
-                inputStream = ByteArrayInputStream(metadata.artwork),
-                contentLength = metadata.artwork.size.toLong(),
-                mimeType = artworkMime
+            // 3. 아트워크 업로드
+            var artworkKey: String? = null
+            var artworkMime: String? = null
+            if (metadata.artwork != null && metadata.artwork.isNotEmpty()) {
+                val artUniqueId = UUID.randomUUID().toString()
+                val artExt = if (metadata.artworkMimeType?.contains("png") == true) "png" else "jpg"
+                artworkKey = "users/$userId/artwork/$artUniqueId.$artExt"
+                artworkMime = metadata.artworkMimeType ?: "image/jpeg"
+
+                storageService.upload(
+                    key = artworkKey,
+                    inputStream = ByteArrayInputStream(metadata.artwork),
+                    contentLength = metadata.artwork.size.toLong(),
+                    mimeType = artworkMime
+                )
+            }
+
+            val musicFile = MusicFile(
+                user = user,
+                storageKey = storageKey,
+                fileName = originalFileName,
+                mimeType = mimeType,
+                fileSize = fileSize,
+                title = metadata.title ?: originalFileName.substringBeforeLast('.'),
+                artist = metadata.artist,
+                album = metadata.album,
+                year = metadata.year,
+                genre = metadata.genre,
+                trackNumber = metadata.trackNumber,
+                durationMs = metadata.durationMs,
+                artworkStorageKey = artworkKey,
+                artworkMimeType = artworkMime,
+                status = MusicFileStatus.ACTIVE
             )
+
+            user.addStorageUsage(fileSize)
+            return musicFileRepository.save(musicFile)
+        } finally {
+            if (tempFile.exists()) {
+                tempFile.delete()
+            }
         }
-
-        val musicFile = MusicFile(
-            user = user,
-            storageKey = storageKey,
-            fileName = originalFileName,
-            mimeType = mimeType,
-            fileSize = fileSize,
-            title = metadata.title ?: originalFileName.substringBeforeLast('.'),
-            artist = metadata.artist,
-            album = metadata.album,
-            year = metadata.year,
-            genre = metadata.genre,
-            trackNumber = metadata.trackNumber,
-            durationMs = metadata.durationMs,
-            artworkStorageKey = artworkKey,
-            artworkMimeType = artworkMime,
-            status = MusicFileStatus.ACTIVE
-        )
-
-        user.addStorageUsage(fileSize)
-        return musicFileRepository.save(musicFile)
     }
 
     /**
