@@ -1,14 +1,19 @@
--- 1. 사용자 테이블
+-- 1. 사용자 테이블 (다중 인증 제공자 지원: GOOGLE, GITHUB, LOCAL 등)
 CREATE TABLE users (
     id                  BIGSERIAL PRIMARY KEY,
-    google_subject      VARCHAR(255) NOT NULL UNIQUE,
+    auth_provider       VARCHAR(32) NOT NULL DEFAULT 'GOOGLE',
+    provider_id         VARCHAR(255) NOT NULL,
     email               VARCHAR(255) NOT NULL,
+    password_hash       VARCHAR(255),
     display_name        VARCHAR(255),
     profile_image_url   TEXT,
     storage_used_bytes  BIGINT NOT NULL DEFAULT 0,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_users_provider UNIQUE (auth_provider, provider_id)
 );
+
+CREATE INDEX idx_users_email ON users(email);
 
 -- 2. 리프레시 토큰 테이블 (해시값 저장 및 Rotation 지원)
 CREATE TABLE refresh_token (

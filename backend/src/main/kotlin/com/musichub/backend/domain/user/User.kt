@@ -3,18 +3,36 @@ package com.musichub.backend.domain.user
 import jakarta.persistence.*
 import java.time.Instant
 
+enum class AuthProvider {
+    GOOGLE,
+    GITHUB,
+    LOCAL
+}
+
 @Entity
-@Table(name = "users")
+@Table(
+    name = "users",
+    uniqueConstraints = [
+        UniqueConstraint(name = "uq_users_provider", columnNames = ["auth_provider", "provider_id"])
+    ]
+)
 class User(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long = 0,
 
-    @Column(name = "google_subject", nullable = false, unique = true)
-    var googleSubject: String,
+    @Enumerated(EnumType.STRING)
+    @Column(name = "auth_provider", nullable = false)
+    var authProvider: AuthProvider = AuthProvider.GOOGLE,
+
+    @Column(name = "provider_id", nullable = false)
+    var providerId: String,
 
     @Column(nullable = false)
     var email: String,
+
+    @Column(name = "password_hash")
+    var passwordHash: String? = null,
 
     @Column(name = "display_name")
     var displayName: String? = null,

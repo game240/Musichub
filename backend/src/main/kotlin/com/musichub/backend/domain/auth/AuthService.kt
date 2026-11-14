@@ -3,6 +3,7 @@ package com.musichub.backend.domain.auth
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
+import com.musichub.backend.domain.user.AuthProvider
 import com.musichub.backend.domain.user.User
 import com.musichub.backend.domain.user.UserRepository
 import com.musichub.backend.global.security.JwtProvider
@@ -43,7 +44,7 @@ class AuthService(
         val name = payload.get("name") as? String
         val picture = payload.get("picture") as? String
 
-        val user = userRepository.findByGoogleSubject(googleSubject)
+        val user = userRepository.findByAuthProviderAndProviderId(AuthProvider.GOOGLE, googleSubject)
             .map { existingUser ->
                 existingUser.email = email
                 existingUser.displayName = name ?: existingUser.displayName
@@ -53,7 +54,8 @@ class AuthService(
             .orElseGet {
                 userRepository.save(
                     User(
-                        googleSubject = googleSubject,
+                        authProvider = AuthProvider.GOOGLE,
+                        providerId = googleSubject,
                         email = email,
                         displayName = name,
                         profileImageUrl = picture
