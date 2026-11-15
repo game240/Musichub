@@ -47,8 +47,8 @@ Ternaries and `&&` early returns stay allowed as an expression-level choice (`sn
 
 | Layer | Config | Catches | Repairs |
 | :--- | :--- | :--- | :--- |
-| ESLint curly rule | `client/eslint.config.js` — `curly: ['error', 'all']` | brace-less control statements (error) | `pnpm exec eslint . --fix` |
-| Prettier | `client/.prettierrc` | same-line bodies, line width, quotes, semicolons, trailing commas | `pnpm format` |
+| ESLint curly rule | `frontend/eslint.config.js` — `curly: ['error', 'all']` | brace-less control statements (error) | `pnpm exec eslint . --fix` |
+| Prettier | `frontend/.prettierrc` | same-line bodies, line width, quotes, semicolons, trailing commas | `pnpm format` |
 
 ESLint alone does not reject a one-line block (`if (!sn) { return dash; }` passes `curly`), and Prettier alone does not add missing braces — so both are needed. That is why `pnpm lint` and `pnpm format:check` are separate checks.
 
@@ -61,5 +61,5 @@ Settings: `printWidth: 100`, `singleQuote`, `semi`, `trailingComma: "all"`, `arr
 
 ## 4. Scope
 
-- Covers `client/**/*.{ts,tsx}` — that is what ESLint and Prettier read.
+- Covers `frontend/**/*.{ts,tsx}` — that is what ESLint and Prettier read.
 - The Spring Boot backend (`src/main/java`, `src/main/resources`) and the legacy WebContent/ JS (jQuery 1.10, etc.) have no equivalent linter. Apply the same brace discipline by hand in new code there, and do not bulk-reformat legacy files while touching them.

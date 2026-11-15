@@ -10,7 +10,7 @@
 
 Music Hub is a personal cloud music locker service that allows users to upload their personal audio files directly to Cloudflare R2 and stream them seamlessly with 0 egress cost.
 
-This document specifies the architecture, user experience, screen layout, and technical implementation of the **Frontend Web Client** (`client/`).
+This document specifies the architecture, user experience, screen layout, and technical implementation of the **Frontend Web Client** (`frontend/`).
 
 ### Key Objectives
 1. **Google OIDC Authentication**: Lightweight identity verification with JWT stored in memory and automated Refresh Token rotation.
@@ -43,7 +43,7 @@ This document specifies the architecture, user experience, screen layout, and te
 In compliance with `AGENTS.md`, the frontend components are strictly split into **Shared UI Vocabulary** and **Domain Screen Tree**:
 
 ```text
-client/
+frontend/
 ├── public/
 ├── src/
 │   ├── assets/

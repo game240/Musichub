@@ -21,15 +21,15 @@
 
 ## 2. Step-by-Step Milestones
 
-### Milestone 1: Client Scaffold & Code Verification Config
-- [x] Initialize `client/` directory with Vite (`react-ts` template).
+### Milestone 1: Frontend Scaffold & Code Verification Config
+- [x] Initialize `frontend/` directory with Vite (`react-ts` template).
 - [x] Install dependencies:
   - Runtime: `react`, `react-dom`, `@tanstack/react-query`, `zustand`, `axios`, `lucide-react`, `@react-oauth/google`.
   - Styling: `tailwindcss`, `@tailwindcss/vite`.
   - Dev/Lint: `eslint`, `@eslint/js`, `typescript-eslint`, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`, `prettier`, `eslint-config-prettier`.
-- [x] Configure `client/eslint.config.js` with `curly: ['error', 'all']` and React rules.
-- [x] Configure `client/.prettierrc` according to `docs/frontend-verification-guide.md`.
-- [x] Configure `client/vite.config.ts` (API proxy to `http://localhost:8080`).
+- [x] Configure `frontend/eslint.config.js` with `curly: ['error', 'all']` and React rules.
+- [x] Configure `frontend/.prettierrc` according to `docs/frontend-verification-guide.md`.
+- [x] Configure `frontend/vite.config.ts` (API proxy to `http://localhost:8080`).
 - [x] Verify `pnpm lint` and `pnpm format:check` pass cleanly.
 
 ### Milestone 2: Types, Utilities, & API Layer
@@ -110,6 +110,6 @@
 |---|---|---|
 | Design Doc | `docs/superpowers/specs/2026-11-15-frontend-mvp-design.md` complete | Verified |
 | Plan Doc | `docs/superpowers/plans/2026-11-15-frontend-mvp.md` complete | Verified |
-| Source Tree | `client/` containing atomic design UI + domain pages | Verified |
+| Source Tree | `frontend/` containing atomic design UI + domain pages | Verified |
 | Verification | `pnpm lint`, `pnpm format:check`, `pnpm build` exit code 0 | Verified |
 | Git Commits | Committed to `feat/frontend-mvp` with `type: subject` message | Verified |
