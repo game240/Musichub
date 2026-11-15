@@ -12,6 +12,10 @@ backend/.gradle/
 backend/build/
 backend/out/
 
+# Frontend
+client/node_modules/
+client/dist/
+
 # Environment & Secrets
 *.env
 .env.*
