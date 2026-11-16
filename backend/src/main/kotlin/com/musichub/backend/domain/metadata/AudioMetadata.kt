@@ -8,6 +8,7 @@ data class AudioMetadata(
     val genre: String?,
     val trackNumber: Int?,
     val durationMs: Long?,
+    val lyrics: String? = null,
     val artwork: ByteArray?,
     val artworkMimeType: String?,
     val tagVersion: String?
@@ -25,6 +26,7 @@ data class AudioMetadata(
         if (genre != other.genre) return false
         if (trackNumber != other.trackNumber) return false
         if (durationMs != other.durationMs) return false
+        if (lyrics != other.lyrics) return false
         if (artwork != null) {
             if (other.artwork == null) return false
             if (!artwork.contentEquals(other.artwork)) return false
@@ -43,6 +45,7 @@ data class AudioMetadata(
         result = 31 * result + (genre?.hashCode() ?: 0)
         result = 31 * result + (trackNumber ?: 0)
         result = 31 * result + (durationMs?.hashCode() ?: 0)
+        result = 31 * result + (lyrics?.hashCode() ?: 0)
         result = 31 * result + (artwork?.contentHashCode() ?: 0)
         result = 31 * result + (artworkMimeType?.hashCode() ?: 0)
         result = 31 * result + (tagVersion?.hashCode() ?: 0)

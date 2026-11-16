@@ -3,6 +3,7 @@ package com.musichub.backend.domain.music
 import com.musichub.backend.domain.metadata.MetadataReader
 import com.musichub.backend.domain.storage.StorageService
 import com.musichub.backend.domain.user.UserRepository
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -32,6 +33,7 @@ class MusicFileService(
     @Value("\${musichub.storage.quota.system-max-bytes}") private val systemMaxBytes: Long,
     @Value("\${musichub.storage.quota.per-user-max-bytes}") private val perUserMaxBytes: Long,
 ) {
+    private val logger = LoggerFactory.getLogger(javaClass)
 
     /**
      * 1. Presigned PUT URL 발급 (클라이언트 직접 업로드용)
@@ -96,6 +98,7 @@ class MusicFileService(
             genre = metadata.genre,
             trackNumber = metadata.trackNumber,
             durationMs = metadata.durationMs,
+            lyrics = metadata.lyrics,
             artworkStorageKey = artworkKey,
             artworkMimeType = artworkMime,
             status = MusicFileStatus.ACTIVE
@@ -162,6 +165,7 @@ class MusicFileService(
                 genre = metadata.genre,
                 trackNumber = metadata.trackNumber,
                 durationMs = metadata.durationMs,
+                lyrics = metadata.lyrics,
                 artworkStorageKey = artworkKey,
                 artworkMimeType = artworkMime,
                 status = MusicFileStatus.ACTIVE
@@ -177,12 +181,14 @@ class MusicFileService(
     }
 
     /**
-     * 4. 재생용 Presigned GET URL 발급
+     * 4. 재생용 Presigned GET URL 발급 및 재생 통계 기록
      */
-    @Transactional(readOnly = true)
+    @Transactional
     fun getStreamingUrl(userId: Long, musicFileId: Long): PlayUrlResult {
         val musicFile = musicFileRepository.findByIdAndUserId(musicFileId, userId)
             .orElseThrow { NoSuchElementException("음악 파일을 찾을 수 없습니다.") }
+
+        musicFile.incrementPlayCount()
 
         val playUrl = storageService.generatePresignedGetUrl(musicFile.storageKey)
         return PlayUrlResult(playUrl = playUrl, durationMs = musicFile.durationMs)
@@ -209,9 +215,13 @@ class MusicFileService(
         val musicFile = musicFileRepository.findByIdAndUserId(musicFileId, userId)
             .orElseThrow { NoSuchElementException("음악 파일을 찾을 수 없습니다.") }
 
-        // R2에서 오브젝트 삭제
-        storageService.delete(musicFile.storageKey)
-        musicFile.artworkStorageKey?.let { storageService.delete(it) }
+        // R2에서 오브젝트 삭제 (실패 시에도 로그 기록 후 메타데이터 및 용량 정리 진행)
+        try {
+            storageService.delete(musicFile.storageKey)
+            musicFile.artworkStorageKey?.let { storageService.delete(it) }
+        } catch (e: Exception) {
+            logger.warn("R2 오브젝트 삭제 중 오류 발생 (키: {}): {}", musicFile.storageKey, e.message)
+        }
 
         // 용량 차감
         val user = musicFile.user

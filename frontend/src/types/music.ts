@@ -10,6 +10,9 @@ export interface MusicFileDto {
   durationMs: number | null;
   fileSize: number;
   hasArtwork: boolean;
+  lyrics?: string | null;
+  playCount?: number;
+  lastPlayedAt?: string | null;
   createdAt: string;
 }
 

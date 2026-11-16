@@ -52,6 +52,7 @@ class JaudiotaggerMetadataReader : MetadataReader {
                 genre = tag.getFirst(FieldKey.GENRE).takeIf { it.isNotBlank() },
                 trackNumber = tag.getFirst(FieldKey.TRACK).toIntOrNull(),
                 durationMs = header.trackLength.toLong() * 1000L,
+                lyrics = tag.getFirst(FieldKey.LYRICS).takeIf { it.isNotBlank() },
                 artwork = artworkObj?.binaryData,
                 artworkMimeType = artworkObj?.mimeType ?: "image/jpeg",
                 tagVersion = tagVersionStr
@@ -66,6 +67,7 @@ class JaudiotaggerMetadataReader : MetadataReader {
                 genre = null,
                 trackNumber = null,
                 durationMs = null,
+                lyrics = null,
                 artwork = null,
                 artworkMimeType = null,
                 tagVersion = null
