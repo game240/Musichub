@@ -4,6 +4,9 @@ server:
 spring:
   application:
     name: musichub-backend
+  config:
+    import:
+      - "optional:classpath:application-secret.yml"
 
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/musichub}
@@ -31,8 +34,8 @@ spring:
 musichub:
   storage:
     r2:
-      endpoint: ${R2_ENDPOINT:https://<account_id>.r2.cloudflarestorage.com}
-      bucket: ${R2_BUCKET:musichub-storage}
+      endpoint: ${R2_ENDPOINT:https://d8c2506a033faf855121461b74bcb67f.r2.cloudflarestorage.com}
+      bucket: ${R2_BUCKET:music}
       access-key: ${R2_ACCESS_KEY:dummy_access_key}
       secret-key: ${R2_SECRET_KEY:dummy_secret_key}
     quota:
