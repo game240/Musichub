@@ -36,9 +36,9 @@ export const Slider: React.FC<SliderProps> = ({
         value={value}
         disabled={disabled}
         onChange={handleChange}
-        className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none"
+        className="w-full h-1 bg-white/[0.08] rounded-full appearance-none cursor-pointer accent-[#5e6ad2] disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none transition-all duration-150 hover:h-1.5"
         style={{
-          background: `linear-gradient(to right, #6366f1 0%, #6366f1 ${percentage}%, #334155 ${percentage}%, #334155 100%)`,
+          background: `linear-gradient(to right, #5e6ad2 0%, #5e6ad2 ${percentage}%, rgba(255, 255, 255, 0.12) ${percentage}%, rgba(255, 255, 255, 0.12) 100%)`,
         }}
       />
     </div>

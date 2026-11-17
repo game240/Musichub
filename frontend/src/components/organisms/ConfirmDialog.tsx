@@ -20,18 +20,18 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onConfirm,
   title,
   message,
-  confirmLabel = 'Delete',
-  cancelLabel = 'Cancel',
+  confirmLabel = '삭제',
+  cancelLabel = '취소',
   isLoading = false,
 }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} maxWidth="sm">
       <div className="flex flex-col items-center text-center">
-        <div className="p-3 bg-rose-500/10 text-rose-400 rounded-full mb-3">
-          <AlertTriangle className="w-8 h-8" />
+        <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-full mb-3">
+          <AlertTriangle className="w-7 h-7" />
         </div>
-        <p className="text-sm text-slate-300 mb-6">{message}</p>
-        <div className="flex justify-end gap-3 w-full">
+        <p className="text-sm text-neutral-300 mb-6 leading-relaxed">{message}</p>
+        <div className="flex justify-end gap-2.5 w-full">
           <Button variant="ghost" onClick={onClose} disabled={isLoading}>
             {cancelLabel}
           </Button>

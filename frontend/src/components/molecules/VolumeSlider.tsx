@@ -21,12 +21,12 @@ export const VolumeSlider: React.FC<VolumeSliderProps> = ({
 
   const renderIcon = () => {
     if (effectiveVolume === 0) {
-      return <VolumeX className="w-4 h-4 text-slate-400" />;
+      return <VolumeX className="w-4 h-4 text-neutral-400" />;
     }
     if (effectiveVolume < 0.5) {
-      return <Volume1 className="w-4 h-4 text-slate-300" />;
+      return <Volume1 className="w-4 h-4 text-neutral-300" />;
     }
-    return <Volume2 className="w-4 h-4 text-slate-200" />;
+    return <Volume2 className="w-4 h-4 text-neutral-200" />;
   };
 
   return (
@@ -34,7 +34,8 @@ export const VolumeSlider: React.FC<VolumeSliderProps> = ({
       <button
         type="button"
         onClick={onToggleMute}
-        className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+        title={isMuted ? '음소거 해제' : '음소거'}
+        className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors cursor-pointer"
       >
         {renderIcon()}
       </button>

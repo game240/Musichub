@@ -11,7 +11,7 @@ export interface SearchInputProps {
 export const SearchInput: React.FC<SearchInputProps> = ({
   value,
   onChange,
-  placeholder = 'Search...',
+  placeholder = '검색...',
   className = '',
 }) => {
   const handleClear = () => {
@@ -20,7 +20,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
 
   return (
     <div className={`relative flex items-center w-full max-w-md ${className}`}>
-      <Search className="absolute left-3 w-4 h-4 text-slate-400 pointer-events-none" />
+      <Search className="absolute left-3 w-4 h-4 text-neutral-400 pointer-events-none" />
       <input
         type="text"
         value={value}
@@ -28,17 +28,21 @@ export const SearchInput: React.FC<SearchInputProps> = ({
           onChange(e.target.value);
         }}
         placeholder={placeholder}
-        className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-9 py-2 text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+        className="w-full bg-[#0f1011] border border-white/[0.08] rounded-lg pl-9 pr-12 py-1.5 text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:border-[#5e6ad2] focus:ring-1 focus:ring-[#5e6ad2] transition-all duration-150"
       />
       {value ? (
         <button
           type="button"
           onClick={handleClear}
-          className="absolute right-3 text-slate-400 hover:text-slate-200 transition-colors"
+          className="absolute right-3 text-neutral-400 hover:text-white transition-colors cursor-pointer"
         >
           <X className="w-4 h-4" />
         </button>
-      ) : null}
+      ) : (
+        <span className="absolute right-2.5 text-[10px] border border-white/10 bg-white/[0.04] text-neutral-500 px-1.5 py-0.5 rounded pointer-events-none select-none">
+          /
+        </span>
+      )}
     </div>
   );
 };

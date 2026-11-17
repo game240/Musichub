@@ -9,20 +9,18 @@ export interface AppLayoutProps {
 
 export const AppLayout: React.FC<AppLayoutProps> = ({ children, headerRight, bottomBar }) => {
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100 antialiased selection:bg-indigo-500 selection:text-white">
+    <div className="flex flex-col min-h-screen bg-[#08090a] text-neutral-100 antialiased">
       {/* Top Header */}
-      <header className="sticky top-0 z-40 w-full h-16 bg-slate-900/80 backdrop-blur-md border-b border-slate-800/80 px-6 flex items-center justify-between">
+      <header className="sticky top-0 z-40 w-full h-14 bg-[#08090a]/80 backdrop-blur-xl border-b border-white/[0.08] px-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-tr from-indigo-600 to-violet-500 rounded-xl shadow-lg shadow-indigo-500/20 text-white">
+          <div className="p-1.5 bg-[#5e6ad2]/15 border border-[#5e6ad2]/30 rounded-lg text-[#5e6ad2]">
             <Disc3 className="w-5 h-5 animate-spin-slow" />
           </div>
-          <div>
-            <h1 className="text-base font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
-              Music Hub
-            </h1>
-            <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">
-              Personal Cloud Locker
-            </p>
+          <div className="flex items-center gap-2">
+            <h1 className="text-sm font-semibold text-neutral-100">Music Hub</h1>
+            <span className="text-[10px] border border-white/10 bg-white/[0.04] text-neutral-400 px-1.5 py-0.5 rounded">
+              클라우드 보관함
+            </span>
           </div>
         </div>
 
