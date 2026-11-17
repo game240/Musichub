@@ -29,23 +29,25 @@ export const TrackRow: React.FC<TrackRowProps> = ({
       onDoubleClick={() => {
         onPlay(track);
       }}
-      className={`group border-b border-slate-800/60 hover:bg-slate-800/50 transition-colors select-none ${
-        isCurrent ? 'bg-indigo-950/30' : ''
+      className={`group border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors duration-150 select-none ${
+        isCurrent
+          ? 'bg-[#5e6ad2]/10 relative before:absolute before:left-0 before:top-1 before:bottom-1 before:w-0.5 before:bg-[#5e6ad2] before:rounded-r'
+          : ''
       }`}
     >
       {/* Index & Play button */}
-      <td className="w-12 py-3 px-4 text-center">
+      <td className="w-12 py-2.5 px-4 text-center">
         <div className="relative flex items-center justify-center">
           {isCurrent && isPlaying ? (
-            <div className="flex items-end justify-center gap-0.5 h-4 w-4">
-              <span className="w-1 bg-indigo-400 h-full animate-bounce" />
-              <span className="w-1 bg-indigo-400 h-2/3 animate-bounce [animation-delay:0.2s]" />
-              <span className="w-1 bg-indigo-400 h-4/5 animate-bounce [animation-delay:0.4s]" />
+            <div className="flex items-end justify-center gap-0.5 h-3.5 w-3.5">
+              <span className="w-0.5 bg-[#8590ea] h-full animate-bounce" />
+              <span className="w-0.5 bg-[#8590ea] h-2/3 animate-bounce [animation-delay:0.2s]" />
+              <span className="w-0.5 bg-[#8590ea] h-4/5 animate-bounce [animation-delay:0.4s]" />
             </div>
           ) : (
             <span
-              className={`text-xs font-mono group-hover:hidden ${
-                isCurrent ? 'text-indigo-400 font-bold' : 'text-slate-500'
+              className={`text-xs group-hover:hidden ${
+                isCurrent ? 'text-[#8590ea] font-semibold' : 'text-neutral-500'
               }`}
             >
               {index + 1}
@@ -57,7 +59,7 @@ export const TrackRow: React.FC<TrackRowProps> = ({
             onClick={() => {
               onPlay(track);
             }}
-            className="hidden group-hover:flex items-center justify-center p-1 text-white bg-indigo-600 rounded-full hover:scale-110 transition-transform shadow-md"
+            className="hidden group-hover:flex items-center justify-center p-1 text-white bg-[#5e6ad2] hover:bg-[#6f7cf4] rounded-full hover:scale-110 transition-transform shadow-md cursor-pointer"
           >
             {isCurrent && isPlaying ? (
               <Pause className="w-3.5 h-3.5 fill-current" />
@@ -69,7 +71,7 @@ export const TrackRow: React.FC<TrackRowProps> = ({
       </td>
 
       {/* Artwork + Title & Artist */}
-      <td className="py-3 px-4">
+      <td className="py-2.5 px-4">
         <div className="flex items-center gap-3">
           <TrackArtwork
             trackId={track.id}
@@ -80,51 +82,55 @@ export const TrackRow: React.FC<TrackRowProps> = ({
           <div className="min-w-0 max-w-xs md:max-w-md">
             <p
               className={`text-sm font-medium truncate ${
-                isCurrent ? 'text-indigo-400 font-semibold' : 'text-slate-100'
+                isCurrent ? 'text-[#8590ea] font-semibold' : 'text-neutral-100'
               }`}
             >
               {track.title || track.fileName}
             </p>
-            <p className="text-xs text-slate-400 truncate">{track.artist || 'Unknown Artist'}</p>
+            <p className="text-xs text-neutral-400 truncate">
+              {track.artist || '알 수 없는 아티스트'}
+            </p>
           </div>
         </div>
       </td>
 
       {/* Album */}
-      <td className="py-3 px-4 hidden md:table-cell">
-        <span className="text-xs text-slate-400 truncate max-w-xs block">{track.album || '—'}</span>
+      <td className="py-2.5 px-4 hidden md:table-cell">
+        <span className="text-xs text-neutral-400 truncate max-w-xs block">
+          {track.album || '—'}
+        </span>
       </td>
 
       {/* Duration */}
-      <td className="py-3 px-4 text-xs font-mono text-slate-400 hidden sm:table-cell">
+      <td className="py-2.5 px-4 text-xs text-neutral-400 hidden sm:table-cell">
         {formatDurationMs(track.durationMs)}
       </td>
 
       {/* File Size */}
-      <td className="py-3 px-4 text-xs font-mono text-slate-500 hidden lg:table-cell">
+      <td className="py-2.5 px-4 text-xs text-neutral-500 hidden lg:table-cell">
         {formatBytes(track.fileSize)}
       </td>
 
       {/* Actions */}
-      <td className="py-3 px-4 text-right">
+      <td className="py-2.5 px-4 text-right">
         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             type="button"
-            title="Add to queue"
+            title="재생목록에 추가"
             onClick={() => {
               onAddToQueue(track);
             }}
-            className="p-1.5 text-slate-400 hover:text-slate-100 rounded-lg hover:bg-slate-700 transition-colors"
+            className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"
           >
             <ListPlus className="w-4 h-4" />
           </button>
           <button
             type="button"
-            title="Delete track"
+            title="음원 삭제"
             onClick={() => {
               onDelete(track);
             }}
-            className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-700 transition-colors"
+            className="p-1.5 text-neutral-400 hover:text-red-400 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"
           >
             <Trash2 className="w-4 h-4" />
           </button>

@@ -40,9 +40,9 @@ export const GlobalPlayer: React.FC = () => {
 
   return (
     <>
-      <div className="w-full h-22 bg-slate-900/95 border-t border-slate-800 backdrop-blur-xl px-6 flex items-center justify-between shadow-2xl">
+      <div className="w-full h-20 bg-[#08090a]/90 border-t border-white/[0.08] backdrop-blur-2xl px-6 flex items-center justify-between shadow-2xl">
         {/* Left: Now Playing Metadata */}
-        <div className="flex items-center gap-3.5 w-1/4 min-w-[200px]">
+        <div className="flex items-center gap-3 w-1/4 min-w-[200px]">
           <TrackArtwork
             trackId={currentTrack.id}
             hasArtwork={currentTrack.hasArtwork}
@@ -50,17 +50,17 @@ export const GlobalPlayer: React.FC = () => {
             size="md"
           />
           <div className="min-w-0 pr-2">
-            <p className="text-sm font-semibold text-slate-100 truncate">
+            <p className="text-sm font-semibold text-neutral-100 truncate">
               {currentTrack.title || currentTrack.fileName}
             </p>
-            <p className="text-xs text-slate-400 truncate">
-              {currentTrack.artist || 'Unknown Artist'}
+            <p className="text-xs text-neutral-400 truncate">
+              {currentTrack.artist || '알 수 없는 아티스트'}
             </p>
           </div>
         </div>
 
         {/* Center: Controls & Seek bar */}
-        <div className="flex flex-col items-center gap-1.5 w-2/4 max-w-xl">
+        <div className="flex flex-col items-center gap-1 w-2/4 max-w-xl">
           <PlayerControls
             isPlaying={isPlaying}
             isLoading={isLoading}
@@ -86,14 +86,14 @@ export const GlobalPlayer: React.FC = () => {
 
           <button
             type="button"
-            title="Queue"
+            title="재생목록"
             onClick={() => {
               setIsQueueOpen((prev) => !prev);
             }}
-            className={`p-2 rounded-lg transition-colors ${
+            className={`p-2 rounded-lg transition-all duration-150 cursor-pointer ${
               isQueueOpen
-                ? 'text-indigo-400 bg-indigo-950/40'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                ? 'text-[#8590ea] bg-[#5e6ad2]/15 border border-[#5e6ad2]/30'
+                : 'text-neutral-400 hover:text-white hover:bg-white/[0.05]'
             }`}
           >
             <ListMusic className="w-5 h-5" />

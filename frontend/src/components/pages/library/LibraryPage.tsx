@@ -78,22 +78,22 @@ export const LibraryPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       {/* Action Toolbar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
           <SearchInput
             value={searchQuery}
             onChange={setSearchQuery}
-            placeholder="Search titles, artists, albums..."
+            placeholder="곡 제목, 아티스트, 앨범 검색..."
           />
           <button
             type="button"
-            title="Refresh library"
+            title="보관함 새로고침"
             onClick={() => {
               refetch();
             }}
-            className={`p-2 text-slate-400 hover:text-slate-100 rounded-lg hover:bg-slate-800 transition-colors ${
+            className={`p-2 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors cursor-pointer ${
               isRefetching ? 'animate-spin' : ''
             }`}
           >
@@ -102,11 +102,9 @@ export const LibraryPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3 justify-between sm:justify-end">
-          <span className="text-xs text-slate-400 font-medium flex items-center gap-1.5">
-            <Music className="w-3.5 h-3.5 text-indigo-400" />
-            <span>
-              {filteredTracks.length} {filteredTracks.length === 1 ? 'track' : 'tracks'}
-            </span>
+          <span className="text-xs text-neutral-400 border border-white/10 bg-white/[0.03] px-2.5 py-1 rounded-md flex items-center gap-1.5">
+            <Music className="w-3.5 h-3.5 text-[#5e6ad2]" />
+            <span>총 {filteredTracks.length}곡</span>
           </span>
 
           <Button
@@ -116,16 +114,16 @@ export const LibraryPage: React.FC = () => {
             }}
           >
             <UploadCloud className="w-4 h-4" />
-            <span>Upload Music</span>
+            <span>음원 업로드</span>
           </Button>
         </div>
       </div>
 
       {/* Tracks Table */}
       {isLoading ? (
-        <div className="w-full h-64 flex flex-col items-center justify-center gap-3 bg-slate-900/40 rounded-2xl border border-slate-800">
-          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs text-slate-400">Loading your cloud library...</p>
+        <div className="w-full h-64 flex flex-col items-center justify-center gap-3 bg-white/[0.015] rounded-2xl border border-white/[0.08]">
+          <div className="w-7 h-7 border-2 border-[#5e6ad2] border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-neutral-400">보관함 음원을 불러오는 중...</p>
         </div>
       ) : (
         <TrackTable
@@ -158,11 +156,11 @@ export const LibraryPage: React.FC = () => {
           setTrackToDelete(null);
         }}
         onConfirm={handleDeleteConfirm}
-        title="Delete Music File"
-        message={`Are you sure you want to permanently delete "${
-          trackToDelete?.title || trackToDelete?.fileName || 'this track'
-        }" from Cloudflare R2? This action cannot be undone.`}
-        confirmLabel="Delete Track"
+        title="음원 삭제"
+        message={`"${
+          trackToDelete?.title || trackToDelete?.fileName || '선택한 곡'
+        }" 음원을 보관함에서 삭제하시겠습니까? 클라우드 스토리지(R2)에서도 즉시 영구 삭제되며 복구할 수 없습니다.`}
+        confirmLabel="삭제하기"
         isLoading={deleteMutation.isPending}
       />
     </div>
