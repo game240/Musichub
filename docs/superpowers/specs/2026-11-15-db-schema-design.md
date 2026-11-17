@@ -110,26 +110,52 @@ CREATE INDEX idx_playlist_track_playlist ON playlist_track(playlist_id, track_or
 
 ---
 
-## 3. Flyway Migration Plan (V2)
+## 3. Flyway Migration Plan & Consolidation
 
-File: `backend/src/main/resources/db/migration/V2__optimize_indexes_and_metadata.sql`
+> **Note:** As the production database had not yet been created, all optimizations (composite indexes, lyrics, telemetry columns) were consolidated directly into the baseline script `backend/src/main/resources/db/migration/V1__init.sql` for a clean initial deployment, avoiding unnecessary migration delta files.
+
+Baseline: `backend/src/main/resources/db/migration/V1__init.sql`
 
 ```sql
--- 1. Optimize query indexes on music_file
-DROP INDEX IF EXISTS idx_music_file_user_id;
-DROP INDEX IF EXISTS idx_music_file_status;
+-- Music file table with integrated metadata & telemetry
+CREATE TABLE music_file (
+    id                      BIGSERIAL PRIMARY KEY,
+    user_id                 BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    storage_key             VARCHAR(500) NOT NULL UNIQUE,
+    file_name               VARCHAR(500) NOT NULL,
+    mime_type               VARCHAR(100) NOT NULL DEFAULT 'audio/mpeg',
+    file_size               BIGINT NOT NULL,
 
+    -- ID3/Vorbis Metadata
+    title                   VARCHAR(500),
+    artist                  VARCHAR(500),
+    album                   VARCHAR(500),
+    year                    INT,
+    genre                   VARCHAR(255),
+    track_number            INT,
+    duration_ms             BIGINT,
+    lyrics                  TEXT,
+
+    -- Album Artwork
+    artwork_storage_key     VARCHAR(500),
+    artwork_mime_type       VARCHAR(64),
+
+    -- Playback Telemetry & Status
+    play_count              INT NOT NULL DEFAULT 0,
+    last_played_at          TIMESTAMPTZ,
+    status                  VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
+    extracted_by_platform   BOOLEAN NOT NULL DEFAULT FALSE,
+
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Optimized Composite Indexes
 CREATE INDEX idx_music_file_user_status_created 
     ON music_file(user_id, status, created_at DESC);
 
 CREATE INDEX idx_music_file_user_size 
     ON music_file(user_id, file_size);
-
--- 2. Add domain columns for lyrics and playback stats
-ALTER TABLE music_file 
-    ADD COLUMN lyrics TEXT,
-    ADD COLUMN play_count INT NOT NULL DEFAULT 0,
-    ADD COLUMN last_played_at TIMESTAMPTZ;
 ```
 
 ---
