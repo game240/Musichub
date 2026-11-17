@@ -7,7 +7,8 @@ import java.time.Instant
 enum class MusicFileStatus {
     ACTIVE,
     PROCESSING,
-    ERROR
+    ERROR,
+    DELETED
 }
 
 @Entity
@@ -54,6 +55,16 @@ class MusicFile(
     @Column(name = "duration_ms")
     var durationMs: Long? = null,
 
+    // Lyrics & Playback Stats
+    @Column(columnDefinition = "TEXT")
+    var lyrics: String? = null,
+
+    @Column(name = "play_count", nullable = false)
+    var playCount: Int = 0,
+
+    @Column(name = "last_played_at")
+    var lastPlayedAt: Instant? = null,
+
     // Album Artwork
     @Column(name = "artwork_storage_key", length = 500)
     var artworkStorageKey: String? = null,
@@ -82,6 +93,7 @@ class MusicFile(
         genre: String?,
         trackNumber: Int?,
         durationMs: Long?,
+        lyrics: String? = null,
         artworkStorageKey: String?,
         artworkMimeType: String?
     ) {
@@ -92,10 +104,22 @@ class MusicFile(
         this.genre = genre
         this.trackNumber = trackNumber
         this.durationMs = durationMs
+        this.lyrics = lyrics
         if (artworkStorageKey != null) {
             this.artworkStorageKey = artworkStorageKey
             this.artworkMimeType = artworkMimeType
         }
+        this.updatedAt = Instant.now()
+    }
+
+    fun incrementPlayCount() {
+        this.playCount += 1
+        this.lastPlayedAt = Instant.now()
+        this.updatedAt = Instant.now()
+    }
+
+    fun markDeleted() {
+        this.status = MusicFileStatus.DELETED
         this.updatedAt = Instant.now()
     }
 }

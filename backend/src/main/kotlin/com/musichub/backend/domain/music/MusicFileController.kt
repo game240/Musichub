@@ -34,6 +34,9 @@ data class MusicFileDto(
     val durationMs: Long?,
     val fileSize: Long,
     val hasArtwork: Boolean,
+    val lyrics: String?,
+    val playCount: Int,
+    val lastPlayedAt: Instant?,
     val createdAt: Instant
 ) {
     companion object {
@@ -49,6 +52,9 @@ data class MusicFileDto(
             durationMs = entity.durationMs,
             fileSize = entity.fileSize,
             hasArtwork = entity.artworkStorageKey != null,
+            lyrics = entity.lyrics,
+            playCount = entity.playCount,
+            lastPlayedAt = entity.lastPlayedAt,
             createdAt = entity.createdAt
         )
     }

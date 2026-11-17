@@ -28,7 +28,7 @@ CREATE TABLE refresh_token (
 
 CREATE INDEX idx_refresh_token_user_id ON refresh_token(user_id);
 
--- 3. 음악 파일 테이블 (R2 Storage Key 기반)
+-- 3. 음악 파일 테이블 (R2 Storage Key 기반 및 최적화 메타데이터/통계)
 CREATE TABLE music_file (
     id                      BIGSERIAL PRIMARY KEY,
     user_id                 BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -45,11 +45,15 @@ CREATE TABLE music_file (
     genre                   VARCHAR(255),
     track_number            INT,
     duration_ms             BIGINT,
+    lyrics                  TEXT,
 
     -- 앨범 커버 이미지 정보
     artwork_storage_key     VARCHAR(500),
     artwork_mime_type       VARCHAR(64),
 
+    -- 재생 통계 및 상태 관리
+    play_count              INT NOT NULL DEFAULT 0,
+    last_played_at          TIMESTAMPTZ,
     status                  VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
     extracted_by_platform   BOOLEAN NOT NULL DEFAULT FALSE,
 
@@ -57,8 +61,13 @@ CREATE TABLE music_file (
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_music_file_user_id ON music_file(user_id);
-CREATE INDEX idx_music_file_status ON music_file(status);
+-- 목록 조회 (user_id, status 조건 및 created_at DESC 정렬 가속 복합 인덱스)
+CREATE INDEX idx_music_file_user_status_created 
+    ON music_file(user_id, status, created_at DESC);
+
+-- 사용자별 용량 합산 (Index-Only Scan 지원)
+CREATE INDEX idx_music_file_user_size 
+    ON music_file(user_id, file_size);
 
 -- 4. 미디어 추출 작업 테이블 (비동기 스케줄러 처리용)
 CREATE TABLE extraction_job (

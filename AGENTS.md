@@ -12,7 +12,7 @@ This project is managed by ZEUS (the zeus pi package).
 
 ## Frontend component structure
 
-The `client/src/components/` tree is two trees in one directory:
+The `frontend/src/components/` tree is two trees in one directory:
 
 - Shared UI vocabulary: `atoms/`, `molecules/`, `organisms/`, `templates/` — domain-agnostic, cross-domain by rule; never import domain code or domain vocabulary (props in, events out)
 - Screen tree: `pages/<domain>/` — domain-specific components live inside their domain, never lifted into the atomic layers just because they are "components"
