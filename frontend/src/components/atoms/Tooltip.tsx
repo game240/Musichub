@@ -6,16 +6,17 @@ const TooltipTrigger = TooltipPrimitive.Trigger;
 
 const TooltipContent = React.forwardRef<
   React.ElementRef<typeof TooltipPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content>
->(({ className = '', sideOffset = 5, children, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content> & { hideArrow?: boolean }
+>(({ className = '', sideOffset = 6, hideArrow = false, children, ...props }, ref) => (
   <TooltipPrimitive.Portal>
     <TooltipPrimitive.Content
       ref={ref}
       sideOffset={sideOffset}
-      className={`z-50 overflow-hidden rounded-md border border-white/[0.08] bg-[#1c1d20] px-2.5 py-1 text-xs text-neutral-200 shadow-xl backdrop-blur-md select-none pointer-events-none ${className}`}
+      className={`z-50 rounded-md bg-white text-neutral-900 px-3 py-1.5 text-xs font-medium shadow-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 select-none pointer-events-none ${className}`}
       {...props}
     >
       {children}
+      {!hideArrow && <TooltipPrimitive.Arrow className="fill-white" width={10} height={5} />}
     </TooltipPrimitive.Content>
   </TooltipPrimitive.Portal>
 ));
@@ -26,6 +27,7 @@ export interface TooltipProps extends React.ComponentPropsWithoutRef<typeof Tool
   side?: 'top' | 'right' | 'bottom' | 'left';
   align?: 'start' | 'center' | 'end';
   sideOffset?: number;
+  hideArrow?: boolean;
   className?: string;
 }
 
@@ -33,7 +35,8 @@ export const Tooltip: React.FC<TooltipProps> = ({
   content,
   side = 'top',
   align = 'center',
-  sideOffset = 5,
+  sideOffset = 6,
+  hideArrow = false,
   className = '',
   children,
   ...props
@@ -43,7 +46,13 @@ export const Tooltip: React.FC<TooltipProps> = ({
     return (
       <TooltipPrimitive.Root {...props}>
         <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
-        <TooltipContent side={side} align={align} sideOffset={sideOffset} className={className}>
+        <TooltipContent
+          side={side}
+          align={align}
+          sideOffset={sideOffset}
+          hideArrow={hideArrow}
+          className={className}
+        >
           {content}
         </TooltipContent>
       </TooltipPrimitive.Root>
