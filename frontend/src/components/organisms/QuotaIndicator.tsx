@@ -1,6 +1,7 @@
 import React from 'react';
 import { HardDrive } from 'lucide-react';
 import { formatBytes } from '../../utils/formatBytes';
+import { SimpleTooltip } from '../atoms/Tooltip';
 
 export interface QuotaIndicatorProps {
   usedBytes: number;
@@ -23,25 +24,27 @@ export const QuotaIndicator: React.FC<QuotaIndicatorProps> = ({
   }
 
   return (
-    <div
-      className={`flex flex-col gap-1.5 min-w-[160px] ${className}`}
-      title={`보관함 사용량: ${formatBytes(usedBytes)} / ${formatBytes(maxBytes)} (${Math.round(percentage)}%)`}
+    <SimpleTooltip
+      content={`보관함 사용량: ${formatBytes(usedBytes)} / ${formatBytes(maxBytes)} (${Math.round(percentage)}%)`}
+      side="bottom"
     >
-      <div className="flex items-center justify-between text-xs text-neutral-400">
-        <span className="flex items-center gap-1.5 font-medium">
-          <HardDrive className="w-3.5 h-3.5 text-neutral-400" />
-          <span>저장 공간</span>
-        </span>
-        <span className="text-neutral-300">
-          {formatBytes(usedBytes)} / {formatBytes(maxBytes)}
-        </span>
+      <div className={`flex flex-col gap-1.5 min-w-[160px] cursor-pointer ${className}`}>
+        <div className="flex items-center justify-between text-xs text-neutral-400">
+          <span className="flex items-center gap-1.5 font-medium">
+            <HardDrive className="w-3.5 h-3.5 text-neutral-400" />
+            <span>저장 공간</span>
+          </span>
+          <span className="text-neutral-300">
+            {formatBytes(usedBytes)} / {formatBytes(maxBytes)}
+          </span>
+        </div>
+        <div className="w-full h-1.5 bg-white/[0.08] rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-300 ease-out ${colorClass}`}
+            style={{ width: `${percentage}%` }}
+          />
+        </div>
       </div>
-      <div className="w-full h-1.5 bg-white/[0.08] rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-300 ease-out ${colorClass}`}
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
-    </div>
+    </SimpleTooltip>
   );
 };

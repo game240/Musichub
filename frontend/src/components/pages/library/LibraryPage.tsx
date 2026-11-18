@@ -7,6 +7,7 @@ import { usePlayerStore } from '../../../stores/playerStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { SearchInput } from '../../molecules/SearchInput';
 import { Button } from '../../atoms/Button';
+import { SimpleTooltip } from '../../atoms/Tooltip';
 import { TrackTable } from './track/TrackTable';
 import { UploadModal } from './upload/UploadModal';
 import { ConfirmDialog } from '../../organisms/ConfirmDialog';
@@ -87,18 +88,19 @@ export const LibraryPage: React.FC = () => {
             onChange={setSearchQuery}
             placeholder="곡 제목, 아티스트, 앨범 검색..."
           />
-          <button
-            type="button"
-            title="보관함 새로고침"
-            onClick={() => {
-              refetch();
-            }}
-            className={`p-2 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors cursor-pointer ${
-              isRefetching ? 'animate-spin' : ''
-            }`}
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
+          <SimpleTooltip content="보관함 새로고침" side="bottom">
+            <button
+              type="button"
+              onClick={() => {
+                refetch();
+              }}
+              className={`p-2 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors cursor-pointer ${
+                isRefetching ? 'animate-spin' : ''
+              }`}
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          </SimpleTooltip>
         </div>
 
         <div className="flex items-center gap-3 justify-between sm:justify-end">

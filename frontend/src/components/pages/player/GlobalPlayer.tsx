@@ -6,6 +6,7 @@ import { PlayerControls } from './PlayerControls';
 import { PlayerSeekBar } from './PlayerSeekBar';
 import { VolumeSlider } from '../../molecules/VolumeSlider';
 import { PlayerQueueDrawer } from './queue/PlayerQueueDrawer';
+import { SimpleTooltip } from '../../atoms/Tooltip';
 
 export const GlobalPlayer: React.FC = () => {
   const {
@@ -84,20 +85,21 @@ export const GlobalPlayer: React.FC = () => {
             onToggleMute={toggleMute}
           />
 
-          <button
-            type="button"
-            title="재생목록"
-            onClick={() => {
-              setIsQueueOpen((prev) => !prev);
-            }}
-            className={`p-2 rounded-lg transition-all duration-150 cursor-pointer ${
-              isQueueOpen
-                ? 'text-[#8590ea] bg-[#5e6ad2]/15 border border-[#5e6ad2]/30'
-                : 'text-neutral-400 hover:text-white hover:bg-white/[0.05]'
-            }`}
-          >
-            <ListMusic className="w-5 h-5" />
-          </button>
+          <SimpleTooltip content="재생목록" side="top">
+            <button
+              type="button"
+              onClick={() => {
+                setIsQueueOpen((prev) => !prev);
+              }}
+              className={`p-2 rounded-lg transition-all duration-150 cursor-pointer ${
+                isQueueOpen
+                  ? 'text-[#8590ea] bg-[#5e6ad2]/15 border border-[#5e6ad2]/30'
+                  : 'text-neutral-400 hover:text-white hover:bg-white/[0.05]'
+              }`}
+            >
+              <ListMusic className="w-5 h-5" />
+            </button>
+          </SimpleTooltip>
         </div>
       </div>
 

@@ -8,6 +8,7 @@ import { LoginPage } from './components/pages/auth/LoginPage';
 import { LibraryPage } from './components/pages/library/LibraryPage';
 import { GlobalPlayer } from './components/pages/player/GlobalPlayer';
 import { QuotaIndicator } from './components/organisms/QuotaIndicator';
+import { TooltipProvider, SimpleTooltip } from './components/atoms/Tooltip';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -61,16 +62,17 @@ const AppContent: React.FC = () => {
         <span className="text-xs font-medium text-neutral-200 hidden sm:inline max-w-[120px] truncate">
           {user?.displayName || user?.email}
         </span>
-        <button
-          type="button"
-          title="로그아웃"
-          onClick={() => {
-            logout();
-          }}
-          className="p-1.5 text-neutral-400 hover:text-red-400 rounded-lg hover:bg-white/[0.05] transition-colors cursor-pointer"
-        >
-          <LogOut className="w-4 h-4" />
-        </button>
+        <SimpleTooltip content="로그아웃" side="bottom">
+          <button
+            type="button"
+            onClick={() => {
+              logout();
+            }}
+            className="p-1.5 text-neutral-400 hover:text-red-400 rounded-lg hover:bg-white/[0.05] transition-colors cursor-pointer"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </SimpleTooltip>
       </div>
     </>
   );
@@ -86,7 +88,9 @@ export const App: React.FC = () => {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <QueryClientProvider client={queryClient}>
-        <AppContent />
+        <TooltipProvider delayDuration={150}>
+          <AppContent />
+        </TooltipProvider>
       </QueryClientProvider>
     </GoogleOAuthProvider>
   );

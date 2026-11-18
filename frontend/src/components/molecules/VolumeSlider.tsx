@@ -1,6 +1,7 @@
 import React from 'react';
 import { Volume2, VolumeX, Volume1 } from 'lucide-react';
 import { Slider } from '../atoms/Slider';
+import { SimpleTooltip } from '../atoms/Tooltip';
 
 export interface VolumeSliderProps {
   volume: number; // 0 to 1
@@ -31,14 +32,15 @@ export const VolumeSlider: React.FC<VolumeSliderProps> = ({
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <button
-        type="button"
-        onClick={onToggleMute}
-        title={isMuted ? '음소거 해제' : '음소거'}
-        className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors cursor-pointer"
-      >
-        {renderIcon()}
-      </button>
+      <SimpleTooltip content={isMuted ? '음소거 해제' : '음소거'} side="top">
+        <button
+          type="button"
+          onClick={onToggleMute}
+          className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors cursor-pointer"
+        >
+          {renderIcon()}
+        </button>
+      </SimpleTooltip>
       <div className="w-24">
         <Slider
           min={0}

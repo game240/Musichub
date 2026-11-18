@@ -2,6 +2,7 @@ import React from 'react';
 import { ListMusic, Trash2, X, Music } from 'lucide-react';
 import type { MusicFileDto } from '../../../../types/music';
 import { formatDurationMs } from '../../../../utils/formatTime';
+import { SimpleTooltip } from '../../../atoms/Tooltip';
 
 export interface PlayerQueueDrawerProps {
   isOpen: boolean;
@@ -37,23 +38,25 @@ export const PlayerQueueDrawer: React.FC<PlayerQueueDrawerProps> = ({
         </div>
         <div className="flex items-center gap-1">
           {queue.length > 0 ? (
+            <SimpleTooltip content="목록 비우기" side="bottom">
+              <button
+                type="button"
+                onClick={onClearQueue}
+                className="p-1.5 text-neutral-400 hover:text-red-400 rounded-lg hover:bg-white/[0.05] transition-colors cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </SimpleTooltip>
+          ) : null}
+          <SimpleTooltip content="닫기" side="bottom">
             <button
               type="button"
-              onClick={onClearQueue}
-              title="목록 비우기"
-              className="p-1.5 text-neutral-400 hover:text-red-400 rounded-lg hover:bg-white/[0.05] transition-colors cursor-pointer"
+              onClick={onClose}
+              className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors cursor-pointer"
             >
-              <Trash2 className="w-4 h-4" />
+              <X className="w-4 h-4" />
             </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={onClose}
-            title="닫기"
-            className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          </SimpleTooltip>
         </div>
       </div>
 
@@ -93,17 +96,18 @@ export const PlayerQueueDrawer: React.FC<PlayerQueueDrawerProps> = ({
                   <span className="text-[11px] text-neutral-400">
                     {formatDurationMs(track.durationMs)}
                   </span>
-                  <button
-                    type="button"
-                    title="대기열에서 제거"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRemoveTrack(idx);
-                    }}
-                    className="p-1 text-neutral-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
+                  <SimpleTooltip content="대기열에서 제거" side="left">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveTrack(idx);
+                      }}
+                      className="p-1 text-neutral-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </SimpleTooltip>
                 </div>
               </div>
             );

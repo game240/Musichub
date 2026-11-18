@@ -4,6 +4,7 @@ import type { MusicFileDto } from '../../../../types/music';
 import { TrackArtwork } from './TrackArtwork';
 import { formatDurationMs } from '../../../../utils/formatTime';
 import { formatBytes } from '../../../../utils/formatBytes';
+import { SimpleTooltip } from '../../../atoms/Tooltip';
 
 export interface TrackRowProps {
   track: MusicFileDto;
@@ -114,26 +115,28 @@ export const TrackRow: React.FC<TrackRowProps> = ({
       {/* Actions */}
       <td className="py-2.5 px-4 text-right">
         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            type="button"
-            title="재생목록에 추가"
-            onClick={() => {
-              onAddToQueue(track);
-            }}
-            className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"
-          >
-            <ListPlus className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            title="음원 삭제"
-            onClick={() => {
-              onDelete(track);
-            }}
-            className="p-1.5 text-neutral-400 hover:text-red-400 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          <SimpleTooltip content="재생목록에 추가" side="top">
+            <button
+              type="button"
+              onClick={() => {
+                onAddToQueue(track);
+              }}
+              className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"
+            >
+              <ListPlus className="w-4 h-4" />
+            </button>
+          </SimpleTooltip>
+          <SimpleTooltip content="음원 삭제" side="top">
+            <button
+              type="button"
+              onClick={() => {
+                onDelete(track);
+              }}
+              className="p-1.5 text-neutral-400 hover:text-red-400 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </SimpleTooltip>
         </div>
       </td>
     </tr>
