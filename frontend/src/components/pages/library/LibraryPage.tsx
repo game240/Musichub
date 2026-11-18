@@ -7,7 +7,7 @@ import { usePlayerStore } from '../../../stores/playerStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { SearchInput } from '../../molecules/SearchInput';
 import { Button } from '../../atoms/Button';
-import { SimpleTooltip } from '../../atoms/Tooltip';
+import { Tooltip } from '../../atoms/Tooltip';
 import { TrackTable } from './track/TrackTable';
 import { UploadModal } from './upload/UploadModal';
 import { ConfirmDialog } from '../../organisms/ConfirmDialog';
@@ -88,7 +88,7 @@ export const LibraryPage: React.FC = () => {
             onChange={setSearchQuery}
             placeholder="곡 제목, 아티스트, 앨범 검색..."
           />
-          <SimpleTooltip content="보관함 새로고침" side="bottom">
+          <Tooltip content="보관함 새로고침" side="bottom">
             <button
               type="button"
               onClick={() => {
@@ -100,7 +100,7 @@ export const LibraryPage: React.FC = () => {
             >
               <RefreshCw className="w-4 h-4" />
             </button>
-          </SimpleTooltip>
+          </Tooltip>
         </div>
 
         <div className="flex items-center gap-3 justify-between sm:justify-end">

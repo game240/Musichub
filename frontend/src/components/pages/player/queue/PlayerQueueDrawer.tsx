@@ -2,7 +2,7 @@ import React from 'react';
 import { ListMusic, Trash2, X, Music } from 'lucide-react';
 import type { MusicFileDto } from '../../../../types/music';
 import { formatDurationMs } from '../../../../utils/formatTime';
-import { SimpleTooltip } from '../../../atoms/Tooltip';
+import { Tooltip } from '../../../atoms/Tooltip';
 
 export interface PlayerQueueDrawerProps {
   isOpen: boolean;
@@ -38,7 +38,7 @@ export const PlayerQueueDrawer: React.FC<PlayerQueueDrawerProps> = ({
         </div>
         <div className="flex items-center gap-1">
           {queue.length > 0 ? (
-            <SimpleTooltip content="목록 비우기" side="bottom">
+            <Tooltip content="목록 비우기" side="bottom">
               <button
                 type="button"
                 onClick={onClearQueue}
@@ -46,9 +46,9 @@ export const PlayerQueueDrawer: React.FC<PlayerQueueDrawerProps> = ({
               >
                 <Trash2 className="w-4 h-4" />
               </button>
-            </SimpleTooltip>
+            </Tooltip>
           ) : null}
-          <SimpleTooltip content="닫기" side="bottom">
+          <Tooltip content="닫기" side="bottom">
             <button
               type="button"
               onClick={onClose}
@@ -56,7 +56,7 @@ export const PlayerQueueDrawer: React.FC<PlayerQueueDrawerProps> = ({
             >
               <X className="w-4 h-4" />
             </button>
-          </SimpleTooltip>
+          </Tooltip>
         </div>
       </div>
 
@@ -96,7 +96,7 @@ export const PlayerQueueDrawer: React.FC<PlayerQueueDrawerProps> = ({
                   <span className="text-[11px] text-neutral-400">
                     {formatDurationMs(track.durationMs)}
                   </span>
-                  <SimpleTooltip content="대기열에서 제거" side="left">
+                  <Tooltip content="대기열에서 제거" side="left">
                     <button
                       type="button"
                       onClick={(e) => {
@@ -107,7 +107,7 @@ export const PlayerQueueDrawer: React.FC<PlayerQueueDrawerProps> = ({
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
-                  </SimpleTooltip>
+                  </Tooltip>
                 </div>
               </div>
             );

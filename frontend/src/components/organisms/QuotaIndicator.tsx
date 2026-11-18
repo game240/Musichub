@@ -1,7 +1,7 @@
 import React from 'react';
 import { HardDrive } from 'lucide-react';
 import { formatBytes } from '../../utils/formatBytes';
-import { SimpleTooltip } from '../atoms/Tooltip';
+import { Tooltip } from '../atoms/Tooltip';
 
 export interface QuotaIndicatorProps {
   usedBytes: number;
@@ -24,7 +24,7 @@ export const QuotaIndicator: React.FC<QuotaIndicatorProps> = ({
   }
 
   return (
-    <SimpleTooltip
+    <Tooltip
       content={`보관함 사용량: ${formatBytes(usedBytes)} / ${formatBytes(maxBytes)} (${Math.round(percentage)}%)`}
       side="bottom"
     >
@@ -45,6 +45,6 @@ export const QuotaIndicator: React.FC<QuotaIndicatorProps> = ({
           />
         </div>
       </div>
-    </SimpleTooltip>
+    </Tooltip>
   );
 };

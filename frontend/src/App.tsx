@@ -8,7 +8,7 @@ import { LoginPage } from './components/pages/auth/LoginPage';
 import { LibraryPage } from './components/pages/library/LibraryPage';
 import { GlobalPlayer } from './components/pages/player/GlobalPlayer';
 import { QuotaIndicator } from './components/organisms/QuotaIndicator';
-import { TooltipProvider, SimpleTooltip } from './components/atoms/Tooltip';
+import { TooltipProvider, Tooltip } from './components/atoms/Tooltip';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -62,7 +62,7 @@ const AppContent: React.FC = () => {
         <span className="text-xs font-medium text-neutral-200 hidden sm:inline max-w-[120px] truncate">
           {user?.displayName || user?.email}
         </span>
-        <SimpleTooltip content="로그아웃" side="bottom">
+        <Tooltip content="로그아웃" side="bottom">
           <button
             type="button"
             onClick={() => {
@@ -72,7 +72,7 @@ const AppContent: React.FC = () => {
           >
             <LogOut className="w-4 h-4" />
           </button>
-        </SimpleTooltip>
+        </Tooltip>
       </div>
     </>
   );

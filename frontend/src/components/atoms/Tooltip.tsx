@@ -2,9 +2,6 @@ import * as React from 'react';
 import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 
 const TooltipProvider = TooltipPrimitive.Provider;
-
-const Tooltip = TooltipPrimitive.Root;
-
 const TooltipTrigger = TooltipPrimitive.Trigger;
 
 const TooltipContent = React.forwardRef<
@@ -15,7 +12,7 @@ const TooltipContent = React.forwardRef<
     <TooltipPrimitive.Content
       ref={ref}
       sideOffset={sideOffset}
-      className={`z-50 overflow-hidden rounded-md border border-white/[0.08] bg-[#1c1d20] px-2.5 py-1 text-xs text-neutral-200 shadow-xl backdrop-blur-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1 select-none pointer-events-none ${className}`}
+      className={`z-50 overflow-hidden rounded-md border border-white/[0.08] bg-[#1c1d20] px-2.5 py-1 text-xs text-neutral-200 shadow-xl backdrop-blur-md select-none pointer-events-none ${className}`}
       {...props}
     >
       {children}
@@ -24,35 +21,37 @@ const TooltipContent = React.forwardRef<
 ));
 TooltipContent.displayName = TooltipPrimitive.Content.displayName;
 
-export interface SimpleTooltipProps {
-  content: React.ReactNode;
-  children: React.ReactElement;
+export interface TooltipProps extends React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Root> {
+  content?: React.ReactNode;
   side?: 'top' | 'right' | 'bottom' | 'left';
   align?: 'start' | 'center' | 'end';
   sideOffset?: number;
   className?: string;
 }
 
-export const SimpleTooltip: React.FC<SimpleTooltipProps> = ({
+export const Tooltip: React.FC<TooltipProps> = ({
   content,
-  children,
   side = 'top',
   align = 'center',
   sideOffset = 5,
   className = '',
+  children,
+  ...props
 }) => {
-  if (!content) {
-    return children;
+  // If `content` is supplied, act as convenient single-element Tooltip
+  if (content !== undefined && content !== null) {
+    return (
+      <TooltipPrimitive.Root {...props}>
+        <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
+        <TooltipContent side={side} align={align} sideOffset={sideOffset} className={className}>
+          {content}
+        </TooltipContent>
+      </TooltipPrimitive.Root>
+    );
   }
 
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{children}</TooltipTrigger>
-      <TooltipContent side={side} align={align} sideOffset={sideOffset} className={className}>
-        {content}
-      </TooltipContent>
-    </Tooltip>
-  );
+  // Otherwise, act as official Shadcn compound Root: <Tooltip><TooltipTrigger>...</TooltipTrigger><TooltipContent>...</TooltipContent></Tooltip>
+  return <TooltipPrimitive.Root {...props}>{children}</TooltipPrimitive.Root>;
 };
 
-export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider };
+export { TooltipTrigger, TooltipContent, TooltipProvider };

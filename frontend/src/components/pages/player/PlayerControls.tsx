@@ -1,7 +1,7 @@
 import React from 'react';
 import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Repeat1 } from 'lucide-react';
 import type { RepeatMode } from '../../../stores/playerStore';
-import { SimpleTooltip } from '../../atoms/Tooltip';
+import { Tooltip } from '../../atoms/Tooltip';
 
 export interface PlayerControlsProps {
   isPlaying: boolean;
@@ -42,7 +42,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
   return (
     <div className="flex items-center gap-2">
       {/* Shuffle */}
-      <SimpleTooltip content={isShuffle ? '셔플 끄기' : '셔플 켜기'} side="top">
+      <Tooltip content={isShuffle ? '셔플 끄기' : '셔플 켜기'} side="top">
         <button
           type="button"
           onClick={onToggleShuffle}
@@ -54,10 +54,10 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         >
           <Shuffle className="w-4 h-4" />
         </button>
-      </SimpleTooltip>
+      </Tooltip>
 
       {/* Prev */}
-      <SimpleTooltip content="이전 곡" side="top">
+      <Tooltip content="이전 곡" side="top">
         <button
           type="button"
           onClick={onPlayPrev}
@@ -65,10 +65,10 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         >
           <SkipBack className="w-4 h-4 fill-current" />
         </button>
-      </SimpleTooltip>
+      </Tooltip>
 
       {/* Play / Pause */}
-      <SimpleTooltip content={isPlaying ? '일시정지 (Space)' : '재생 (Space)'} side="top">
+      <Tooltip content={isPlaying ? '일시정지 (Space)' : '재생 (Space)'} side="top">
         <button
           type="button"
           onClick={onTogglePlay}
@@ -81,10 +81,10 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
             <Play className="w-4 h-4 fill-current ml-0.5" />
           )}
         </button>
-      </SimpleTooltip>
+      </Tooltip>
 
       {/* Next */}
-      <SimpleTooltip content="다음 곡" side="top">
+      <Tooltip content="다음 곡" side="top">
         <button
           type="button"
           onClick={onPlayNext}
@@ -92,10 +92,10 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         >
           <SkipForward className="w-4 h-4 fill-current" />
         </button>
-      </SimpleTooltip>
+      </Tooltip>
 
       {/* Repeat */}
-      <SimpleTooltip content={`반복: ${repeatTooltip}`} side="top">
+      <Tooltip content={`반복: ${repeatTooltip}`} side="top">
         <button
           type="button"
           onClick={onToggleRepeat}
@@ -107,7 +107,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         >
           {renderRepeatIcon()}
         </button>
-      </SimpleTooltip>
+      </Tooltip>
     </div>
   );
 };

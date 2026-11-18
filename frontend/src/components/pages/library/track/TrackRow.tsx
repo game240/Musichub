@@ -4,7 +4,7 @@ import type { MusicFileDto } from '../../../../types/music';
 import { TrackArtwork } from './TrackArtwork';
 import { formatDurationMs } from '../../../../utils/formatTime';
 import { formatBytes } from '../../../../utils/formatBytes';
-import { SimpleTooltip } from '../../../atoms/Tooltip';
+import { Tooltip } from '../../../atoms/Tooltip';
 
 export interface TrackRowProps {
   track: MusicFileDto;
@@ -115,7 +115,7 @@ export const TrackRow: React.FC<TrackRowProps> = ({
       {/* Actions */}
       <td className="py-2.5 px-4 text-right">
         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <SimpleTooltip content="재생목록에 추가" side="top">
+          <Tooltip content="재생목록에 추가" side="top">
             <button
               type="button"
               onClick={() => {
@@ -125,8 +125,8 @@ export const TrackRow: React.FC<TrackRowProps> = ({
             >
               <ListPlus className="w-4 h-4" />
             </button>
-          </SimpleTooltip>
-          <SimpleTooltip content="음원 삭제" side="top">
+          </Tooltip>
+          <Tooltip content="음원 삭제" side="top">
             <button
               type="button"
               onClick={() => {
@@ -136,7 +136,7 @@ export const TrackRow: React.FC<TrackRowProps> = ({
             >
               <Trash2 className="w-4 h-4" />
             </button>
-          </SimpleTooltip>
+          </Tooltip>
         </div>
       </td>
     </tr>

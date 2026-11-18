@@ -6,7 +6,7 @@ import { PlayerControls } from './PlayerControls';
 import { PlayerSeekBar } from './PlayerSeekBar';
 import { VolumeSlider } from '../../molecules/VolumeSlider';
 import { PlayerQueueDrawer } from './queue/PlayerQueueDrawer';
-import { SimpleTooltip } from '../../atoms/Tooltip';
+import { Tooltip } from '../../atoms/Tooltip';
 
 export const GlobalPlayer: React.FC = () => {
   const {
@@ -85,7 +85,7 @@ export const GlobalPlayer: React.FC = () => {
             onToggleMute={toggleMute}
           />
 
-          <SimpleTooltip content="재생목록" side="top">
+          <Tooltip content="재생목록" side="top">
             <button
               type="button"
               onClick={() => {
@@ -99,7 +99,7 @@ export const GlobalPlayer: React.FC = () => {
             >
               <ListMusic className="w-5 h-5" />
             </button>
-          </SimpleTooltip>
+          </Tooltip>
         </div>
       </div>
 
