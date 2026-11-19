@@ -249,6 +249,7 @@ class MusicFileService(
         musicFile.genre = request.genre?.trim()?.takeIf { it.isNotBlank() }
         musicFile.trackNumber = request.trackNumber
         musicFile.lyrics = request.lyrics?.trim()?.takeIf { it.isNotBlank() }
+        musicFile.tagSyncStatus = TagSyncStatus.SYNCING
         musicFile.updatedAt = java.time.Instant.now()
 
         // 2. 무거운 작업(R2 파일 다운로드 -> Jaudiotagger 태그 재작성 -> R2 재업로드)은 백그라운드 비동기로 실행
@@ -291,25 +292,37 @@ class MusicFileService(
                 storageService.upload(musicFile.storageKey, input, newSize, musicFile.mimeType)
             }
 
-            // 4. 유저 스토리지 사용량 델타 반영
+            // 4. 유저 스토리지 사용량 델타 반영 & 상태 갱신
             val deltaSize = newSize - musicFile.fileSize
-            if (deltaSize != 0L) {
-                musicFile.fileSize = newSize
-                if (deltaSize > 0) {
-                    musicFile.user.addStorageUsage(deltaSize)
-                } else {
-                    musicFile.user.subtractStorageUsage(-deltaSize)
-                }
-                musicFileRepository.save(musicFile)
+            if (deltaSize > 0) {
+                musicFile.user.addStorageUsage(deltaSize)
+            } else if (deltaSize < 0) {
+                musicFile.user.subtractStorageUsage(-deltaSize)
             }
+            musicFile.fileSize = newSize
+            musicFile.tagSyncStatus = TagSyncStatus.SYNCED
+            musicFileRepository.save(musicFile)
             logger.info("Successfully updated R2 audio tags in background for track id: {}", musicFileId)
         } catch (e: Exception) {
             logger.error("Failed to rewrite R2 audio tags for track id {}: {}", musicFileId, e.message, e)
+            try {
+                musicFile.tagSyncStatus = TagSyncStatus.FAILED
+                musicFileRepository.save(musicFile)
+            } catch (saveEx: Exception) {
+                logger.error("Failed to mark tagSyncStatus as FAILED for track id {}: {}", musicFileId, saveEx.message)
+            }
         } finally {
             if (tempFile.exists()) {
                 tempFile.delete()
             }
         }
+    }
+
+    @Transactional(readOnly = true)
+    fun getSyncStatus(userId: Long, musicFileId: Long): TagSyncStatus {
+        val musicFile = musicFileRepository.findByIdAndUserId(musicFileId, userId)
+            .orElseThrow { NoSuchElementException("음악 파일을 찾을 수 없습니다.") }
+        return musicFile.tagSyncStatus
     }
 
     private fun validateStorageQuotas(userId: Long, incomingBytes: Long) {

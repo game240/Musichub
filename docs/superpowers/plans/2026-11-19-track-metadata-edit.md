@@ -1,4 +1,4 @@
-# Track Metadata Edit with Async R2 Tag Rewriting Implementation Plan
+# Track Metadata Edit with Real Async Status Tracking Implementation Plan
 
 - **Date:** 2026-11-19
 - **Spec:** [docs/superpowers/specs/2026-11-19-track-metadata-edit-design.md](file:///c:/vscode/Musichub/docs/superpowers/specs/2026-11-19-track-metadata-edit-design.md)
@@ -11,42 +11,44 @@
 1. **Rule Compliance**:
    - `AGENTS.md`: "Design approved before implementation; plan written before touching code".
    - Git branch: `feat/track-metadata-edit` cut from `dev`.
-   - Commit format: `type: subject` (e.g. `feat: add optimistic metadata edit with async r2 tag rewriting and floating status ui`).
+   - Commit format: `type: subject` (e.g. `feat: implement real background tag sync status tracking and polling`).
 2. **Architecture**:
-   - Backend: Instant DB update + async R2 tag rewrite via `CompletableFuture`.
-   - Frontend: `tagSyncStore.ts` for managing background sync tasks.
-   - UI: `FloatingTagSyncWidget.tsx` (fixed at bottom-right, above player bar).
-   - Instant modal dismissal upon successful DB update response.
+   - PostgreSQL 16 migration (`V3__add_tag_sync_status.sql`).
+   - `MusicFile.tagSyncStatus` enum (`SYNCED`, `SYNCING`, `FAILED`).
+   - Endpoint `GET /api/music-files/{id}/sync-status`.
+   - Frontend `tagSyncStore.ts` polls real backend sync status until terminal state.
 
 ---
 
 ## 2. Step-by-Step Milestones
 
-### Milestone 1: Backend Async Tag Rewriting
+### Milestone 1: Database Migration & Domain Entity
+- [x] Create Flyway migration `backend/src/main/resources/db/migration/V3__add_tag_sync_status.sql`:
+  - `ALTER TABLE music_file ADD COLUMN tag_sync_status VARCHAR(32) NOT NULL DEFAULT 'SYNCED';`
+- [x] Update `MusicFile.kt`:
+  - Add `TagSyncStatus` enum (`SYNCED`, `SYNCING`, `FAILED`).
+  - Add `var tagSyncStatus: TagSyncStatus = TagSyncStatus.SYNCED` property.
+
+### Milestone 2: Backend Status Management & Sync-Status Endpoint
 - [x] In `MusicFileService.kt`:
-  - Update `updateMetadata`:
-    - Update entity fields in DB immediately and return updated entity.
-    - Launch `CompletableFuture.runAsync` to perform `rewriteR2Tags(...)`.
-  - Implement `rewriteR2Tags(musicFileId: Long, request: UpdateMusicMetadataRequest)`.
-- [x] Update `MusicFileServiceUpdateTest.kt` to verify immediate return and async execution.
+  - In `updateMetadata`: set `musicFile.tagSyncStatus = TagSyncStatus.SYNCING`.
+  - In `rewriteR2Tags`:
+    - On success: set `musicFile.tagSyncStatus = TagSyncStatus.SYNCED`.
+    - On catch: set `musicFile.tagSyncStatus = TagSyncStatus.FAILED`.
+  - Add `getSyncStatus(userId: Long, musicFileId: Long): TagSyncStatus`.
+- [x] In `MusicFileController.kt`:
+  - Add `GET /api/music-files/{id}/sync-status` returning `{ "id": id, "status": "SYNCING" | "SYNCED" | "FAILED" }`.
+- [x] Update `MusicFileServiceUpdateTest.kt` to verify status transitions.
 
-### Milestone 2: Frontend Tag Sync Store & Floating Status Widget
-- [x] Create `frontend/src/stores/tagSyncStore.ts`:
-  - State: `tasks: TagSyncTask[]`.
-  - Actions: `addTask`, `completeTask`, `failTask`, `removeTask`.
-- [x] Create `frontend/src/components/organisms/FloatingTagSyncWidget.tsx`:
-  - Fixed position at `bottom-24 right-6 z-50` (just above the global player).
-  - Clean Linear-dark badge style with Spinner / Check / Alert icons.
-  - Auto-dismiss after 3.5s on completion.
-- [x] Render `FloatingTagSyncWidget` in `App.tsx`.
-
-### Milestone 3: Modal UX Optimization
-- [x] Update `EditMetadataModal.tsx`:
-  - When user submits, call `updateMetadata`.
-  - Since API returns in ~20ms, immediately close modal and register a task in `tagSyncStore`.
-  - Update `LibraryPage.tsx` and `playerStore` with new data immediately.
+### Milestone 3: Frontend API & Real Polling Store
+- [x] In `frontend/src/api/musicApi.ts`:
+  - Add `getSyncStatus(id: number): Promise<{ id: number; status: 'SYNCED' | 'SYNCING' | 'FAILED' }>`.
+- [x] In `frontend/src/stores/tagSyncStore.ts`:
+  - Replace `setTimeout` with actual `setInterval` polling `musicApi.getSyncStatus`.
+  - On `SYNCED`: mark completed, stop polling, auto-dismiss after 3.5s.
+  - On `FAILED`: mark error, stop polling, show error message.
 
 ### Milestone 4: Verification & Compilation
-- [x] Backend tests: `./gradlew test`.
-- [x] Frontend verification: `npm run build` and `npm run lint`.
-- [ ] Git commit & merge to `dev` with `--no-ff`.
+- [x] Run backend tests: `./gradlew test`.
+- [x] Run frontend build & lint: `npm run build && npm run lint`.
+- [ ] Merge to `dev` with `--no-ff`.

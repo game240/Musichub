@@ -23,7 +23,13 @@ export const FloatingTagSyncWidget: React.FC = () => {
         return (
           <div
             key={task.id}
-            className="pointer-events-auto bg-[#0f1011]/95 border border-white/[0.1] backdrop-blur-xl rounded-xl p-3 shadow-2xl flex items-center gap-3 transition-all duration-200 animate-in fade-in slide-in-from-bottom-2"
+            className={`pointer-events-auto bg-[#0f1011]/95 border backdrop-blur-xl rounded-xl p-3 shadow-2xl flex items-center gap-3 transition-all duration-200 animate-in fade-in slide-in-from-bottom-2 ${
+              isError
+                ? 'border-red-500/30 bg-red-950/20'
+                : isCompleted
+                  ? 'border-emerald-500/30'
+                  : 'border-white/[0.1]'
+            }`}
           >
             {/* Status Icon */}
             <div className="flex-shrink-0">

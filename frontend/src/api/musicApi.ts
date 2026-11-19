@@ -91,6 +91,15 @@ export const musicApi = {
     const response = await apiClient.patch<MusicFileDto>(`/music-files/${id}`, request);
     return response.data;
   },
+
+  async getSyncStatus(
+    id: number,
+  ): Promise<{ id: number; status: 'SYNCED' | 'SYNCING' | 'FAILED' }> {
+    const response = await apiClient.get<{ id: number; status: 'SYNCED' | 'SYNCING' | 'FAILED' }>(
+      `/music-files/${id}/sync-status`,
+    );
+    return response.data;
+  },
 };
 
 export interface UpdateMusicMetadataDto {
