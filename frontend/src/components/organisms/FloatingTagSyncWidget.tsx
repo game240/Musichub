@@ -1,10 +1,10 @@
 import React from 'react';
-import { CheckCircle2, AlertCircle, X } from 'lucide-react';
+import { CheckCircle2, AlertCircle, X, RotateCcw } from 'lucide-react';
 import { useTagSyncStore } from '../../stores/tagSyncStore';
 import { Spinner } from '../atoms/Spinner';
 
 export const FloatingTagSyncWidget: React.FC = () => {
-  const { tasks, removeTask } = useTagSyncStore();
+  const { tasks, retrySync, removeTask } = useTagSyncStore();
 
   if (tasks.length === 0) {
     return null;
@@ -50,16 +50,31 @@ export const FloatingTagSyncWidget: React.FC = () => {
               </p>
             </div>
 
-            {/* Close button for completed or error */}
-            {!isSyncing && (
-              <button
-                type="button"
-                onClick={() => removeTask(task.id)}
-                className="flex-shrink-0 p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors cursor-pointer"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
+            {/* Action buttons */}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {isError && (
+                <button
+                  type="button"
+                  onClick={() => retrySync(task.id)}
+                  className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-red-200 hover:text-white bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 rounded-md transition-colors cursor-pointer"
+                  title="태그 재동기화 시도"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>재시도</span>
+                </button>
+              )}
+
+              {!isSyncing && (
+                <button
+                  type="button"
+                  onClick={() => removeTask(task.id)}
+                  className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors cursor-pointer"
+                  title="닫기"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
         );
       })}

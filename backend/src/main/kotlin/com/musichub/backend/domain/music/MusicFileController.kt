@@ -173,4 +173,13 @@ class MusicFileController(
         val status = musicFileService.getSyncStatus(user.id, id)
         return ResponseEntity.ok(TagSyncStatusResponse(id = id, status = status.name))
     }
+
+    @PostMapping("/{id}/resync-tags")
+    fun resyncTags(
+        @AuthenticationPrincipal user: UserPrincipal,
+        @PathVariable id: Long
+    ): ResponseEntity<TagSyncStatusResponse> {
+        val status = musicFileService.resyncTags(user.id, id)
+        return ResponseEntity.ok(TagSyncStatusResponse(id = id, status = status.name))
+    }
 }

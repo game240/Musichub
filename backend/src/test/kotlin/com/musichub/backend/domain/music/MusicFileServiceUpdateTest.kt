@@ -198,6 +198,30 @@ class MusicFileServiceUpdateTest {
     }
 
     @Test
+    fun `resyncTags marks tagSyncStatus as SYNCING and saves to database`() {
+        val user = User(id = 1L, providerId = "test", email = "test@test.com")
+        val musicFile = MusicFile(
+            id = 100L,
+            user = user,
+            storageKey = "users/1/audio/track.mp3",
+            fileName = "track.mp3",
+            fileSize = 1024L,
+            title = "Existing Title",
+            tagSyncStatus = TagSyncStatus.FAILED
+        )
+
+        given(musicFileRepository.findByIdAndUserId(100L, 1L)).willReturn(Optional.of(musicFile))
+        given(musicFileRepository.findById(100L)).willReturn(Optional.of(musicFile))
+        given(storageService.getObject("users/1/audio/track.mp3"))
+            .willReturn(ByteArrayInputStream("dummy audio content".toByteArray()))
+
+        val status = musicFileService.resyncTags(1L, 100L)
+
+        assertEquals(TagSyncStatus.SYNCING, status)
+        verify(musicFileRepository, Mockito.atLeastOnce()).save(musicFile)
+    }
+
+    @Test
     fun `updateMetadata throws NoSuchElementException when track is not found or not owned`() {
         given(musicFileRepository.findByIdAndUserId(999L, 1L)).willReturn(Optional.empty())
 

@@ -325,6 +325,34 @@ class MusicFileService(
         return musicFile.tagSyncStatus
     }
 
+    /**
+     * 실패한 R2 오디오 태그 재동기화 수동 요청
+     */
+    @Transactional
+    fun resyncTags(userId: Long, musicFileId: Long): TagSyncStatus {
+        val musicFile = musicFileRepository.findByIdAndUserId(musicFileId, userId)
+            .orElseThrow { NoSuchElementException("음악 파일을 찾을 수 없습니다.") }
+
+        val request = UpdateMusicMetadataRequest(
+            title = musicFile.title,
+            artist = musicFile.artist,
+            album = musicFile.album,
+            year = musicFile.year,
+            genre = musicFile.genre,
+            trackNumber = musicFile.trackNumber,
+            lyrics = musicFile.lyrics
+        )
+
+        musicFile.tagSyncStatus = TagSyncStatus.SYNCING
+        musicFileRepository.save(musicFile)
+
+        CompletableFuture.runAsync {
+            rewriteR2Tags(musicFileId, request)
+        }
+
+        return TagSyncStatus.SYNCING
+    }
+
     private fun validateStorageQuotas(userId: Long, incomingBytes: Long) {
         // 전체 시스템 9.5GB 초과 방지
         val totalUsed = musicFileRepository.sumTotalFileSize()

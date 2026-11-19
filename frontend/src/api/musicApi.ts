@@ -100,6 +100,15 @@ export const musicApi = {
     );
     return response.data;
   },
+
+  async resyncTags(
+    id: number,
+  ): Promise<{ id: number; status: 'SYNCED' | 'SYNCING' | 'FAILED' }> {
+    const response = await apiClient.post<{ id: number; status: 'SYNCED' | 'SYNCING' | 'FAILED' }>(
+      `/music-files/${id}/resync-tags`,
+    );
+    return response.data;
+  },
 };
 
 export interface UpdateMusicMetadataDto {
