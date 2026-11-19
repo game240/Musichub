@@ -83,4 +83,40 @@ export const musicApi = {
   async deleteMusicFile(id: number): Promise<void> {
     await apiClient.delete(`/music-files/${id}`);
   },
+
+  async updateMetadata(
+    id: number,
+    request: UpdateMusicMetadataDto,
+  ): Promise<MusicFileDto> {
+    const response = await apiClient.patch<MusicFileDto>(`/music-files/${id}`, request);
+    return response.data;
+  },
+
+  async getSyncStatus(
+    id: number,
+  ): Promise<{ id: number; status: 'SYNCED' | 'SYNCING' | 'FAILED' }> {
+    const response = await apiClient.get<{ id: number; status: 'SYNCED' | 'SYNCING' | 'FAILED' }>(
+      `/music-files/${id}/sync-status`,
+    );
+    return response.data;
+  },
+
+  async resyncTags(
+    id: number,
+  ): Promise<{ id: number; status: 'SYNCED' | 'SYNCING' | 'FAILED' }> {
+    const response = await apiClient.post<{ id: number; status: 'SYNCED' | 'SYNCING' | 'FAILED' }>(
+      `/music-files/${id}/resync-tags`,
+    );
+    return response.data;
+  },
 };
+
+export interface UpdateMusicMetadataDto {
+  title?: string;
+  artist?: string;
+  album?: string;
+  year?: number | null;
+  genre?: string;
+  trackNumber?: number | null;
+  lyrics?: string;
+}

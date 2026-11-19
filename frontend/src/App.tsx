@@ -8,6 +8,7 @@ import { LoginPage } from './components/pages/auth/LoginPage';
 import { LibraryPage } from './components/pages/library/LibraryPage';
 import { GlobalPlayer } from './components/pages/player/GlobalPlayer';
 import { QuotaIndicator } from './components/organisms/QuotaIndicator';
+import { FloatingTagSyncWidget } from './components/organisms/FloatingTagSyncWidget';
 import { TooltipProvider, Tooltip } from './components/atoms/Tooltip';
 
 const queryClient = new QueryClient({
@@ -78,9 +79,12 @@ const AppContent: React.FC = () => {
   );
 
   return (
-    <AppLayout headerRight={headerRight} bottomBar={<GlobalPlayer />}>
-      <LibraryPage />
-    </AppLayout>
+    <>
+      <AppLayout headerRight={headerRight} bottomBar={<GlobalPlayer />}>
+        <LibraryPage />
+      </AppLayout>
+      <FloatingTagSyncWidget />
+    </>
   );
 };
 

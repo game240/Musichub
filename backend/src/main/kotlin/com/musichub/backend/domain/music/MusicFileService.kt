@@ -1,6 +1,7 @@
 package com.musichub.backend.domain.music
 
 import com.musichub.backend.domain.metadata.MetadataReader
+import com.musichub.backend.domain.metadata.MetadataWriter
 import com.musichub.backend.domain.storage.StorageService
 import com.musichub.backend.domain.user.UserRepository
 import org.slf4j.LoggerFactory
@@ -13,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile
 import java.io.ByteArrayInputStream
 import java.nio.file.Files
 import java.util.*
+import java.util.concurrent.CompletableFuture
 
 data class UploadInitResult(
     val storageKey: String,
@@ -30,6 +32,7 @@ class MusicFileService(
     private val userRepository: UserRepository,
     private val storageService: StorageService,
     private val metadataReader: MetadataReader,
+    private val metadataWriter: MetadataWriter,
     @Value("\${musichub.storage.quota.system-max-bytes}") private val systemMaxBytes: Long,
     @Value("\${musichub.storage.quota.per-user-max-bytes}") private val perUserMaxBytes: Long,
 ) {
@@ -228,6 +231,126 @@ class MusicFileService(
         user.subtractStorageUsage(musicFile.fileSize)
 
         musicFileRepository.delete(musicFile)
+    }
+
+    /**
+     * 6. 음악 파일 메타데이터 수정 (DB 즉시 반영 후 R2 바이너리 태그 비동기 재작성)
+     */
+    @Transactional
+    fun updateMetadata(userId: Long, musicFileId: Long, request: UpdateMusicMetadataRequest): MusicFile {
+        val musicFile = musicFileRepository.findByIdAndUserId(musicFileId, userId)
+            .orElseThrow { NoSuchElementException("음악 파일을 찾을 수 없습니다.") }
+
+        // 1. DB 엔티티 즉시 업데이트 (사용자 UI는 10ms 만에 즉각 갱신)
+        musicFile.title = request.title?.trim()?.takeIf { it.isNotBlank() }
+        musicFile.artist = request.artist?.trim()?.takeIf { it.isNotBlank() }
+        musicFile.album = request.album?.trim()?.takeIf { it.isNotBlank() }
+        musicFile.year = request.year
+        musicFile.genre = request.genre?.trim()?.takeIf { it.isNotBlank() }
+        musicFile.trackNumber = request.trackNumber
+        musicFile.lyrics = request.lyrics?.trim()?.takeIf { it.isNotBlank() }
+        musicFile.tagSyncStatus = TagSyncStatus.SYNCING
+        musicFile.updatedAt = java.time.Instant.now()
+
+        // 2. 무거운 작업(R2 파일 다운로드 -> Jaudiotagger 태그 재작성 -> R2 재업로드)은 백그라운드 비동기로 실행
+        CompletableFuture.runAsync {
+            rewriteR2Tags(musicFileId, request)
+        }
+
+        return musicFile
+    }
+
+    /**
+     * 백그라운드 R2 오디오 파일 태그 재작성 및 재업로드
+     */
+    fun rewriteR2Tags(musicFileId: Long, request: UpdateMusicMetadataRequest) {
+        val musicFile = musicFileRepository.findById(musicFileId).orElse(null) ?: return
+        val extension = musicFile.fileName.substringAfterLast('.', "mp3")
+        val tempFile = Files.createTempFile("musichub-update-", ".$extension").toFile()
+
+        try {
+            // 1. R2에서 원본 파일 다운로드
+            storageService.getObject(musicFile.storageKey).use { input ->
+                tempFile.outputStream().use { out -> input.copyTo(out) }
+            }
+
+            // 2. Jaudiotagger로 오디오 바이너리 태그 갱신
+            metadataWriter.updateTags(
+                file = tempFile,
+                title = request.title,
+                artist = request.artist,
+                album = request.album,
+                year = request.year,
+                genre = request.genre,
+                trackNumber = request.trackNumber,
+                lyrics = request.lyrics
+            )
+
+            // 3. 변경된 파일 크기 확인 및 R2 덮어쓰기 업로드
+            val newSize = tempFile.length()
+            tempFile.inputStream().use { input ->
+                storageService.upload(musicFile.storageKey, input, newSize, musicFile.mimeType)
+            }
+
+            // 4. 유저 스토리지 사용량 델타 반영 & 상태 갱신
+            val deltaSize = newSize - musicFile.fileSize
+            if (deltaSize > 0) {
+                musicFile.user.addStorageUsage(deltaSize)
+            } else if (deltaSize < 0) {
+                musicFile.user.subtractStorageUsage(-deltaSize)
+            }
+            musicFile.fileSize = newSize
+            musicFile.tagSyncStatus = TagSyncStatus.SYNCED
+            musicFileRepository.save(musicFile)
+            logger.info("Successfully updated R2 audio tags in background for track id: {}", musicFileId)
+        } catch (e: Exception) {
+            logger.error("Failed to rewrite R2 audio tags for track id {}: {}", musicFileId, e.message, e)
+            try {
+                musicFile.tagSyncStatus = TagSyncStatus.FAILED
+                musicFileRepository.save(musicFile)
+            } catch (saveEx: Exception) {
+                logger.error("Failed to mark tagSyncStatus as FAILED for track id {}: {}", musicFileId, saveEx.message)
+            }
+        } finally {
+            if (tempFile.exists()) {
+                tempFile.delete()
+            }
+        }
+    }
+
+    @Transactional(readOnly = true)
+    fun getSyncStatus(userId: Long, musicFileId: Long): TagSyncStatus {
+        val musicFile = musicFileRepository.findByIdAndUserId(musicFileId, userId)
+            .orElseThrow { NoSuchElementException("음악 파일을 찾을 수 없습니다.") }
+        return musicFile.tagSyncStatus
+    }
+
+    /**
+     * 실패한 R2 오디오 태그 재동기화 수동 요청
+     */
+    @Transactional
+    fun resyncTags(userId: Long, musicFileId: Long): TagSyncStatus {
+        val musicFile = musicFileRepository.findByIdAndUserId(musicFileId, userId)
+            .orElseThrow { NoSuchElementException("음악 파일을 찾을 수 없습니다.") }
+
+        val request = UpdateMusicMetadataRequest(
+            title = musicFile.title,
+            artist = musicFile.artist,
+            album = musicFile.album,
+            year = musicFile.year,
+            genre = musicFile.genre,
+            trackNumber = musicFile.trackNumber,
+            lyrics = musicFile.lyrics
+        )
+
+        musicFile.tagSyncStatus = TagSyncStatus.SYNCING
+        musicFileRepository.save(musicFile)
+
+        CompletableFuture.runAsync {
+            rewriteR2Tags(musicFileId, request)
+        }
+
+        return TagSyncStatus.SYNCING
     }
 
     private fun validateStorageQuotas(userId: Long, incomingBytes: Long) {

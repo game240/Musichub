@@ -22,6 +22,21 @@ data class DirectUploadCompleteRequest(
     val fileName: String
 )
 
+data class UpdateMusicMetadataRequest(
+    val title: String? = null,
+    val artist: String? = null,
+    val album: String? = null,
+    val year: Int? = null,
+    val genre: String? = null,
+    val trackNumber: Int? = null,
+    val lyrics: String? = null
+)
+
+data class TagSyncStatusResponse(
+    val id: Long,
+    val status: String
+)
+
 data class MusicFileDto(
     val id: Long,
     val fileName: String,
@@ -37,6 +52,7 @@ data class MusicFileDto(
     val lyrics: String?,
     val playCount: Int,
     val lastPlayedAt: Instant?,
+    val tagSyncStatus: String,
     val createdAt: Instant
 ) {
     companion object {
@@ -55,6 +71,7 @@ data class MusicFileDto(
             lyrics = entity.lyrics,
             playCount = entity.playCount,
             lastPlayedAt = entity.lastPlayedAt,
+            tagSyncStatus = entity.tagSyncStatus.name,
             createdAt = entity.createdAt
         )
     }
@@ -136,5 +153,33 @@ class MusicFileController(
     ): ResponseEntity<Void> {
         musicFileService.deleteMusicFile(user.id, id)
         return ResponseEntity.noContent().build()
+    }
+
+    @PatchMapping("/{id}")
+    fun updateMetadata(
+        @AuthenticationPrincipal user: UserPrincipal,
+        @PathVariable id: Long,
+        @RequestBody request: UpdateMusicMetadataRequest
+    ): ResponseEntity<MusicFileDto> {
+        val updated = musicFileService.updateMetadata(user.id, id, request)
+        return ResponseEntity.ok(MusicFileDto.from(updated))
+    }
+
+    @GetMapping("/{id}/sync-status")
+    fun getSyncStatus(
+        @AuthenticationPrincipal user: UserPrincipal,
+        @PathVariable id: Long
+    ): ResponseEntity<TagSyncStatusResponse> {
+        val status = musicFileService.getSyncStatus(user.id, id)
+        return ResponseEntity.ok(TagSyncStatusResponse(id = id, status = status.name))
+    }
+
+    @PostMapping("/{id}/resync-tags")
+    fun resyncTags(
+        @AuthenticationPrincipal user: UserPrincipal,
+        @PathVariable id: Long
+    ): ResponseEntity<TagSyncStatusResponse> {
+        val status = musicFileService.resyncTags(user.id, id)
+        return ResponseEntity.ok(TagSyncStatusResponse(id = id, status = status.name))
     }
 }
