@@ -5,6 +5,7 @@ import { TrackArtwork } from './TrackArtwork';
 import { formatDurationMs } from '../../../../utils/formatTime';
 import { formatBytes } from '../../../../utils/formatBytes';
 import { Tooltip } from '../../../atoms/Tooltip';
+import { cn } from '../../../../utils/cn';
 
 export interface TrackRowProps {
   track: MusicFileDto;
@@ -30,9 +31,10 @@ export const TrackRow: React.FC<TrackRowProps> = ({
       onDoubleClick={() => {
         onPlay(track);
       }}
-      className={`group border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors duration-150 select-none ${
-        isCurrent ? 'bg-[#5e6ad2]/10' : ''
-      }`}
+      className={cn(
+        'group border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors duration-150 select-none',
+        isCurrent && 'bg-[#5e6ad2]/10'
+      )}
     >
       {/* Index & Play button */}
       <td className="w-14 py-2.5 px-3 text-center relative">
@@ -49,9 +51,10 @@ export const TrackRow: React.FC<TrackRowProps> = ({
               </div>
             ) : (
               <span
-                className={`text-xs ${
+                className={cn(
+                  'text-xs',
                   isCurrent ? 'text-[#8590ea] font-semibold' : 'text-neutral-500'
-                }`}
+                )}
               >
                 {index + 1}
               </span>
@@ -85,9 +88,10 @@ export const TrackRow: React.FC<TrackRowProps> = ({
           />
           <div className="min-w-0 max-w-xs md:max-w-md">
             <p
-              className={`text-sm font-medium truncate ${
+              className={cn(
+                'text-sm font-medium truncate',
                 isCurrent ? 'text-[#8590ea] font-semibold' : 'text-neutral-100'
-              }`}
+              )}
             >
               {track.title || track.fileName}
             </p>
