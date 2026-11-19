@@ -42,6 +42,7 @@ export const LoginPage: React.FC = () => {
         displayName: '로컬 개발자',
         profileImageUrl: null,
         storageUsedBytes: 0,
+        volume: 100,
       },
       'dev-access-token-local',
     );

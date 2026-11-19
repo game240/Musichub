@@ -43,12 +43,21 @@ class User(
     @Column(name = "storage_used_bytes", nullable = false)
     var storageUsedBytes: Long = 0,
 
+    @Column(name = "volume", nullable = false)
+    var volume: Int = 100,
+
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant = Instant.now(),
 
     @Column(name = "updated_at", nullable = false)
     var updatedAt: Instant = Instant.now()
 ) {
+    fun updateVolume(volume: Int) {
+        require(volume in 0..100) { "Volume must be between 0 and 100" }
+        this.volume = volume
+        this.updatedAt = Instant.now()
+    }
+
     fun addStorageUsage(bytes: Long) {
         this.storageUsedBytes += bytes
         this.updatedAt = Instant.now()
