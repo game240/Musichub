@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { UserDto } from '../types/auth';
 import { setAccessToken, registerLogoutHandler } from '../api/client';
 import { authApi } from '../api/authApi';
+import { usePlayerStore } from './playerStore';
 
 interface AuthState {
   user: UserDto | null;
@@ -28,6 +29,9 @@ export const useAuthStore = create<AuthState>((set, get) => {
     setAuth: (user: UserDto, token: string) => {
       setAccessToken(token);
       set({ user, isAuthenticated: true, isLoading: false });
+      if (typeof user.volume === 'number') {
+        usePlayerStore.getState().initVolumeFromUser(user.volume);
+      }
     },
 
     updateStorageUsage: (deltaBytes: number) => {
@@ -53,6 +57,9 @@ export const useAuthStore = create<AuthState>((set, get) => {
         const response = await authApi.refresh();
         setAccessToken(response.accessToken);
         set({ user: response.user, isAuthenticated: true, isLoading: false });
+        if (typeof response.user.volume === 'number') {
+          usePlayerStore.getState().initVolumeFromUser(response.user.volume);
+        }
         return true;
       } catch {
         setAccessToken(null);

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { MusicFileDto } from '../types/music';
 import { musicApi } from '../api/musicApi';
+import { userApi } from '../api/userApi';
 
 export type RepeatMode = 'OFF' | 'ALL' | 'ONE';
 
@@ -25,6 +26,7 @@ interface PlayerState {
   resume: () => void;
   seekTo: (timeInSeconds: number) => void;
   setVolume: (volume: number) => void;
+  initVolumeFromUser: (volumePercent: number) => void;
   toggleMute: () => void;
   toggleRepeat: () => void;
   toggleShuffle: () => void;
@@ -35,9 +37,28 @@ interface PlayerState {
   clearQueue: () => void;
 }
 
+const INITIAL_VOLUME_KEY = 'musichub_volume';
+const loadSavedVolume = (): number => {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem(INITIAL_VOLUME_KEY);
+    if (saved !== null) {
+      const parsed = parseFloat(saved);
+      if (!isNaN(parsed) && parsed >= 0 && parsed <= 1) {
+        return parsed;
+      }
+    }
+  }
+  return 1;
+};
+
+let volumeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
 // Native HTML5 Audio singleton
+const initialVolume = loadSavedVolume();
 const audioElement = new Audio();
 audioElement.preload = 'metadata';
+audioElement.volume = initialVolume;
+audioElement.muted = initialVolume === 0;
 
 export const usePlayerStore = create<PlayerState>((set, get) => {
   // Setup audio event listeners
@@ -84,8 +105,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     isLoading: false,
     currentTime: 0,
     duration: 0,
-    volume: 1,
-    isMuted: false,
+    volume: initialVolume,
+    isMuted: initialVolume === 0,
     repeatMode: 'OFF',
     isShuffle: false,
 
@@ -176,6 +197,34 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       audioElement.volume = safeVol;
       audioElement.muted = safeVol === 0;
       set({ volume: safeVol, isMuted: safeVol === 0 });
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(INITIAL_VOLUME_KEY, safeVol.toString());
+      }
+
+      // 5초(5000ms) 디바운스로 서버에 동기화
+      if (volumeDebounceTimer) {
+        clearTimeout(volumeDebounceTimer);
+      }
+      volumeDebounceTimer = setTimeout(() => {
+        if (userApi.isLoggedIn()) {
+          const volumePercent = Math.round(safeVol * 100);
+          userApi.updateVolume(volumePercent).catch((err) => {
+            console.error('Failed to sync volume to server:', err);
+          });
+        }
+      }, 5000);
+    },
+
+    initVolumeFromUser: (volumePercent: number) => {
+      const safeVol = Math.max(0, Math.min(100, volumePercent)) / 100;
+      audioElement.volume = safeVol;
+      audioElement.muted = safeVol === 0;
+      set({ volume: safeVol, isMuted: safeVol === 0 });
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(INITIAL_VOLUME_KEY, safeVol.toString());
+      }
     },
 
     toggleMute: () => {

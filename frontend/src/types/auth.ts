@@ -4,6 +4,7 @@ export interface UserDto {
   displayName: string | null;
   profileImageUrl: string | null;
   storageUsedBytes: number;
+  volume: number;
 }
 
 export interface AuthResponse {
