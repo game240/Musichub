@@ -11,6 +11,12 @@ enum class MusicFileStatus {
     DELETED
 }
 
+enum class TagSyncStatus {
+    SYNCED,
+    SYNCING,
+    FAILED
+}
+
 @Entity
 @Table(name = "music_file")
 class MusicFile(
@@ -75,6 +81,10 @@ class MusicFile(
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     var status: MusicFileStatus = MusicFileStatus.ACTIVE,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tag_sync_status", nullable = false, length = 32)
+    var tagSyncStatus: TagSyncStatus = TagSyncStatus.SYNCED,
 
     @Column(name = "extracted_by_platform", nullable = false)
     var extractedByPlatform: Boolean = false,

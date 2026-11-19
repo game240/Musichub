@@ -13,6 +13,7 @@ export interface MusicFileDto {
   lyrics?: string | null;
   playCount?: number;
   lastPlayedAt?: string | null;
+  tagSyncStatus?: 'SYNCED' | 'SYNCING' | 'FAILED';
   createdAt: string;
 }
 

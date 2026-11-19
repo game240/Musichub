@@ -10,15 +10,17 @@ import { Button } from '../../atoms/Button';
 import { Tooltip } from '../../atoms/Tooltip';
 import { TrackTable } from './track/TrackTable';
 import { UploadModal } from './upload/UploadModal';
+import { EditMetadataModal } from './track/EditMetadataModal';
 import { ConfirmDialog } from '../../organisms/ConfirmDialog';
 
 export const LibraryPage: React.FC = () => {
   const queryClient = useQueryClient();
-  const { currentTrack, isPlaying, playTrack, addToQueue } = usePlayerStore();
+  const { currentTrack, isPlaying, playTrack, addToQueue, updateTrackInfo } = usePlayerStore();
   const { updateStorageUsage } = useAuthStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [editingTrack, setEditingTrack] = useState<MusicFileDto | null>(null);
   const [trackToDelete, setTrackToDelete] = useState<MusicFileDto | null>(null);
 
   // Fetch track list
@@ -70,6 +72,11 @@ export const LibraryPage: React.FC = () => {
 
   const handleUploadSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ['music-files'] });
+  };
+
+  const handleEditSuccess = (updatedTrack: MusicFileDto) => {
+    queryClient.invalidateQueries({ queryKey: ['music-files'] });
+    updateTrackInfo(updatedTrack);
   };
 
   const handleDeleteConfirm = () => {
@@ -134,6 +141,7 @@ export const LibraryPage: React.FC = () => {
           isPlaying={isPlaying}
           onPlay={handlePlay}
           onAddToQueue={addToQueue}
+          onEdit={setEditingTrack}
           onDelete={setTrackToDelete}
           onUploadClick={() => {
             setIsUploadModalOpen(true);
@@ -149,6 +157,16 @@ export const LibraryPage: React.FC = () => {
           setIsUploadModalOpen(false);
         }}
         onSuccess={handleUploadSuccess}
+      />
+
+      {/* Edit Metadata Modal */}
+      <EditMetadataModal
+        isOpen={editingTrack !== null}
+        onClose={() => {
+          setEditingTrack(null);
+        }}
+        track={editingTrack}
+        onSuccess={handleEditSuccess}
       />
 
       {/* Delete Confirmation Dialog */}
