@@ -8,6 +8,7 @@ export interface VolumeSliderProps {
   isMuted: boolean;
   onVolumeChange: (volume: number) => void;
   onToggleMute: () => void;
+  showPercentage?: boolean;
   className?: string;
 }
 
@@ -16,9 +17,11 @@ export const VolumeSlider: React.FC<VolumeSliderProps> = ({
   isMuted,
   onVolumeChange,
   onToggleMute,
+  showPercentage = true,
   className = '',
 }) => {
   const effectiveVolume = isMuted ? 0 : volume;
+  const percentage = Math.round(effectiveVolume * 100);
 
   const renderIcon = () => {
     if (effectiveVolume === 0) {
@@ -52,6 +55,11 @@ export const VolumeSlider: React.FC<VolumeSliderProps> = ({
           }}
         />
       </div>
+      {showPercentage && (
+        <span className="w-9 text-[11px] font-medium tabular-nums text-neutral-400 text-right select-none">
+          {percentage}%
+        </span>
+      )}
     </div>
   );
 };
