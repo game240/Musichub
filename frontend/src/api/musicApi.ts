@@ -83,4 +83,22 @@ export const musicApi = {
   async deleteMusicFile(id: number): Promise<void> {
     await apiClient.delete(`/music-files/${id}`);
   },
+
+  async updateMetadata(
+    id: number,
+    request: UpdateMusicMetadataDto,
+  ): Promise<MusicFileDto> {
+    const response = await apiClient.patch<MusicFileDto>(`/music-files/${id}`, request);
+    return response.data;
+  },
 };
+
+export interface UpdateMusicMetadataDto {
+  title?: string;
+  artist?: string;
+  album?: string;
+  year?: number | null;
+  genre?: string;
+  trackNumber?: number | null;
+  lyrics?: string;
+}

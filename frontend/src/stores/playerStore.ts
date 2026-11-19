@@ -35,6 +35,7 @@ interface PlayerState {
   addToQueue: (track: MusicFileDto) => void;
   removeFromQueue: (index: number) => void;
   clearQueue: () => void;
+  updateTrackInfo: (track: MusicFileDto) => void;
 }
 
 const INITIAL_VOLUME_KEY = 'musichub_volume';
@@ -319,6 +320,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 
     clearQueue: () => {
       set({ queue: [], queueIndex: -1 });
+    },
+
+    updateTrackInfo: (track: MusicFileDto) => {
+      const { currentTrack, queue } = get();
+      const updatedQueue = queue.map((t) => (t.id === track.id ? { ...t, ...track } : t));
+      const updatedCurrent =
+        currentTrack?.id === track.id ? { ...currentTrack, ...track } : currentTrack;
+      set({ queue: updatedQueue, currentTrack: updatedCurrent });
     },
   };
 });

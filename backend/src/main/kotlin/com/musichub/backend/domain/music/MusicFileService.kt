@@ -1,6 +1,7 @@
 package com.musichub.backend.domain.music
 
 import com.musichub.backend.domain.metadata.MetadataReader
+import com.musichub.backend.domain.metadata.MetadataWriter
 import com.musichub.backend.domain.storage.StorageService
 import com.musichub.backend.domain.user.UserRepository
 import org.slf4j.LoggerFactory
@@ -30,6 +31,7 @@ class MusicFileService(
     private val userRepository: UserRepository,
     private val storageService: StorageService,
     private val metadataReader: MetadataReader,
+    private val metadataWriter: MetadataWriter,
     @Value("\${musichub.storage.quota.system-max-bytes}") private val systemMaxBytes: Long,
     @Value("\${musichub.storage.quota.per-user-max-bytes}") private val perUserMaxBytes: Long,
 ) {
@@ -228,6 +230,68 @@ class MusicFileService(
         user.subtractStorageUsage(musicFile.fileSize)
 
         musicFileRepository.delete(musicFile)
+    }
+
+    /**
+     * 6. 음악 파일 메타데이터 수정 (R2 바이너리 태그 재작성 + DB 업데이트)
+     */
+    @Transactional
+    fun updateMetadata(userId: Long, musicFileId: Long, request: UpdateMusicMetadataRequest): MusicFile {
+        val musicFile = musicFileRepository.findByIdAndUserId(musicFileId, userId)
+            .orElseThrow { NoSuchElementException("음악 파일을 찾을 수 없습니다.") }
+
+        val extension = musicFile.fileName.substringAfterLast('.', "mp3")
+        val tempFile = Files.createTempFile("musichub-update-", ".$extension").toFile()
+
+        try {
+            // 1. R2에서 원본 파일 다운로드
+            storageService.getObject(musicFile.storageKey).use { input ->
+                tempFile.outputStream().use { out -> input.copyTo(out) }
+            }
+
+            // 2. Jaudiotagger로 오디오 바이너리 태그 갱신
+            metadataWriter.updateTags(
+                file = tempFile,
+                title = request.title,
+                artist = request.artist,
+                album = request.album,
+                year = request.year,
+                genre = request.genre,
+                trackNumber = request.trackNumber,
+                lyrics = request.lyrics
+            )
+
+            // 3. 변경된 파일 크기 확인 및 R2 덮어쓰기 업로드
+            val newSize = tempFile.length()
+            tempFile.inputStream().use { input ->
+                storageService.upload(musicFile.storageKey, input, newSize, musicFile.mimeType)
+            }
+
+            // 4. 유저 스토리지 사용량 델타 반영
+            val deltaSize = newSize - musicFile.fileSize
+            if (deltaSize > 0) {
+                musicFile.user.addStorageUsage(deltaSize)
+            } else if (deltaSize < 0) {
+                musicFile.user.subtractStorageUsage(-deltaSize)
+            }
+
+            // 5. DB 엔티티 업데이트
+            musicFile.title = request.title?.trim()?.takeIf { it.isNotBlank() }
+            musicFile.artist = request.artist?.trim()?.takeIf { it.isNotBlank() }
+            musicFile.album = request.album?.trim()?.takeIf { it.isNotBlank() }
+            musicFile.year = request.year
+            musicFile.genre = request.genre?.trim()?.takeIf { it.isNotBlank() }
+            musicFile.trackNumber = request.trackNumber
+            musicFile.lyrics = request.lyrics?.trim()?.takeIf { it.isNotBlank() }
+            musicFile.fileSize = newSize
+            musicFile.updatedAt = java.time.Instant.now()
+
+            return musicFile
+        } finally {
+            if (tempFile.exists()) {
+                tempFile.delete()
+            }
+        }
     }
 
     private fun validateStorageQuotas(userId: Long, incomingBytes: Long) {

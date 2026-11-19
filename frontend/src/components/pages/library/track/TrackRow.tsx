@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, Trash2, ListPlus } from 'lucide-react';
+import { Play, Pause, Trash2, ListPlus, Pencil } from 'lucide-react';
 import type { MusicFileDto } from '../../../../types/music';
 import { TrackArtwork } from './TrackArtwork';
 import { formatDurationMs } from '../../../../utils/formatTime';
@@ -14,6 +14,7 @@ export interface TrackRowProps {
   isPlaying: boolean;
   onPlay: (track: MusicFileDto) => void;
   onAddToQueue: (track: MusicFileDto) => void;
+  onEdit: (track: MusicFileDto) => void;
   onDelete: (track: MusicFileDto) => void;
 }
 
@@ -24,6 +25,7 @@ export const TrackRow: React.FC<TrackRowProps> = ({
   isPlaying,
   onPlay,
   onAddToQueue,
+  onEdit,
   onDelete,
 }) => {
   return (
@@ -120,7 +122,7 @@ export const TrackRow: React.FC<TrackRowProps> = ({
       </td>
 
       {/* Actions */}
-      <td className="w-24 py-2.5 px-4 text-right">
+      <td className="w-28 py-2.5 px-4 text-right">
         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <Tooltip content="재생목록에 추가" side="top">
             <button
@@ -131,6 +133,17 @@ export const TrackRow: React.FC<TrackRowProps> = ({
               className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"
             >
               <ListPlus className="w-4 h-4" />
+            </button>
+          </Tooltip>
+          <Tooltip content="정보 수정" side="top">
+            <button
+              type="button"
+              onClick={() => {
+                onEdit(track);
+              }}
+              className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"
+            >
+              <Pencil className="w-4 h-4" />
             </button>
           </Tooltip>
           <Tooltip content="음원 삭제" side="top">

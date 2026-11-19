@@ -22,6 +22,16 @@ data class DirectUploadCompleteRequest(
     val fileName: String
 )
 
+data class UpdateMusicMetadataRequest(
+    val title: String? = null,
+    val artist: String? = null,
+    val album: String? = null,
+    val year: Int? = null,
+    val genre: String? = null,
+    val trackNumber: Int? = null,
+    val lyrics: String? = null
+)
+
 data class MusicFileDto(
     val id: Long,
     val fileName: String,
@@ -136,5 +146,15 @@ class MusicFileController(
     ): ResponseEntity<Void> {
         musicFileService.deleteMusicFile(user.id, id)
         return ResponseEntity.noContent().build()
+    }
+
+    @PatchMapping("/{id}")
+    fun updateMetadata(
+        @AuthenticationPrincipal user: UserPrincipal,
+        @PathVariable id: Long,
+        @RequestBody request: UpdateMusicMetadataRequest
+    ): ResponseEntity<MusicFileDto> {
+        val updated = musicFileService.updateMetadata(user.id, id, request)
+        return ResponseEntity.ok(MusicFileDto.from(updated))
     }
 }
