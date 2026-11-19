@@ -95,8 +95,8 @@ jobs:
             R2_SECRET_KEY=${{ secrets.R2_SECRET_KEY }}
             JWT_SECRET=${{ secrets.JWT_SECRET }}
             GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
-            CORS_ALLOWED_ORIGINS=http://${{ secrets.GCP_HOST }},http://localhost
-            COOKIE_SECURE=false
+            CORS_ALLOWED_ORIGINS=https://musichubdev.duckdns.org,http://localhost
+            COOKIE_SECURE=true
             EOF
 
             # GHCR 로그인 (비공개 패키지 대비)
