@@ -1,0 +1,60 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: musichub-backend
+  config:
+    import:
+      - "optional:classpath:application-secret.yml"
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/musichub}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+musichub:
+  storage:
+    r2:
+      endpoint: ${R2_ENDPOINT:https://d8c2506a033faf855121461b74bcb67f.r2.cloudflarestorage.com}
+      bucket: ${R2_BUCKET:music}
+      access-key: ${R2_ACCESS_KEY:dummy_access_key}
+      secret-key: ${R2_SECRET_KEY:dummy_secret_key}
+    quota:
+      system-max-bytes: 10200547328 # 9.5 GB
+      per-user-max-bytes: 2147483648 # 2.0 GB
+
+  auth:
+    cookie-secure: ${COOKIE_SECURE:false}
+    jwt:
+      secret: ${JWT_SECRET:dGhpc2lzYXZlcnlsb25nc2VjcmV0a2V5Zm9ybXVzaWNodWJqd3RhdXRoZW50aWNhdGlvbjEyMzQ1Njc4OTA=}
+      access-token-validity-ms: 900000 # 15 minutes
+      refresh-token-validity-ms: 604800000 # 7 days
+    google:
+      client-id: ${GOOGLE_CLIENT_ID:your-google-client-id.apps.googleusercontent.com}
+
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+
+logging:
+  level:
+    com.musichub: DEBUG
+    org.springframework.security: INFO
