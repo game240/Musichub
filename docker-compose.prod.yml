@@ -1,0 +1,58 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: musichub-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-musichub}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - musichub-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-musichub}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/musichub-backend:latest
+    container_name: musichub-backend
+    restart: always
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-musichub}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      R2_ENDPOINT: ${R2_ENDPOINT:-https://d8c2506a033faf855121461b74bcb67f.r2.cloudflarestorage.com}
+      R2_BUCKET: ${R2_BUCKET:-music}
+      R2_ACCESS_KEY: ${R2_ACCESS_KEY}
+      R2_SECRET_KEY: ${R2_SECRET_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-778015652430-f0hntsiqdgrrj4a5o9htf5o03hjgiqpi.apps.googleusercontent.com}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:80}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - musichub-network
+
+  frontend:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/musichub-frontend:latest
+    container_name: musichub-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - musichub-network
+
+volumes:
+  postgres_data:
+
+networks:
+  musichub-network:
+    driver: bridge

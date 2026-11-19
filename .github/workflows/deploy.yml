@@ -1,0 +1,112 @@
+name: CI/CD Pipeline to GCP
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: # GitHub UI에서 수동 배포 버튼 지원
+
+jobs:
+  build-and-push:
+    name: Build & Push Images to GHCR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      repo_owner: ${{ steps.set_owner.outputs.owner }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set lowercase repository owner
+        id: set_owner
+        run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Backend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: ghcr.io/${{ steps.set_owner.outputs.owner }}/musichub-backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Frontend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ghcr.io/${{ steps.set_owner.outputs.owner }}/musichub-frontend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to GCP VM via SSH
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Copy docker-compose.prod.yml to VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.GCP_HOST }}
+          username: ${{ secrets.GCP_USERNAME }}
+          key: ${{ secrets.GCP_SSH_KEY }}
+          source: "docker-compose.prod.yml"
+          target: "~/musichub"
+
+      - name: Execute deployment commands via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          host: ${{ secrets.GCP_HOST }}
+          username: ${{ secrets.GCP_USERNAME }}
+          key: ${{ secrets.GCP_SSH_KEY }}
+          envs: GITHUB_TOKEN
+          script: |
+            mkdir -p ~/musichub
+            cd ~/musichub
+
+            # .env 파일 생성 및 환경변수 주입
+            cat << 'EOF' > .env
+            GITHUB_REPOSITORY_OWNER=${{ needs.build-and-push.outputs.repo_owner }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            R2_ACCESS_KEY=${{ secrets.R2_ACCESS_KEY }}
+            R2_SECRET_KEY=${{ secrets.R2_SECRET_KEY }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            CORS_ALLOWED_ORIGINS=http://${{ secrets.GCP_HOST }},http://localhost
+            COOKIE_SECURE=false
+            EOF
+
+            # GHCR 로그인 (비공개 패키지 대비)
+            if [ -n "${{ secrets.GHCR_PAT }}" ]; then
+              echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            elif [ -n "$GITHUB_TOKEN" ]; then
+              echo "$GITHUB_TOKEN" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            fi
+
+            # 최신 컨테이너 배포 및 구버전 정리
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker image prune -af
