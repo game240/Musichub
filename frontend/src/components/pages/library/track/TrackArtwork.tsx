@@ -44,7 +44,7 @@ export const TrackArtwork: React.FC<TrackArtworkProps> = ({
 
   const sizeClasses = {
     sm: 'w-8 h-8 rounded-md',
-    md: 'w-11 h-11 rounded-lg',
+    md: 'w-10 h-10 rounded-lg',
     lg: 'w-14 h-14 rounded-xl',
   };
 
@@ -57,7 +57,7 @@ export const TrackArtwork: React.FC<TrackArtworkProps> = ({
   if (!hasArtwork || isError || !artworkUrl) {
     return (
       <div
-        className={`bg-slate-800 flex items-center justify-center text-slate-500 shrink-0 border border-slate-700/60 shadow-inner ${sizeClasses[size]} ${className}`}
+        className={`bg-white/[0.04] flex items-center justify-center text-neutral-500 shrink-0 border border-white/[0.08] ${sizeClasses[size]} ${className}`}
       >
         <Music2 className={iconSizes[size]} />
       </div>
@@ -67,11 +67,11 @@ export const TrackArtwork: React.FC<TrackArtworkProps> = ({
   return (
     <img
       src={artworkUrl}
-      alt={title || 'Track Artwork'}
+      alt={title || '앨범 커버'}
       onError={() => {
         setIsError(true);
       }}
-      className={`object-cover shrink-0 border border-slate-700/60 shadow-md ${sizeClasses[size]} ${className}`}
+      className={`object-cover shrink-0 border border-white/[0.08] shadow-md ${sizeClasses[size]} ${className}`}
     />
   );
 };

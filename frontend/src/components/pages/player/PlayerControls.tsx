@@ -1,6 +1,7 @@
 import React from 'react';
 import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Repeat1 } from 'lucide-react';
 import type { RepeatMode } from '../../../stores/playerStore';
+import { Tooltip } from '../../atoms/Tooltip';
 
 export interface PlayerControlsProps {
   isPlaying: boolean;
@@ -27,76 +28,86 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
 }) => {
   const renderRepeatIcon = () => {
     if (repeatMode === 'ONE') {
-      return <Repeat1 className="w-4 h-4 text-indigo-400" />;
+      return <Repeat1 className="w-4 h-4 text-[#8590ea]" />;
     }
     if (repeatMode === 'ALL') {
-      return <Repeat className="w-4 h-4 text-indigo-400" />;
+      return <Repeat className="w-4 h-4 text-[#8590ea]" />;
     }
-    return <Repeat className="w-4 h-4 text-slate-400" />;
+    return <Repeat className="w-4 h-4 text-neutral-400" />;
   };
 
+  const repeatTooltip =
+    repeatMode === 'ONE' ? '한 곡 반복' : repeatMode === 'ALL' ? '전체 반복' : '반복 끄기';
+
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2">
       {/* Shuffle */}
-      <button
-        type="button"
-        title="Shuffle"
-        onClick={onToggleShuffle}
-        className={`p-2 rounded-lg transition-colors ${
-          isShuffle
-            ? 'text-indigo-400 bg-indigo-950/40'
-            : 'text-slate-400 hover:text-white hover:bg-slate-800'
-        }`}
-      >
-        <Shuffle className="w-4 h-4" />
-      </button>
+      <Tooltip content={isShuffle ? '셔플 끄기' : '셔플 켜기'} side="top">
+        <button
+          type="button"
+          onClick={onToggleShuffle}
+          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+            isShuffle
+              ? 'text-[#8590ea] bg-[#5e6ad2]/15 border border-[#5e6ad2]/30'
+              : 'text-neutral-400 hover:text-white hover:bg-white/[0.05]'
+          }`}
+        >
+          <Shuffle className="w-4 h-4" />
+        </button>
+      </Tooltip>
 
       {/* Prev */}
-      <button
-        type="button"
-        title="Previous"
-        onClick={onPlayPrev}
-        className="p-2 text-slate-300 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
-      >
-        <SkipBack className="w-5 h-5 fill-current" />
-      </button>
+      <Tooltip content="이전 곡" side="top">
+        <button
+          type="button"
+          onClick={onPlayPrev}
+          className="p-1.5 text-neutral-300 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors cursor-pointer"
+        >
+          <SkipBack className="w-4 h-4 fill-current" />
+        </button>
+      </Tooltip>
 
       {/* Play / Pause */}
-      <button
-        type="button"
-        title={isPlaying ? 'Pause' : 'Play'}
-        onClick={onTogglePlay}
-        disabled={isLoading}
-        className="p-3 bg-white hover:bg-slate-200 text-slate-900 rounded-full transition-transform hover:scale-105 active:scale-95 shadow-lg shadow-white/10 disabled:opacity-50"
-      >
-        {isPlaying ? (
-          <Pause className="w-5 h-5 fill-current" />
-        ) : (
-          <Play className="w-5 h-5 fill-current ml-0.5" />
-        )}
-      </button>
+      <Tooltip content={isPlaying ? '일시정지 (Space)' : '재생 (Space)'} side="top">
+        <button
+          type="button"
+          onClick={onTogglePlay}
+          disabled={isLoading}
+          className="p-2.5 bg-white hover:bg-neutral-200 text-black rounded-full transition-transform hover:scale-105 active:scale-95 shadow-md shadow-white/10 disabled:opacity-50 cursor-pointer"
+        >
+          {isPlaying ? (
+            <Pause className="w-4 h-4 fill-current" />
+          ) : (
+            <Play className="w-4 h-4 fill-current ml-0.5" />
+          )}
+        </button>
+      </Tooltip>
 
       {/* Next */}
-      <button
-        type="button"
-        title="Next"
-        onClick={onPlayNext}
-        className="p-2 text-slate-300 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
-      >
-        <SkipForward className="w-5 h-5 fill-current" />
-      </button>
+      <Tooltip content="다음 곡" side="top">
+        <button
+          type="button"
+          onClick={onPlayNext}
+          className="p-1.5 text-neutral-300 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors cursor-pointer"
+        >
+          <SkipForward className="w-4 h-4 fill-current" />
+        </button>
+      </Tooltip>
 
       {/* Repeat */}
-      <button
-        type="button"
-        title={`Repeat: ${repeatMode}`}
-        onClick={onToggleRepeat}
-        className={`p-2 rounded-lg transition-colors ${
-          repeatMode !== 'OFF' ? 'bg-indigo-950/40' : 'hover:text-white hover:bg-slate-800'
-        }`}
-      >
-        {renderRepeatIcon()}
-      </button>
+      <Tooltip content={`반복: ${repeatTooltip}`} side="top">
+        <button
+          type="button"
+          onClick={onToggleRepeat}
+          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+            repeatMode !== 'OFF'
+              ? 'bg-[#5e6ad2]/15 border border-[#5e6ad2]/30'
+              : 'hover:text-white hover:bg-white/[0.05]'
+          }`}
+        >
+          {renderRepeatIcon()}
+        </button>
+      </Tooltip>
     </div>
   );
 };

@@ -16,21 +16,21 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   const safeProgress = Math.max(0, Math.min(100, progress));
 
   const colorClasses = {
-    indigo: 'bg-indigo-500',
-    emerald: 'bg-emerald-500',
-    amber: 'bg-amber-500',
-    rose: 'bg-rose-500',
+    indigo: 'bg-[#5e6ad2]',
+    emerald: 'bg-[#27a672]',
+    amber: 'bg-[#f2994a]',
+    rose: 'bg-[#eb5757]',
   };
 
   return (
     <div className={`w-full ${className}`}>
       {showLabel ? (
-        <div className="flex justify-between text-xs text-slate-400 mb-1">
-          <span>Progress</span>
+        <div className="flex justify-between text-xs text-neutral-400 mb-1">
+          <span>진행률</span>
           <span>{Math.round(safeProgress)}%</span>
         </div>
       ) : null}
-      <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+      <div className="w-full h-1.5 bg-white/[0.08] rounded-full overflow-hidden">
         <div
           className={`h-full transition-all duration-300 ease-out rounded-full ${colorClasses[color]}`}
           style={{ width: `${safeProgress}%` }}

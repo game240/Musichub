@@ -16,8 +16,8 @@ export const PlayerSeekBar: React.FC<PlayerSeekBarProps> = ({
   className = '',
 }) => {
   return (
-    <div className={`flex items-center gap-3 w-full ${className}`}>
-      <span className="text-xs font-mono text-slate-400 w-10 text-right select-none">
+    <div className={`flex items-center gap-2.5 w-full ${className}`}>
+      <span className="text-[11px] text-neutral-400 w-9 text-right select-none">
         {formatSeconds(currentTime)}
       </span>
       <Slider
@@ -28,7 +28,7 @@ export const PlayerSeekBar: React.FC<PlayerSeekBarProps> = ({
         onChange={onSeek}
         disabled={duration === 0}
       />
-      <span className="text-xs font-mono text-slate-400 w-10 select-none">
+      <span className="text-[11px] text-neutral-400 w-9 select-none">
         {formatSeconds(duration)}
       </span>
     </div>

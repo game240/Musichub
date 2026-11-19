@@ -62,10 +62,10 @@ export const Dropzone: React.FC<DropzoneProps> = ({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200 ${
+      className={`flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200 select-none ${
         isDragOver
-          ? 'border-indigo-500 bg-indigo-950/20'
-          : 'border-slate-700 bg-slate-800/40 hover:border-slate-500 hover:bg-slate-800/70'
+          ? 'border-[#5e6ad2] bg-[#5e6ad2]/10'
+          : 'border-white/[0.1] bg-white/[0.02] hover:border-white/[0.2] hover:bg-white/[0.04]'
       } ${className}`}
     >
       <input
@@ -76,13 +76,13 @@ export const Dropzone: React.FC<DropzoneProps> = ({
         onChange={handleFileInputChange}
         className="hidden"
       />
-      <div className="p-3 bg-indigo-600/10 rounded-full mb-3 text-indigo-400">
-        <UploadCloud className="w-8 h-8" />
+      <div className="p-3 bg-[#5e6ad2]/10 border border-[#5e6ad2]/20 rounded-full mb-3 text-[#5e6ad2]">
+        <UploadCloud className="w-7 h-7" />
       </div>
-      <p className="text-sm font-medium text-slate-200 mb-1">
-        Click to browse or drag & drop audio files
+      <p className="text-sm font-medium text-neutral-200 mb-1">
+        오디오 파일을 여기에 끌어다 놓거나 클릭하여 선택하세요
       </p>
-      <p className="text-xs text-slate-400">Supports MP3, FLAC, M4A, WAV up to 50MB</p>
+      <p className="text-xs text-neutral-500">MP3, FLAC, M4A, WAV, AAC, OGG 지원 (최대 50MB)</p>
     </div>
   );
 };

@@ -79,7 +79,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
         return true;
       } catch (fallbackErr: unknown) {
         const errorMsg =
-          fallbackErr instanceof Error ? fallbackErr.message : 'Upload failed. Quota exceeded?';
+          fallbackErr instanceof Error ? fallbackErr.message : '업로드에 실패했습니다.';
         updateItem(item.id, { status: 'error', errorMessage: errorMsg });
         return false;
       }
@@ -121,23 +121,23 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
   const completedCount = queue.filter((i) => i.status === 'completed').length;
 
   return (
-    <Modal isOpen={isOpen} onClose={handleModalClose} title="Upload Music Files" maxWidth="lg">
+    <Modal isOpen={isOpen} onClose={handleModalClose} title="음원 업로드" maxWidth="lg">
       <div className="flex flex-col gap-5">
         <Dropzone onFilesSelected={handleFilesSelected} />
 
         {queue.length > 0 ? (
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between text-xs text-slate-400 px-1">
+            <div className="flex items-center justify-between text-xs text-neutral-400 px-1">
               <span>
-                Queue: {queue.length} file(s) ({completedCount} completed)
+                대기열: 총 {queue.length}개 파일 ({completedCount}개 완료)
               </span>
               {completedCount > 0 && !isUploading ? (
                 <button
                   type="button"
                   onClick={clearCompleted}
-                  className="text-indigo-400 hover:text-indigo-300 font-medium"
+                  className="text-[#8590ea] hover:text-[#a5aef0] font-medium cursor-pointer"
                 >
-                  Clear Done
+                  완료 항목 정리
                 </button>
               ) : null}
             </div>
@@ -148,9 +148,9 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
               ))}
             </div>
 
-            <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+            <div className="flex justify-end gap-2.5 pt-3 border-t border-white/[0.08]">
               <Button variant="ghost" onClick={handleModalClose} disabled={isUploading}>
-                Close
+                닫기
               </Button>
               <Button
                 variant="primary"
@@ -158,7 +158,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
                 isLoading={isUploading}
                 disabled={pendingCount === 0}
               >
-                Upload ({pendingCount})
+                업로드 시작 ({pendingCount})
               </Button>
             </div>
           </div>
