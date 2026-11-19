@@ -1,9 +1,9 @@
-# Design: Track Metadata Edit Feature (with R2 Binary Tag Rewriting)
+# Design: Track Metadata Edit Feature (Optimistic DB Update + Async R2 Tag Rewriting)
 
 ## Overview
-Allows authenticated users to view and edit metadata (title, artist, album, year, genre, track number, and lyrics) of their uploaded music files. 
+Allows authenticated users to view and edit metadata (title, artist, album, year, genre, track number, and lyrics) of their uploaded music files.
 
-Crucially, **changes are written BOTH to the PostgreSQL database AND directly back into the audio file binary in Cloudflare R2** (using Jaudiotagger to rewrite ID3v2.3 / Vorbis Comment tags). This ensures that if the user downloads the file in the future, the embedded audio tags match the updated metadata.
+To provide instant UI responsiveness without blocking the user, **changes are saved to the PostgreSQL database immediately (<10ms)**, closing the modal and updating the UI instantly. Meanwhile, the heavy task of **downloading from Cloudflare R2, rewriting audio ID3/Vorbis tags via Jaudiotagger, and re-uploading to R2** runs asynchronously in the background. A sleek bottom-right floating widget (Linear-style) informs the user of the ongoing background sync status until completion.
 
 ---
 
@@ -11,127 +11,82 @@ Crucially, **changes are written BOTH to the PostgreSQL database AND directly ba
 
 ### 1.1 Functional Requirements
 - **FR-1**: Users can trigger an edit dialog from the library track row (via an edit icon button).
-- **FR-2**: The modal provides form inputs pre-filled with existing metadata:
-  - Title (`title`: String)
-  - Artist (`artist`: String)
-  - Album (`album`: String)
-  - Release Year (`year`: Integer, optional)
-  - Genre (`genre`: String, optional)
-  - Track Number (`trackNumber`: Integer, optional)
-  - Lyrics (`lyrics`: Multi-line text, optional)
-- **FR-3**: Submitting the form calls `PATCH /api/music-files/{id}`.
-- **FR-4**: Only the owner of the track (`userId == principal.id`) can update the metadata.
-- **FR-5**: The backend pipeline updates:
-  1. The audio file binary in Cloudflare R2 (download $\rightarrow$ rewrite tags via Jaudiotagger $\rightarrow$ re-upload overwrite).
-  2. The `music_file` row in the database (columns: `title`, `artist`, `album`, `year`, `genre`, `track_number`, `lyrics`, `file_size`, `updated_at`).
-- **FR-6**: On successful update:
-  - The modal closes.
-  - The library list cache is invalidated and updated.
-  - If the edited track is currently playing or in the player queue, player store track information is synchronized.
+- **FR-2**: Submitting the form calls `PATCH /api/music-files/{id}`.
+- **FR-3**: The endpoint immediately updates the PostgreSQL database and returns the updated `MusicFileDto`.
+- **FR-4**: Frontend immediately:
+  - Closes the modal.
+  - Updates the library track list and currently playing track info (0ms latency).
+  - Enqueues a background sync task in a global toast/floating badge widget located at the bottom-right of the screen.
+- **FR-5**: Backend executes the R2 binary tag rewrite asynchronously:
+  - Downloads original file from R2.
+  - Rewrites ID3v2.3 / Vorbis tags with `MetadataWriter`.
+  - Re-uploads modified file to R2.
+  - Updates `file_size` and storage usage delta in DB.
+- **FR-6**: The bottom-right floating badge displays:
+  - In progress: Spinner + `"{title}" 오디오 파일(R2) 태그 동기화 중...`
+  - Completed: Checkmark + `"{title}" 파일 태그 동기화 완료!` (auto-dismiss after 3-4s).
 
 ### 1.2 Non-Functional Requirements
-- **NFR-1**: Atomicity & Safety: Tag rewriting is performed on a local temp file first. R2 is only overwritten if tag writing succeeds. Temp files are deleted in a `finally` block.
-- **NFR-2**: Supports major audio formats already supported by Jaudiotagger (MP3 ID3v2.3, FLAC Vorbis, M4A/AAC, OGG).
-- **NFR-3**: Visual design matches the Linear-inspired dark palette with a clear loading state while file rewriting occurs.
+- **NFR-1**: Instant responsiveness: Submitting the modal takes < 50ms total network round-trip.
+- **NFR-2**: Robust error handling: If the background R2 tag update fails, errors are logged and status reflects failure without breaking the user's DB metadata.
+- **NFR-3**: Clean Linear Dark UI styling for the floating status widget (`#0f1011`, border `white/[0.1]`, accent `#5e6ad2`).
 
 ---
 
 ## 2. Backend Design
 
-### 2.1 Metadata Writer Component (`MetadataWriter.kt` & `JaudiotaggerMetadataWriter.kt`)
-Define an interface under `com.musichub.backend.domain.metadata`:
-```kotlin
-interface MetadataWriter {
-    fun updateTags(
-        file: File,
-        title: String?,
-        artist: String?,
-        album: String?,
-        year: Int?,
-        genre: String?,
-        trackNumber: Int?,
-        lyrics: String?
-    )
-}
-```
-Implementation using `org.jaudiotagger.audio.AudioFileIO`:
-- `val audioFile = AudioFileIO.read(file)`
-- `val tag = audioFile.tagOrCreateAndSetDefault`
-- Use `setOrDeleteField(tag, FieldKey.TITLE, title)` etc.
-- Call `AudioFileIO.write(audioFile)` to safely write the header/tags in place.
-
-### 2.2 Endpoint: `PATCH /api/music-files/{id}`
-- **Authentication**: Required (`Bearer <access_token>`)
-- **Request Body**:
-  ```kotlin
-  data class UpdateMusicMetadataRequest(
-      val title: String?,
-      val artist: String?,
-      val album: String?,
-      val year: Int?,
-      val genre: String?,
-      val trackNumber: Int?,
-      val lyrics: String?
-  )
-  ```
-- **Service Logic (`MusicFileService.updateMetadata`)**:
-  1. Verify ownership: `musicFile.userId == user.id`.
-  2. Download original file from R2 to a temporary file:
-     ```kotlin
-     val tempFile = Files.createTempFile("musichub-update-", ".$ext").toFile()
-     storageService.getObject(musicFile.storageKey).use { input ->
-         tempFile.outputStream().use { out -> input.copyTo(out) }
-     }
-     ```
-  3. Rewrite audio tags using `metadataWriter.updateTags(tempFile, ...)`.
-  4. Re-upload modified file to R2 (overwriting existing `storageKey`):
-     ```kotlin
-     val newSize = tempFile.length()
-     tempFile.inputStream().use { input ->
-         storageService.upload(musicFile.storageKey, input, newSize, musicFile.mimeType)
-     }
-     ```
-  5. Update `musicFile` entity in DB (`title`, `artist`, `album`, `year`, `genre`, `trackNumber`, `lyrics`, `fileSize = newSize`).
-  6. Return `MusicFileDto.from(musicFile)`.
-  7. Delete `tempFile` in `finally`.
+### 2.1 Async Configuration & Service Structure
+- In `MusicFileService`:
+  1. `updateMetadata(userId: Long, musicFileId: Long, request: UpdateMusicMetadataRequest): MusicFile`:
+     - Updates `musicFile` entity in DB (`title`, `artist`, `album`, `year`, `genre`, `trackNumber`, `lyrics`).
+     - Returns updated entity immediately.
+     - Triggers `asyncRewriteR2Tags(musicFileId, request)` via `CompletableFuture.runAsync` or Spring `@Async`.
+  2. `rewriteR2Tags(musicFileId: Long, request: UpdateMusicMetadataRequest)`:
+     - Downloads from R2 to temp file.
+     - Updates audio binary tags.
+     - Re-uploads to R2.
+     - Updates `fileSize` in DB.
 
 ---
 
 ## 3. Frontend Design
 
-### 3.1 API Client (`frontend/src/api/musicApi.ts`)
+### 3.1 Background Sync Store (`frontend/src/stores/tagSyncStore.ts`)
 ```typescript
-export interface UpdateMetadataDto {
-  title?: string;
-  artist?: string;
-  album?: string;
-  year?: number | null;
-  genre?: string;
-  trackNumber?: number | null;
-  lyrics?: string;
+export interface TagSyncTask {
+  id: string;
+  trackId: number;
+  title: string;
+  status: 'syncing' | 'completed' | 'error';
+  errorMessage?: string;
 }
-
-updateMetadata(id: number, data: UpdateMetadataDto): Promise<MusicFileDto>
 ```
+Provides:
+- `tasks: TagSyncTask[]`
+- `startSync(trackId: number, title: string): string`
+- `completeSync(taskId: string)`
+- `failSync(taskId: string, error: string)`
 
-### 3.2 UI Components
-- **`EditMetadataModal.tsx`** (`pages/library/track/EditMetadataModal.tsx`):
-  - Form inputs: Title, Artist, Album, Year, Genre, Track Number, and multi-line expandable Lyrics textarea.
-  - Loading spinner & disabled inputs during submission with status message: "파일 태그 및 메타데이터를 저장하는 중...".
-- **`TrackRow.tsx`**:
-  - Add an edit button (`Pencil` icon, "정보 수정" tooltip) next to "재생목록 추가" and "음원 삭제".
-- **`LibraryPage.tsx`**:
-  - Manages `editingTrack: MusicFileDto | null` state.
-  - On update success, triggers toast message and updates React Query cache and player store if applicable.
+### 3.2 Floating Status Widget (`frontend/src/components/organisms/FloatingTagSyncWidget.tsx`)
+- Rendered globally (e.g., in `App.tsx` or layout, positioned fixed at `bottom-24 right-6` above the player bar).
+- Displays active sync tasks with spinner and smooth entry/exit animations.
+
+### 3.3 Edit Modal (`EditMetadataModal.tsx`)
+- On form submit:
+  - Calls `musicApi.updateMetadata(track.id, payload)`.
+  - On API response (instant ~20ms):
+    - Registers task in `tagSyncStore`.
+    - Fires `onSuccess(updatedTrack)`.
+    - Closes modal immediately!
 
 ---
 
 ## 4. Verification & Testing
-
 1. **Backend Tests**:
-   - `JaudiotaggerMetadataWriterTest`: Write tags to a test MP3 file and re-read via `JaudiotaggerMetadataReader` to ensure title/artist/lyrics round-trip cleanly.
-   - `MusicFileServiceTest`: Verify that `updateMetadata` calls storage download, tag writer, storage re-upload, and DB update.
+   - Verify `updateMetadata` updates and returns `MusicFile` immediately.
+   - Verify background tag rewriting runs without blocking.
 2. **Frontend Tests**:
-   - Verify modal opens with current values pre-filled.
-   - Verify submit sends request and closes modal on success.
-   - Verify `tsc -b && vite build` and `eslint` pass without warnings.
+   - Modal closes instantly on Save.
+   - Library table displays updated title immediately.
+   - Bottom-right widget appears showing sync progress and transitions to completion.
+   - `tsc -b && vite build` and `eslint` pass.

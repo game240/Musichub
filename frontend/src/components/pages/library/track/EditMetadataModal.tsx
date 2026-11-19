@@ -4,6 +4,7 @@ import { Button } from '../../../atoms/Button';
 import { Input } from '../../../atoms/Input';
 import { Spinner } from '../../../atoms/Spinner';
 import { musicApi, type UpdateMusicMetadataDto } from '../../../../api/musicApi';
+import { useTagSyncStore } from '../../../../stores/tagSyncStore';
 import type { MusicFileDto } from '../../../../types/music';
 
 export interface EditMetadataModalProps {
@@ -52,6 +53,8 @@ const EditMetadataForm: React.FC<EditMetadataFormProps> = ({ track, onClose, onS
       };
 
       const updated = await musicApi.updateMetadata(track.id, payload);
+      // 우측 하단 백그라운드 R2 태그 동기화 위젯에 태스크 등록
+      useTagSyncStore.getState().startSync(track.id, payload.title || track.fileName);
       onSuccess(updated);
       onClose();
     } catch (err: unknown) {
@@ -152,14 +155,6 @@ const EditMetadataForm: React.FC<EditMetadataFormProps> = ({ track, onClose, onS
           className="w-full bg-[#0f1011] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:border-[#5e6ad2] focus:ring-1 focus:ring-[#5e6ad2] transition-all duration-150 resize-y"
         />
       </div>
-
-      {/* Progress status notification when saving */}
-      {isSaving ? (
-        <div className="flex items-center gap-2 p-2.5 bg-[#5e6ad2]/10 border border-[#5e6ad2]/20 rounded-lg text-xs text-[#8590ea]">
-          <Spinner size="sm" />
-          <span>오디오 파일(R2) 바이너리 태그를 다시 쓰고 메타데이터를 저장하는 중입니다...</span>
-        </div>
-      ) : null}
 
       {/* Actions */}
       <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.08]">

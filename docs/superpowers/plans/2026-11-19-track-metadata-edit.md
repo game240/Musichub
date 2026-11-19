@@ -1,4 +1,4 @@
-# Track Metadata Edit with R2 Tag Rewriting Implementation Plan
+# Track Metadata Edit with Async R2 Tag Rewriting Implementation Plan
 
 - **Date:** 2026-11-19
 - **Spec:** [docs/superpowers/specs/2026-11-19-track-metadata-edit-design.md](file:///c:/vscode/Musichub/docs/superpowers/specs/2026-11-19-track-metadata-edit-design.md)
@@ -11,51 +11,42 @@
 1. **Rule Compliance**:
    - `AGENTS.md`: "Design approved before implementation; plan written before touching code".
    - Git branch: `feat/track-metadata-edit` cut from `dev`.
-   - Commit format: `type: subject` (e.g. `feat: add track metadata edit with r2 tag rewriting`).
+   - Commit format: `type: subject` (e.g. `feat: add optimistic metadata edit with async r2 tag rewriting and floating status ui`).
 2. **Architecture**:
-   - Jaudiotagger `MetadataWriter` component in `com.musichub.backend.domain.metadata`.
-   - `MusicFileService.updateMetadata`: downloads from R2, rewrites tags, re-uploads to R2, updates PostgreSQL DB.
-   - Endpoint: `PATCH /api/music-files/{id}`.
-   - Frontend: `EditMetadataModal.tsx` in `pages/library/track/`, edit button in `TrackRow.tsx`, integration in `LibraryPage.tsx`.
+   - Backend: Instant DB update + async R2 tag rewrite via `CompletableFuture`.
+   - Frontend: `tagSyncStore.ts` for managing background sync tasks.
+   - UI: `FloatingTagSyncWidget.tsx` (fixed at bottom-right, above player bar).
+   - Instant modal dismissal upon successful DB update response.
 
 ---
 
 ## 2. Step-by-Step Milestones
 
-### Milestone 1: Backend Audio Tag Writer (`MetadataWriter`)
-- [x] Create `MetadataWriter.kt` interface and `JaudiotaggerMetadataWriter.kt` implementation in `com.musichub.backend.domain.metadata`:
-  - Support setting/clearing `TITLE`, `ARTIST`, `ALBUM`, `YEAR`, `GENRE`, `TRACK`, `LYRICS`.
-  - Fix ID3v2.3 settings for broad compatibility.
+### Milestone 1: Backend Async Tag Rewriting
+- [x] In `MusicFileService.kt`:
+  - Update `updateMetadata`:
+    - Update entity fields in DB immediately and return updated entity.
+    - Launch `CompletableFuture.runAsync` to perform `rewriteR2Tags(...)`.
+  - Implement `rewriteR2Tags(musicFileId: Long, request: UpdateMusicMetadataRequest)`.
+- [x] Update `MusicFileServiceUpdateTest.kt` to verify immediate return and async execution.
 
-### Milestone 2: Backend Service & Controller
-- [x] Update `MusicFileService.kt`:
-  - Add `updateMetadata(userId: Long, musicFileId: Long, request: UpdateMusicMetadataRequest): MusicFile`.
-  - Download from R2, rewrite with `metadataWriter`, re-upload to R2, update `MusicFile` entity.
-- [x] Update `MusicFileController.kt`:
-  - Add `data class UpdateMusicMetadataRequest(...)`.
-  - Add `PATCH /api/music-files/{id}` endpoint.
-- [x] Add unit test for service/controller verifying ownership check and R2 interaction.
+### Milestone 2: Frontend Tag Sync Store & Floating Status Widget
+- [x] Create `frontend/src/stores/tagSyncStore.ts`:
+  - State: `tasks: TagSyncTask[]`.
+  - Actions: `addTask`, `completeTask`, `failTask`, `removeTask`.
+- [x] Create `frontend/src/components/organisms/FloatingTagSyncWidget.tsx`:
+  - Fixed position at `bottom-24 right-6 z-50` (just above the global player).
+  - Clean Linear-dark badge style with Spinner / Check / Alert icons.
+  - Auto-dismiss after 3.5s on completion.
+- [x] Render `FloatingTagSyncWidget` in `App.tsx`.
 
-### Milestone 3: Frontend API & Types
-- [x] Update `frontend/src/api/musicApi.ts`:
-  - Add `UpdateMusicMetadataDto` interface.
-  - Add `updateMetadata(id: number, data: UpdateMusicMetadataDto): Promise<MusicFileDto>`.
+### Milestone 3: Modal UX Optimization
+- [x] Update `EditMetadataModal.tsx`:
+  - When user submits, call `updateMetadata`.
+  - Since API returns in ~20ms, immediately close modal and register a task in `tagSyncStore`.
+  - Update `LibraryPage.tsx` and `playerStore` with new data immediately.
 
-### Milestone 4: Frontend UI Components
-- [x] Create `frontend/src/components/pages/library/track/EditMetadataModal.tsx`:
-  - Linear Dark design with backdrop blur.
-  - Pre-filled inputs for Title, Artist, Album, Year, Genre, TrackNumber, and expandable Lyrics.
-  - Loading state with spinner during file tag writing.
-- [x] Update `frontend/src/components/pages/library/track/TrackRow.tsx`:
-  - Add `Pencil` icon button with "정보 수정" tooltip.
-  - Prop `onEdit: (track: MusicFileDto) => void`.
-- [x] Update `frontend/src/components/pages/library/track/TrackTable.tsx` & `LibraryPage.tsx`:
-  - Pass `onEdit` handler to `TrackTable` and `TrackRow`.
-  - Manage `editingTrack: MusicFileDto | null` state.
-  - On save success, invalidate React Query cache and sync with `playerStore` if current track was edited.
-
-### Milestone 5: Verification & Compilation
-- [x] Run backend tests: `./gradlew test`.
-- [x] Run frontend build & lint: `npm run build` and `npm run lint`.
-- [x] Verify git commit & merge to `dev` using `--no-ff`.
-- [ ] Verify git commit & merge to `dev` using `--no-ff`.
+### Milestone 4: Verification & Compilation
+- [x] Backend tests: `./gradlew test`.
+- [x] Frontend verification: `npm run build` and `npm run lint`.
+- [ ] Git commit & merge to `dev` with `--no-ff`.

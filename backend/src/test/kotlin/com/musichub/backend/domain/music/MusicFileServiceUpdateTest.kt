@@ -62,7 +62,7 @@ class MusicFileServiceUpdateTest {
     }
 
     @Test
-    fun `updateMetadata rewrites tags and updates database when user owns the track`() {
+    fun `updateMetadata updates database entity immediately`() {
         val user = User(id = 1L, providerId = "test", email = "test@test.com")
         val musicFile = MusicFile(
             id = 100L,
@@ -75,6 +75,7 @@ class MusicFileServiceUpdateTest {
         )
 
         given(musicFileRepository.findByIdAndUserId(100L, 1L)).willReturn(Optional.of(musicFile))
+        given(musicFileRepository.findById(100L)).willReturn(Optional.of(musicFile))
         given(storageService.getObject("users/1/audio/track.mp3"))
             .willReturn(ByteArrayInputStream("dummy audio content".toByteArray()))
 
@@ -97,6 +98,36 @@ class MusicFileServiceUpdateTest {
         assertEquals("Rock", result.genre)
         assertEquals(3, result.trackNumber)
         assertEquals("New Lyrics", result.lyrics)
+    }
+
+    @Test
+    fun `rewriteR2Tags downloads from R2 rewrites tags and reuploads to storage`() {
+        val user = User(id = 1L, providerId = "test", email = "test@test.com")
+        val musicFile = MusicFile(
+            id = 100L,
+            user = user,
+            storageKey = "users/1/audio/track.mp3",
+            fileName = "track.mp3",
+            fileSize = 1024L,
+            title = "Old Title",
+            artist = "Old Artist"
+        )
+
+        given(musicFileRepository.findById(100L)).willReturn(Optional.of(musicFile))
+        given(storageService.getObject("users/1/audio/track.mp3"))
+            .willReturn(ByteArrayInputStream("dummy audio content".toByteArray()))
+
+        val request = UpdateMusicMetadataRequest(
+            title = "New Title",
+            artist = "New Artist",
+            album = "New Album",
+            year = 2024,
+            genre = "Rock",
+            trackNumber = 3,
+            lyrics = "New Lyrics"
+        )
+
+        musicFileService.rewriteR2Tags(100L, request)
 
         verify(metadataWriter).updateTags(
             file = anyFile(),

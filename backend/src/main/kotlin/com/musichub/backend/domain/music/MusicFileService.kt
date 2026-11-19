@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile
 import java.io.ByteArrayInputStream
 import java.nio.file.Files
 import java.util.*
+import java.util.concurrent.CompletableFuture
 
 data class UploadInitResult(
     val storageKey: String,
@@ -233,13 +234,36 @@ class MusicFileService(
     }
 
     /**
-     * 6. 음악 파일 메타데이터 수정 (R2 바이너리 태그 재작성 + DB 업데이트)
+     * 6. 음악 파일 메타데이터 수정 (DB 즉시 반영 후 R2 바이너리 태그 비동기 재작성)
      */
     @Transactional
     fun updateMetadata(userId: Long, musicFileId: Long, request: UpdateMusicMetadataRequest): MusicFile {
         val musicFile = musicFileRepository.findByIdAndUserId(musicFileId, userId)
             .orElseThrow { NoSuchElementException("음악 파일을 찾을 수 없습니다.") }
 
+        // 1. DB 엔티티 즉시 업데이트 (사용자 UI는 10ms 만에 즉각 갱신)
+        musicFile.title = request.title?.trim()?.takeIf { it.isNotBlank() }
+        musicFile.artist = request.artist?.trim()?.takeIf { it.isNotBlank() }
+        musicFile.album = request.album?.trim()?.takeIf { it.isNotBlank() }
+        musicFile.year = request.year
+        musicFile.genre = request.genre?.trim()?.takeIf { it.isNotBlank() }
+        musicFile.trackNumber = request.trackNumber
+        musicFile.lyrics = request.lyrics?.trim()?.takeIf { it.isNotBlank() }
+        musicFile.updatedAt = java.time.Instant.now()
+
+        // 2. 무거운 작업(R2 파일 다운로드 -> Jaudiotagger 태그 재작성 -> R2 재업로드)은 백그라운드 비동기로 실행
+        CompletableFuture.runAsync {
+            rewriteR2Tags(musicFileId, request)
+        }
+
+        return musicFile
+    }
+
+    /**
+     * 백그라운드 R2 오디오 파일 태그 재작성 및 재업로드
+     */
+    fun rewriteR2Tags(musicFileId: Long, request: UpdateMusicMetadataRequest) {
+        val musicFile = musicFileRepository.findById(musicFileId).orElse(null) ?: return
         val extension = musicFile.fileName.substringAfterLast('.', "mp3")
         val tempFile = Files.createTempFile("musichub-update-", ".$extension").toFile()
 
@@ -269,24 +293,18 @@ class MusicFileService(
 
             // 4. 유저 스토리지 사용량 델타 반영
             val deltaSize = newSize - musicFile.fileSize
-            if (deltaSize > 0) {
-                musicFile.user.addStorageUsage(deltaSize)
-            } else if (deltaSize < 0) {
-                musicFile.user.subtractStorageUsage(-deltaSize)
+            if (deltaSize != 0L) {
+                musicFile.fileSize = newSize
+                if (deltaSize > 0) {
+                    musicFile.user.addStorageUsage(deltaSize)
+                } else {
+                    musicFile.user.subtractStorageUsage(-deltaSize)
+                }
+                musicFileRepository.save(musicFile)
             }
-
-            // 5. DB 엔티티 업데이트
-            musicFile.title = request.title?.trim()?.takeIf { it.isNotBlank() }
-            musicFile.artist = request.artist?.trim()?.takeIf { it.isNotBlank() }
-            musicFile.album = request.album?.trim()?.takeIf { it.isNotBlank() }
-            musicFile.year = request.year
-            musicFile.genre = request.genre?.trim()?.takeIf { it.isNotBlank() }
-            musicFile.trackNumber = request.trackNumber
-            musicFile.lyrics = request.lyrics?.trim()?.takeIf { it.isNotBlank() }
-            musicFile.fileSize = newSize
-            musicFile.updatedAt = java.time.Instant.now()
-
-            return musicFile
+            logger.info("Successfully updated R2 audio tags in background for track id: {}", musicFileId)
+        } catch (e: Exception) {
+            logger.error("Failed to rewrite R2 audio tags for track id {}: {}", musicFileId, e.message, e)
         } finally {
             if (tempFile.exists()) {
                 tempFile.delete()
