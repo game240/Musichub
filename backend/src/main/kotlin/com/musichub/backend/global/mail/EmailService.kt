@@ -44,7 +44,7 @@ class SmtpEmailService(
                         <div style="display: inline-block; padding: 12px 28px; background-color: rgba(94, 106, 210, 0.15); border: 1px solid rgba(94, 106, 210, 0.4); border-radius: 10px; font-size: 28px; font-weight: 700; letter-spacing: 6px; color: #8590ea;">
                             $code
                         </div>
-                        <p style="color: #9ca3af; font-size: 12px; margin-top: 16px; margin-bottom: 0;">인증번호는 <strong>10분간</strong> 유효합니다.</p>
+                        <p style="color: #9ca3af; font-size: 12px; margin-top: 16px; margin-bottom: 0;">인증번호는 <strong>5분간</strong> 유효합니다.</p>
                     </div>
                     <p style="color: #6b7280; font-size: 12px; text-align: center; line-height: 1.5; margin: 0;">
                         본인이 요청하지 않은 경우 이 메일을 무시하셔도 됩니다.<br />
@@ -74,7 +74,7 @@ class SmtpEmailService(
             Subject: [Music Hub] 비밀번호 설정을 위한 인증번호입니다.
             ----------------------------------------------------------------------
             귀하의 비밀번호 설정을 위한 인증번호는 [{}] 입니다.
-            이 인증번호는 10분간 유효합니다.
+            이 인증번호는 5분간 유효합니다.
             ======================================================================
             """.trimIndent(),
             toEmail,

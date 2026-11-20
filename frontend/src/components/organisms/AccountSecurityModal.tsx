@@ -414,7 +414,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                             className="tracking-widest font-mono text-center text-base"
                           />
                           <p className="text-[10px] text-neutral-400 mt-1">
-                            {userEmail}로 전송된 6자리 번호를 10분 내에 입력해 주세요.
+                            {userEmail}로 전송된 6자리 번호를 5분 내에 입력해 주세요.
                           </p>
                         </div>
                       ) : null}

@@ -12,7 +12,7 @@ class PasswordSetupVerificationManager {
     data class VerificationEntry(
         val code: String,
         val createdAt: Instant = Instant.now(),
-        val expiresAt: Instant = Instant.now().plus(Duration.ofMinutes(10)),
+        val expiresAt: Instant = Instant.now().plus(Duration.ofMinutes(5)),
         var attempts: Int = 0
     )
 
