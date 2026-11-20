@@ -87,7 +87,7 @@ class AuthService(
         val identityOpt = userIdentityRepository.findByProviderAndProviderId(AuthProvider.LOCAL, normalizedEmail)
         if (identityOpt.isPresent) {
             val identity = identityOpt.get()
-            val passwordHash = identity.passwordHash
+            val passwordHash = identity.passwordHash?.takeIf { it.isNotBlank() }
                 ?: throw IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.")
 
             if (!passwordEncoder.matches(request.password, passwordHash)) {
@@ -100,7 +100,7 @@ class AuthService(
         val user = userRepository.findByAuthProviderAndProviderId(AuthProvider.LOCAL, normalizedEmail)
             .orElseThrow { IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.") }
 
-        val passwordHash = user.passwordHash
+        val passwordHash = user.passwordHash?.takeIf { it.isNotBlank() }
             ?: throw IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.")
 
         if (!passwordEncoder.matches(request.password, passwordHash)) {

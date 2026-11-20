@@ -47,8 +47,8 @@ class UserIdentityService(
             .orElseThrow { NoSuchElementException("사용자를 찾을 수 없습니다.") }
 
         val identities = userIdentityRepository.findAllByUserId(userId)
-        val hasPassword = identities.any { it.provider == AuthProvider.LOCAL && it.passwordHash != null }
-            || user.passwordHash != null
+        val hasPassword = identities.any { it.provider == AuthProvider.LOCAL && !it.passwordHash.isNullOrBlank() }
+            || !user.passwordHash.isNullOrBlank()
 
         val dtos = identities.map { identity ->
             IdentityDto(
@@ -70,8 +70,8 @@ class UserIdentityService(
             .orElseThrow { NoSuchElementException("사용자를 찾을 수 없습니다.") }
 
         val hasPassword = userIdentityRepository.findByUserIdAndProvider(userId, AuthProvider.LOCAL)
-            .map { it.passwordHash != null }
-            .orElse(false) || user.passwordHash != null
+            .map { !it.passwordHash.isNullOrBlank() }
+            .orElse(false) || !user.passwordHash.isNullOrBlank()
 
         if (hasPassword) {
             throw IllegalStateException("이미 비밀번호가 등록되어 있습니다. 비밀번호 변경 기능을 이용해 주세요.")
@@ -120,7 +120,7 @@ class UserIdentityService(
 
         if (localIdentityOpt.isPresent) {
             val identity = localIdentityOpt.get()
-            if (identity.passwordHash != null) {
+            if (!identity.passwordHash.isNullOrBlank()) {
                 if (currentPassword.isNullOrBlank()) {
                     throw IllegalArgumentException("기존 비밀번호를 입력해 주세요.")
                 }
