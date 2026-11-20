@@ -5,9 +5,12 @@ import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import com.musichub.backend.domain.user.AuthProvider
 import com.musichub.backend.domain.user.User
+import com.musichub.backend.domain.user.UserIdentity
+import com.musichub.backend.domain.user.UserIdentityRepository
 import com.musichub.backend.domain.user.UserRepository
 import com.musichub.backend.global.security.JwtProvider
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -23,14 +26,97 @@ data class TokenResult(
 @Service
 class AuthService(
     private val userRepository: UserRepository,
+    private val userIdentityRepository: UserIdentityRepository,
     private val refreshTokenRepository: RefreshTokenRepository,
     private val jwtProvider: JwtProvider,
+    private val passwordEncoder: PasswordEncoder,
     @Value("\${musichub.auth.google.client-id}") private val googleClientId: String
 ) {
+    companion object {
+        val PASSWORD_REGEX = Regex("^(?=.*[A-Za-z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?~]).{8,64}$")
+    }
+
     private val verifier by lazy {
         GoogleIdTokenVerifier.Builder(NetHttpTransport(), GsonFactory.getDefaultInstance())
             .setAudience(Collections.singletonList(googleClientId))
             .build()
+    }
+
+    @Transactional
+    fun register(request: LocalRegisterRequest, deviceInfo: String?): TokenResult {
+        require(PASSWORD_REGEX.matches(request.password)) { "비밀번호는 8자 이상이며 영문, 숫자, 특수문자를 모두 포함해야 합니다." }
+
+        val normalizedEmail = request.email.trim().lowercase()
+
+        val existingIdentity = userIdentityRepository.findByProviderAndProviderId(AuthProvider.LOCAL, normalizedEmail)
+        val existingUser = userRepository.findByAuthProviderAndProviderId(AuthProvider.LOCAL, normalizedEmail)
+        if (existingIdentity.isPresent || existingUser.isPresent) {
+            throw IllegalArgumentException("이미 가입된 이메일입니다.")
+        }
+
+        val hashedPassword = passwordEncoder.encode(request.password)
+        val defaultDisplayName = request.displayName?.trim()?.ifBlank { null }
+            ?: normalizedEmail.substringBefore("@")
+
+        val user = userRepository.save(
+            User(
+                authProvider = AuthProvider.LOCAL,
+                providerId = normalizedEmail,
+                email = normalizedEmail,
+                passwordHash = hashedPassword,
+                displayName = defaultDisplayName
+            )
+        )
+
+        userIdentityRepository.save(
+            UserIdentity(
+                user = user,
+                provider = AuthProvider.LOCAL,
+                providerId = normalizedEmail,
+                passwordHash = hashedPassword
+            )
+        )
+
+        return issueTokens(user, deviceInfo)
+    }
+
+    @Transactional
+    fun loginWithLocal(request: LocalLoginRequest, deviceInfo: String?): TokenResult {
+        val normalizedEmail = request.email.trim().lowercase()
+
+        val identityOpt = userIdentityRepository.findByProviderAndProviderId(AuthProvider.LOCAL, normalizedEmail)
+        if (identityOpt.isPresent) {
+            val identity = identityOpt.get()
+            val passwordHash = identity.passwordHash?.takeIf { it.isNotBlank() }
+                ?: throw IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.")
+
+            if (!passwordEncoder.matches(request.password, passwordHash)) {
+                throw IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.")
+            }
+            return issueTokens(identity.user, deviceInfo)
+        }
+
+        // Fallback for pre-migration users
+        val user = userRepository.findByAuthProviderAndProviderId(AuthProvider.LOCAL, normalizedEmail)
+            .orElseThrow { IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.") }
+
+        val passwordHash = user.passwordHash?.takeIf { it.isNotBlank() }
+            ?: throw IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.")
+
+        if (!passwordEncoder.matches(request.password, passwordHash)) {
+            throw IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.")
+        }
+
+        userIdentityRepository.save(
+            UserIdentity(
+                user = user,
+                provider = AuthProvider.LOCAL,
+                providerId = normalizedEmail,
+                passwordHash = passwordHash
+            )
+        )
+
+        return issueTokens(user, deviceInfo)
     }
 
     @Transactional
@@ -43,6 +129,15 @@ class AuthService(
         val email = payload.email
         val name = payload.get("name") as? String
         val picture = payload.get("picture") as? String
+
+        val identityOpt = userIdentityRepository.findByProviderAndProviderId(AuthProvider.GOOGLE, googleSubject)
+        if (identityOpt.isPresent) {
+            val user = identityOpt.get().user
+            user.email = email
+            user.displayName = name ?: user.displayName
+            user.profileImageUrl = picture ?: user.profileImageUrl
+            return issueTokens(user, deviceInfo)
+        }
 
         val user = userRepository.findByAuthProviderAndProviderId(AuthProvider.GOOGLE, googleSubject)
             .map { existingUser ->
@@ -62,6 +157,14 @@ class AuthService(
                     )
                 )
             }
+
+        userIdentityRepository.save(
+            UserIdentity(
+                user = user,
+                provider = AuthProvider.GOOGLE,
+                providerId = googleSubject
+            )
+        )
 
         return issueTokens(user, deviceInfo)
     }
