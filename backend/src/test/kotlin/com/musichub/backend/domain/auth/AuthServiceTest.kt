@@ -2,6 +2,8 @@ package com.musichub.backend.domain.auth
 
 import com.musichub.backend.domain.user.AuthProvider
 import com.musichub.backend.domain.user.User
+import com.musichub.backend.domain.user.UserIdentity
+import com.musichub.backend.domain.user.UserIdentityRepository
 import com.musichub.backend.domain.user.UserRepository
 import com.musichub.backend.global.security.JwtProvider
 import org.junit.jupiter.api.Assertions.*
@@ -18,6 +20,7 @@ import java.util.Optional
 class AuthServiceTest {
 
     private lateinit var userRepository: UserRepository
+    private lateinit var userIdentityRepository: UserIdentityRepository
     private lateinit var refreshTokenRepository: RefreshTokenRepository
     private lateinit var jwtProvider: JwtProvider
     private lateinit var passwordEncoder: BCryptPasswordEncoder
@@ -28,9 +31,20 @@ class AuthServiceTest {
         return User(id = 0L, providerId = "", email = "")
     }
 
+    private fun anyIdentity(): UserIdentity {
+        Mockito.any(UserIdentity::class.java)
+        return UserIdentity(
+            id = 0L,
+            user = User(id = 1L, providerId = "test", email = "test@test.com"),
+            provider = AuthProvider.LOCAL,
+            providerId = "test@test.com"
+        )
+    }
+
     @BeforeEach
     fun setUp() {
         userRepository = mock(UserRepository::class.java)
+        userIdentityRepository = mock(UserIdentityRepository::class.java)
         refreshTokenRepository = mock(RefreshTokenRepository::class.java)
         jwtProvider = mock(JwtProvider::class.java)
         passwordEncoder = BCryptPasswordEncoder()
@@ -43,6 +57,7 @@ class AuthServiceTest {
 
         authService = AuthService(
             userRepository = userRepository,
+            userIdentityRepository = userIdentityRepository,
             refreshTokenRepository = refreshTokenRepository,
             jwtProvider = jwtProvider,
             passwordEncoder = passwordEncoder,

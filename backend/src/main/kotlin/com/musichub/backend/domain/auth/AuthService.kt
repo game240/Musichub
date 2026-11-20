@@ -5,6 +5,8 @@ import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import com.musichub.backend.domain.user.AuthProvider
 import com.musichub.backend.domain.user.User
+import com.musichub.backend.domain.user.UserIdentity
+import com.musichub.backend.domain.user.UserIdentityRepository
 import com.musichub.backend.domain.user.UserRepository
 import com.musichub.backend.global.security.JwtProvider
 import org.springframework.beans.factory.annotation.Value
@@ -24,6 +26,7 @@ data class TokenResult(
 @Service
 class AuthService(
     private val userRepository: UserRepository,
+    private val userIdentityRepository: UserIdentityRepository,
     private val refreshTokenRepository: RefreshTokenRepository,
     private val jwtProvider: JwtProvider,
     private val passwordEncoder: PasswordEncoder,
@@ -39,8 +42,9 @@ class AuthService(
     fun register(request: LocalRegisterRequest, deviceInfo: String?): TokenResult {
         val normalizedEmail = request.email.trim().lowercase()
 
+        val existingIdentity = userIdentityRepository.findByProviderAndProviderId(AuthProvider.LOCAL, normalizedEmail)
         val existingUser = userRepository.findByAuthProviderAndProviderId(AuthProvider.LOCAL, normalizedEmail)
-        if (existingUser.isPresent) {
+        if (existingIdentity.isPresent || existingUser.isPresent) {
             throw IllegalArgumentException("이미 가입된 이메일입니다.")
         }
 
@@ -58,6 +62,15 @@ class AuthService(
             )
         )
 
+        userIdentityRepository.save(
+            UserIdentity(
+                user = user,
+                provider = AuthProvider.LOCAL,
+                providerId = normalizedEmail,
+                passwordHash = hashedPassword
+            )
+        )
+
         return issueTokens(user, deviceInfo)
     }
 
@@ -65,6 +78,19 @@ class AuthService(
     fun loginWithLocal(request: LocalLoginRequest, deviceInfo: String?): TokenResult {
         val normalizedEmail = request.email.trim().lowercase()
 
+        val identityOpt = userIdentityRepository.findByProviderAndProviderId(AuthProvider.LOCAL, normalizedEmail)
+        if (identityOpt.isPresent) {
+            val identity = identityOpt.get()
+            val passwordHash = identity.passwordHash
+                ?: throw IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.")
+
+            if (!passwordEncoder.matches(request.password, passwordHash)) {
+                throw IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.")
+            }
+            return issueTokens(identity.user, deviceInfo)
+        }
+
+        // Fallback for pre-migration users
         val user = userRepository.findByAuthProviderAndProviderId(AuthProvider.LOCAL, normalizedEmail)
             .orElseThrow { IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.") }
 
@@ -74,6 +100,15 @@ class AuthService(
         if (!passwordEncoder.matches(request.password, passwordHash)) {
             throw IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.")
         }
+
+        userIdentityRepository.save(
+            UserIdentity(
+                user = user,
+                provider = AuthProvider.LOCAL,
+                providerId = normalizedEmail,
+                passwordHash = passwordHash
+            )
+        )
 
         return issueTokens(user, deviceInfo)
     }
@@ -88,6 +123,15 @@ class AuthService(
         val email = payload.email
         val name = payload.get("name") as? String
         val picture = payload.get("picture") as? String
+
+        val identityOpt = userIdentityRepository.findByProviderAndProviderId(AuthProvider.GOOGLE, googleSubject)
+        if (identityOpt.isPresent) {
+            val user = identityOpt.get().user
+            user.email = email
+            user.displayName = name ?: user.displayName
+            user.profileImageUrl = picture ?: user.profileImageUrl
+            return issueTokens(user, deviceInfo)
+        }
 
         val user = userRepository.findByAuthProviderAndProviderId(AuthProvider.GOOGLE, googleSubject)
             .map { existingUser ->
@@ -107,6 +151,14 @@ class AuthService(
                     )
                 )
             }
+
+        userIdentityRepository.save(
+            UserIdentity(
+                user = user,
+                provider = AuthProvider.GOOGLE,
+                providerId = googleSubject
+            )
+        )
 
         return issueTokens(user, deviceInfo)
     }

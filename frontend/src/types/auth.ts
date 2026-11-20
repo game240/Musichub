@@ -27,3 +27,25 @@ export interface LocalRegisterRequest {
   password: string;
   displayName?: string;
 }
+
+export type AuthProviderType = 'GOOGLE' | 'GITHUB' | 'LOCAL';
+
+export interface IdentityDto {
+  provider: AuthProviderType;
+  identifier: string;
+  createdAt: string;
+}
+
+export interface UserIdentitiesResponse {
+  hasPassword: boolean;
+  identities: IdentityDto[];
+}
+
+export interface SetPasswordRequest {
+  currentPassword?: string;
+  newPassword: string;
+}
+
+export interface LinkGoogleRequest {
+  idToken: string;
+}
