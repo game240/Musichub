@@ -124,6 +124,21 @@ class AuthServiceTest {
     }
 
     @Test
+    fun `register throws IllegalArgumentException when password does not meet complexity`() {
+        val request = LocalRegisterRequest(
+            email = "test@musichub.com",
+            password = "password123",
+            displayName = "테스터"
+        )
+
+        val ex = assertThrows<IllegalArgumentException> {
+            authService.register(request, "TestBrowser")
+        }
+
+        assertEquals("비밀번호는 8자 이상이며 영문, 숫자, 특수문자를 모두 포함해야 합니다.", ex.message)
+    }
+
+    @Test
     fun `loginWithLocal succeeds when email and password match`() {
         val hashedPassword = passwordEncoder.encode("correct-password")
         val user = User(

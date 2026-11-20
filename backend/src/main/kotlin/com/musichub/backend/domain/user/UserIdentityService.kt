@@ -28,6 +28,10 @@ class UserIdentityService(
     private val passwordEncoder: PasswordEncoder,
     @Value("\${musichub.auth.google.client-id}") private val googleClientId: String
 ) {
+    companion object {
+        val PASSWORD_REGEX = Regex("^(?=.*[A-Za-z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?~]).{8,64}$")
+    }
+
     private val verifier by lazy {
         GoogleIdTokenVerifier.Builder(NetHttpTransport(), GsonFactory.getDefaultInstance())
             .setAudience(Collections.singletonList(googleClientId))
@@ -59,7 +63,7 @@ class UserIdentityService(
 
     @Transactional
     fun setPassword(userId: Long, currentPassword: String?, newPassword: String) {
-        require(newPassword.length >= 8) { "비밀번호는 최소 8자 이상이어야 합니다." }
+        require(PASSWORD_REGEX.matches(newPassword)) { "비밀번호는 8자 이상이며 영문, 숫자, 특수문자를 모두 포함해야 합니다." }
 
         val user = userRepository.findById(userId)
             .orElseThrow { NoSuchElementException("사용자를 찾을 수 없습니다.") }

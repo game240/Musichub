@@ -3,6 +3,7 @@ package com.musichub.backend.domain.user
 import com.musichub.backend.global.security.UserPrincipal
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -12,7 +13,10 @@ data class SetPasswordRequest(
     val currentPassword: String? = null,
 
     @field:NotBlank(message = "새 비밀번호는 필수 입력값입니다.")
-    @field:Size(min = 8, message = "비밀번호는 최소 8자 이상이어야 합니다.")
+    @field:Pattern(
+        regexp = "^(?=.*[A-Za-z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?~]).{8,64}$",
+        message = "비밀번호는 8자 이상이며 영문, 숫자, 특수문자를 모두 포함해야 합니다."
+    )
     val newPassword: String
 )
 

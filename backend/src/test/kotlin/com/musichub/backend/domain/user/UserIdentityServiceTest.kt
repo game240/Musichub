@@ -78,10 +78,10 @@ class UserIdentityServiceTest {
         given(userIdentityRepository.findByUserIdAndProvider(1L, AuthProvider.LOCAL)).willReturn(Optional.empty())
         given(userIdentityRepository.save(anyIdentity())).willAnswer { it.getArgument(0) }
 
-        userIdentityService.setPassword(1L, null, "newPassword123")
+        userIdentityService.setPassword(1L, null, "newPassword123!")
 
         assertNotNull(user.passwordHash)
-        assertTrue(passwordEncoder.matches("newPassword123", user.passwordHash))
+        assertTrue(passwordEncoder.matches("newPassword123!", user.passwordHash))
     }
 
     @Test
@@ -92,16 +92,16 @@ class UserIdentityServiceTest {
             user = user,
             provider = AuthProvider.LOCAL,
             providerId = "user@test.com",
-            passwordHash = passwordEncoder.encode("oldPassword123")
+            passwordHash = passwordEncoder.encode("oldPassword123!")
         )
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user))
         given(userIdentityRepository.findByUserIdAndProvider(1L, AuthProvider.LOCAL)).willReturn(Optional.of(existingIdentity))
 
-        userIdentityService.setPassword(1L, "oldPassword123", "newPassword456")
+        userIdentityService.setPassword(1L, "oldPassword123!", "newPassword456@")
 
-        assertTrue(passwordEncoder.matches("newPassword456", existingIdentity.passwordHash))
-        assertTrue(passwordEncoder.matches("newPassword456", user.passwordHash))
+        assertTrue(passwordEncoder.matches("newPassword456@", existingIdentity.passwordHash))
+        assertTrue(passwordEncoder.matches("newPassword456@", user.passwordHash))
     }
 
     @Test
@@ -112,17 +112,25 @@ class UserIdentityServiceTest {
             user = user,
             provider = AuthProvider.LOCAL,
             providerId = "user@test.com",
-            passwordHash = passwordEncoder.encode("oldPassword123")
+            passwordHash = passwordEncoder.encode("oldPassword123!")
         )
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user))
         given(userIdentityRepository.findByUserIdAndProvider(1L, AuthProvider.LOCAL)).willReturn(Optional.of(existingIdentity))
 
         val ex = assertThrows<IllegalArgumentException> {
-            userIdentityService.setPassword(1L, "wrongPassword", "newPassword456")
+            userIdentityService.setPassword(1L, "wrongPassword", "newPassword456@")
         }
 
         assertEquals("현재 비밀번호가 일치하지 않습니다.", ex.message)
+    }
+
+    @Test
+    fun `setPassword throws IllegalArgumentException when new password does not meet complexity`() {
+        val ex = assertThrows<IllegalArgumentException> {
+            userIdentityService.setPassword(1L, null, "simple123") // 특수문자 없음
+        }
+        assertEquals("비밀번호는 8자 이상이며 영문, 숫자, 특수문자를 모두 포함해야 합니다.", ex.message)
     }
 
     @Test

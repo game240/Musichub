@@ -114,6 +114,12 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
       return;
     }
 
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~]).{8,64}$/;
+    if (!passwordRegex.test(newPassword)) {
+      setPasswordError('비밀번호는 8자 이상이며 영문, 숫자, 특수문자를 모두 포함해야 합니다.');
+      return;
+    }
+
     if (newPassword.length < 8) {
       setPasswordError('새 비밀번호는 최소 8자 이상이어야 합니다.');
       return;
@@ -303,13 +309,13 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
 
                   <div>
                     <label className="block text-xs text-neutral-300 mb-1">
-                      {hasPassword ? '새 비밀번호' : '설정할 비밀번호'} (최소 8자)
+                      {hasPassword ? '새 비밀번호' : '설정할 비밀번호'} (8자 이상, 영문/숫자/특수문자 포함)
                     </label>
                     <Input
                       type="password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="8자 이상의 안전한 비밀번호"
+                      placeholder="영문, 숫자, 특수문자를 포함한 8자 이상 비밀번호"
                       disabled={setPasswordMutation.isPending}
                     />
                   </div>

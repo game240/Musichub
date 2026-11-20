@@ -32,6 +32,10 @@ class AuthService(
     private val passwordEncoder: PasswordEncoder,
     @Value("\${musichub.auth.google.client-id}") private val googleClientId: String
 ) {
+    companion object {
+        val PASSWORD_REGEX = Regex("^(?=.*[A-Za-z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?~]).{8,64}$")
+    }
+
     private val verifier by lazy {
         GoogleIdTokenVerifier.Builder(NetHttpTransport(), GsonFactory.getDefaultInstance())
             .setAudience(Collections.singletonList(googleClientId))
@@ -40,6 +44,8 @@ class AuthService(
 
     @Transactional
     fun register(request: LocalRegisterRequest, deviceInfo: String?): TokenResult {
+        require(PASSWORD_REGEX.matches(request.password)) { "비밀번호는 8자 이상이며 영문, 숫자, 특수문자를 모두 포함해야 합니다." }
+
         val normalizedEmail = request.email.trim().lowercase()
 
         val existingIdentity = userIdentityRepository.findByProviderAndProviderId(AuthProvider.LOCAL, normalizedEmail)

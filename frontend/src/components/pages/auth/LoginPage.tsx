@@ -45,6 +45,12 @@ export const LoginPage: React.FC = () => {
       return;
     }
 
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~]).{8,64}$/;
+    if (mode === 'register' && !passwordRegex.test(password)) {
+      setError('비밀번호는 8자 이상이며 영문, 숫자, 특수문자를 모두 포함해야 합니다.');
+      return;
+    }
+
     if (password.length < 8) {
       setError('비밀번호는 최소 8자 이상이어야 합니다.');
       return;
@@ -236,7 +242,7 @@ export const LoginPage: React.FC = () => {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder={mode === 'register' ? '비밀번호 (8자 이상)' : '비밀번호'}
+              placeholder={mode === 'register' ? '비밀번호 (8자 이상, 영문/숫자/특수문자)' : '비밀번호'}
               className="pl-9"
               autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
               disabled={isLoading}
