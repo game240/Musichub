@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
-import { ShieldCheck, Lock, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Unlink } from 'lucide-react';
+import { ShieldCheck, Lock, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Unlink, Mail } from 'lucide-react';
 import axios from 'axios';
 import { Modal } from './Modal';
 import { Button } from '../atoms/Button';
@@ -24,6 +24,8 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
   const queryClient = useQueryClient();
 
   const [isPasswordFormOpen, setIsPasswordFormOpen] = useState(false);
+  const [setupStep, setSetupStep] = useState<'initial' | 'code_sent'>('initial');
+  const [verificationCode, setVerificationCode] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -39,10 +41,15 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
     enabled: isOpen,
   });
 
+  const isGoogleLinked = data?.identities.some((i) => i.provider === 'GOOGLE') ?? false;
+  const hasPassword = data?.hasPassword ?? false;
+  const totalIdentitiesCount = data?.identities.length ?? 0;
+
+  // 비밀번호 변경 (hasPassword === true)
   const setPasswordMutation = useMutation({
     mutationFn: (payload: SetPasswordRequest) => userApi.setPassword(payload),
     onSuccess: () => {
-      setPasswordSuccess('비밀번호가 성공적으로 저장되었습니다.');
+      setPasswordSuccess('비밀번호가 성공적으로 변경되었습니다.');
       setPasswordError(null);
       setCurrentPassword('');
       setNewPassword('');
@@ -51,7 +58,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
       queryClient.invalidateQueries({ queryKey: ['user-identities'] });
     },
     onError: (err: unknown) => {
-      let msg = '비밀번호 저장에 실패했습니다.';
+      let msg = '비밀번호 변경에 실패했습니다.';
       if (axios.isAxiosError(err) && err.response?.data?.message) {
         msg = err.response.data.message;
       } else if (err instanceof Error) {
@@ -59,6 +66,50 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
       }
       setPasswordError(msg);
       setPasswordSuccess(null);
+    },
+  });
+
+  // 인증코드 발송 요청 (hasPassword === false)
+  const requestCodeMutation = useMutation({
+    mutationFn: () => userApi.requestPasswordSetupCode(),
+    onSuccess: () => {
+      setSetupStep('code_sent');
+      setPasswordSuccess('인증번호 6자리가 이메일로 발송되었습니다.');
+      setPasswordError(null);
+    },
+    onError: (err: unknown) => {
+      let msg = '인증번호 발송에 실패했습니다.';
+      if (axios.isAxiosError(err) && err.response?.data?.message) {
+        msg = err.response.data.message;
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      setPasswordError(msg);
+    },
+  });
+
+  // 인증코드 확인 후 비밀번호 설정 (hasPassword === false)
+  const confirmSetupMutation = useMutation({
+    mutationFn: ({ code, newPassword }: { code: string; newPassword: string }) =>
+      userApi.confirmPasswordSetup(code, newPassword),
+    onSuccess: () => {
+      setPasswordSuccess('비밀번호가 성공적으로 설정되었습니다. 이제 이메일/비밀번호로도 로그인하실 수 있습니다.');
+      setPasswordError(null);
+      setVerificationCode('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setIsPasswordFormOpen(false);
+      setSetupStep('initial');
+      queryClient.invalidateQueries({ queryKey: ['user-identities'] });
+    },
+    onError: (err: unknown) => {
+      let msg = '비밀번호 설정에 실패했습니다.';
+      if (axios.isAxiosError(err) && err.response?.data?.message) {
+        msg = err.response.data.message;
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      setPasswordError(msg);
     },
   });
 
@@ -100,19 +151,10 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
     },
   });
 
-  const isGoogleLinked = data?.identities.some((i) => i.provider === 'GOOGLE') ?? false;
-  const hasPassword = data?.hasPassword ?? false;
-  const totalIdentitiesCount = data?.identities.length ?? 0;
-
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError(null);
     setPasswordSuccess(null);
-
-    if (hasPassword && !currentPassword) {
-      setPasswordError('현재 비밀번호를 입력해 주세요.');
-      return;
-    }
 
     const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~]).{8,64}$/;
     if (!passwordRegex.test(newPassword)) {
@@ -130,10 +172,25 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
       return;
     }
 
-    setPasswordMutation.mutate({
-      currentPassword: hasPassword ? currentPassword : undefined,
-      newPassword,
-    });
+    if (hasPassword) {
+      if (!currentPassword) {
+        setPasswordError('현재 비밀번호를 입력해 주세요.');
+        return;
+      }
+      setPasswordMutation.mutate({
+        currentPassword,
+        newPassword,
+      });
+    } else {
+      if (!verificationCode || verificationCode.trim().length !== 6) {
+        setPasswordError('이메일로 전송된 6자리 인증번호를 정확히 입력해 주세요.');
+        return;
+      }
+      confirmSetupMutation.mutate({
+        code: verificationCode.trim(),
+        newPassword,
+      });
+    }
   };
 
   const handleGoogleSuccess = (credentialResponse: CredentialResponse) => {
@@ -184,13 +241,9 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-neutral-100">Google 계정</span>
                       {isGoogleLinked ? (
-                        <Badge variant="success">
-                          연결됨
-                        </Badge>
+                        <Badge variant="success">연결됨</Badge>
                       ) : (
-                        <Badge variant="default">
-                          미연결
-                        </Badge>
+                        <Badge variant="default">미연결</Badge>
                       )}
                     </div>
                     <p className="text-xs text-neutral-400 mt-0.5">
@@ -259,13 +312,9 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-neutral-100">이메일 비밀번호 로그인</span>
                       {hasPassword ? (
-                        <Badge variant="success">
-                          설정됨
-                        </Badge>
+                        <Badge variant="success">설정됨</Badge>
                       ) : (
-                        <Badge variant="default">
-                          미설정
-                        </Badge>
+                        <Badge variant="default">미설정</Badge>
                       )}
                     </div>
                     <p className="text-xs text-neutral-400 mt-0.5">
@@ -281,6 +330,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                     setIsPasswordFormOpen((prev) => !prev);
                     setPasswordError(null);
                     setPasswordSuccess(null);
+                    setSetupStep('initial');
                   }}
                 >
                   <span>{hasPassword ? '비밀번호 변경' : '비밀번호 설정'}</span>
@@ -288,83 +338,164 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                 </Button>
               </div>
 
-              {/* Password Setting / Changing Form */}
+              {/* Password Setting / Changing Area */}
               {isPasswordFormOpen ? (
-                <form
-                  onSubmit={handlePasswordSubmit}
-                  className="mt-2 pt-3 border-t border-white/[0.06] flex flex-col gap-3"
-                >
-                  {hasPassword ? (
-                    <div>
-                      <label className="block text-xs text-neutral-300 mb-1">현재 비밀번호</label>
-                      <Input
-                        type="password"
-                        value={currentPassword}
-                        onChange={(e) => setCurrentPassword(e.target.value)}
-                        placeholder="현재 비밀번호를 입력하세요"
-                        disabled={setPasswordMutation.isPending}
-                      />
+                <div className="mt-2 pt-3 border-t border-white/[0.06] flex flex-col gap-3">
+                  {/* Case 1: 최초 비밀번호 설정 (hasPassword === false) && 아직 코드 발송 전 */}
+                  {!hasPassword && setupStep === 'initial' ? (
+                    <div className="p-3.5 bg-white/[0.02] border border-white/[0.05] rounded-xl flex flex-col gap-3">
+                      <div className="flex items-start gap-2.5 text-xs text-neutral-300">
+                        <Mail className="w-4 h-4 text-[#5e6ad2] shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-neutral-100 mb-0.5">이메일 본인 확인 필요</p>
+                          <p className="text-neutral-400 leading-relaxed">
+                            계정 보안을 위해 Google 계정 이메일 (<span className="text-neutral-200 font-medium">{userEmail}</span>)로
+                            6자리 일회용 인증번호를 발송합니다.
+                          </p>
+                        </div>
+                      </div>
+
+                      {passwordError ? (
+                        <div className="flex items-center gap-2 p-2.5 bg-red-500/10 border border-red-500/20 text-red-300 text-xs rounded-lg">
+                          <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                          <span>{passwordError}</span>
+                        </div>
+                      ) : null}
+
+                      <div className="flex justify-end gap-2 pt-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setIsPasswordFormOpen(false)}
+                          disabled={requestCodeMutation.isPending}
+                        >
+                          취소
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="primary"
+                          size="sm"
+                          onClick={() => requestCodeMutation.mutate()}
+                          isLoading={requestCodeMutation.isPending}
+                        >
+                          인증번호 발송
+                        </Button>
+                      </div>
                     </div>
                   ) : null}
 
-                  <div>
-                    <label className="block text-xs text-neutral-300 mb-1">
-                      {hasPassword ? '새 비밀번호' : '설정할 비밀번호'} (8자 이상, 영문/숫자/특수문자 포함)
-                    </label>
-                    <Input
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="영문, 숫자, 특수문자를 포함한 8자 이상 비밀번호"
-                      disabled={setPasswordMutation.isPending}
-                    />
-                  </div>
+                  {/* Case 2: (최초 설정 시 코드 발송 완료 후) OR (기존 비밀번호 변경 시) */}
+                  {hasPassword || setupStep === 'code_sent' ? (
+                    <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-3">
+                      {/* 최초 설정 시 인증코드 입력란 */}
+                      {!hasPassword ? (
+                        <div className="p-3 bg-[#5e6ad2]/10 border border-[#5e6ad2]/20 rounded-xl mb-1">
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="block text-xs font-medium text-[#8590ea]">
+                              이메일 인증번호 6자리
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => requestCodeMutation.mutate()}
+                              disabled={requestCodeMutation.isPending}
+                              className="text-[11px] text-neutral-400 hover:text-white underline cursor-pointer"
+                            >
+                              인증번호 재전송
+                            </button>
+                          </div>
+                          <Input
+                            type="text"
+                            maxLength={6}
+                            value={verificationCode}
+                            onChange={(e) => setVerificationCode(e.target.value)}
+                            placeholder="6자리 숫자 입력 (예: 123456)"
+                            disabled={confirmSetupMutation.isPending}
+                            className="tracking-widest font-mono text-center text-base"
+                          />
+                          <p className="text-[10px] text-neutral-400 mt-1">
+                            {userEmail}로 전송된 6자리 번호를 10분 내에 입력해 주세요.
+                          </p>
+                        </div>
+                      ) : null}
 
-                  <div>
-                    <label className="block text-xs text-neutral-300 mb-1">비밀번호 확인</label>
-                    <Input
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="비밀번호를 다시 한번 입력하세요"
-                      disabled={setPasswordMutation.isPending}
-                    />
-                  </div>
+                      {/* 기존 비밀번호 변경 시 현재 비밀번호 입력란 */}
+                      {hasPassword ? (
+                        <div>
+                          <label className="block text-xs text-neutral-300 mb-1">현재 비밀번호</label>
+                          <Input
+                            type="password"
+                            value={currentPassword}
+                            onChange={(e) => setCurrentPassword(e.target.value)}
+                            placeholder="현재 비밀번호를 입력하세요"
+                            disabled={setPasswordMutation.isPending}
+                          />
+                        </div>
+                      ) : null}
 
-                  {passwordError ? (
-                    <div className="flex items-center gap-2 p-2.5 bg-red-500/10 border border-red-500/20 text-red-300 text-xs rounded-lg">
-                      <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
-                      <span>{passwordError}</span>
-                    </div>
+                      <div>
+                        <label className="block text-xs text-neutral-300 mb-1">
+                          {hasPassword ? '새 비밀번호' : '설정할 비밀번호'} (8자 이상, 영문/숫자/특수문자 포함)
+                        </label>
+                        <Input
+                          type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="영문, 숫자, 특수문자를 포함한 8자 이상 비밀번호"
+                          disabled={hasPassword ? setPasswordMutation.isPending : confirmSetupMutation.isPending}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs text-neutral-300 mb-1">비밀번호 확인</label>
+                        <Input
+                          type="password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          placeholder="비밀번호를 다시 한번 입력하세요"
+                          disabled={hasPassword ? setPasswordMutation.isPending : confirmSetupMutation.isPending}
+                        />
+                      </div>
+
+                      {passwordError ? (
+                        <div className="flex items-center gap-2 p-2.5 bg-red-500/10 border border-red-500/20 text-red-300 text-xs rounded-lg">
+                          <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                          <span>{passwordError}</span>
+                        </div>
+                      ) : null}
+
+                      {passwordSuccess ? (
+                        <div className="flex items-center gap-2 p-2.5 bg-green-500/10 border border-green-500/20 text-green-300 text-xs rounded-lg">
+                          <CheckCircle2 className="w-4 h-4 shrink-0 text-green-400" />
+                          <span>{passwordSuccess}</span>
+                        </div>
+                      ) : null}
+
+                      <div className="flex justify-end gap-2 mt-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setIsPasswordFormOpen(false);
+                            setSetupStep('initial');
+                          }}
+                          disabled={hasPassword ? setPasswordMutation.isPending : confirmSetupMutation.isPending}
+                        >
+                          취소
+                        </Button>
+                        <Button
+                          type="submit"
+                          variant="primary"
+                          size="sm"
+                          isLoading={hasPassword ? setPasswordMutation.isPending : confirmSetupMutation.isPending}
+                        >
+                          {hasPassword ? '비밀번호 변경 완료' : '비밀번호 등록 완료'}
+                        </Button>
+                      </div>
+                    </form>
                   ) : null}
-
-                  {passwordSuccess ? (
-                    <div className="flex items-center gap-2 p-2.5 bg-green-500/10 border border-green-500/20 text-green-300 text-xs rounded-lg">
-                      <CheckCircle2 className="w-4 h-4 shrink-0 text-green-400" />
-                      <span>{passwordSuccess}</span>
-                    </div>
-                  ) : null}
-
-                  <div className="flex justify-end gap-2 mt-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIsPasswordFormOpen(false)}
-                      disabled={setPasswordMutation.isPending}
-                    >
-                      취소
-                    </Button>
-                    <Button
-                      type="submit"
-                      variant="primary"
-                      size="sm"
-                      isLoading={setPasswordMutation.isPending}
-                    >
-                      {hasPassword ? '비밀번호 변경 완료' : '비밀번호 등록'}
-                    </Button>
-                  </div>
-                </form>
+                </div>
               ) : null}
             </div>
 

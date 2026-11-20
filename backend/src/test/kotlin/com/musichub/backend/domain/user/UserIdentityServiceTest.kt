@@ -1,5 +1,6 @@
 package com.musichub.backend.domain.user
 
+import com.musichub.backend.global.mail.EmailService
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -16,6 +17,8 @@ class UserIdentityServiceTest {
     private lateinit var userRepository: UserRepository
     private lateinit var userIdentityRepository: UserIdentityRepository
     private lateinit var passwordEncoder: BCryptPasswordEncoder
+    private lateinit var verificationManager: PasswordSetupVerificationManager
+    private lateinit var emailService: EmailService
     private lateinit var userIdentityService: UserIdentityService
 
     private fun anyIdentity(): UserIdentity {
@@ -33,11 +36,15 @@ class UserIdentityServiceTest {
         userRepository = mock(UserRepository::class.java)
         userIdentityRepository = mock(UserIdentityRepository::class.java)
         passwordEncoder = BCryptPasswordEncoder()
+        verificationManager = mock(PasswordSetupVerificationManager::class.java)
+        emailService = mock(EmailService::class.java)
 
         userIdentityService = UserIdentityService(
             userRepository = userRepository,
             userIdentityRepository = userIdentityRepository,
             passwordEncoder = passwordEncoder,
+            verificationManager = verificationManager,
+            emailService = emailService,
             googleClientId = "dummy-client-id"
         )
     }
@@ -131,6 +138,32 @@ class UserIdentityServiceTest {
             userIdentityService.setPassword(1L, null, "simple123") // 특수문자 없음
         }
         assertEquals("비밀번호는 8자 이상이며 영문, 숫자, 특수문자를 모두 포함해야 합니다.", ex.message)
+    }
+
+    @Test
+    fun `requestPasswordSetup sends code to user email when user has no password`() {
+        val user = User(id = 1L, providerId = "google-123", email = "user@gmail.com")
+        given(userRepository.findById(1L)).willReturn(Optional.of(user))
+        given(userIdentityRepository.findByUserIdAndProvider(1L, AuthProvider.LOCAL)).willReturn(Optional.empty())
+        given(verificationManager.createCode(1L)).willReturn("123456")
+
+        userIdentityService.requestPasswordSetup(1L)
+
+        Mockito.verify(emailService).sendPasswordSetupCode("user@gmail.com", "123456")
+    }
+
+    @Test
+    fun `confirmPasswordSetup verifies code and sets password`() {
+        val user = User(id = 1L, providerId = "google-123", email = "user@gmail.com")
+        given(userRepository.findById(1L)).willReturn(Optional.of(user))
+        given(userIdentityRepository.findByUserIdAndProvider(1L, AuthProvider.LOCAL)).willReturn(Optional.empty())
+        given(userIdentityRepository.save(anyIdentity())).willAnswer { it.getArgument(0) }
+
+        userIdentityService.confirmPasswordSetup(1L, "123456", "securePassword123!")
+
+        Mockito.verify(verificationManager).verifyCode(1L, "123456")
+        assertNotNull(user.passwordHash)
+        assertTrue(passwordEncoder.matches("securePassword123!", user.passwordHash))
     }
 
     @Test

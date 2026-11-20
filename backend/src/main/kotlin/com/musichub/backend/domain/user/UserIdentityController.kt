@@ -25,6 +25,19 @@ data class LinkGoogleRequest(
     val idToken: String
 )
 
+data class ConfirmPasswordSetupRequest(
+    @field:NotBlank(message = "인증번호는 필수 입력값입니다.")
+    @field:Size(min = 6, max = 6, message = "인증번호는 6자리 숫자여야 합니다.")
+    val code: String,
+
+    @field:NotBlank(message = "새 비밀번호는 필수 입력값입니다.")
+    @field:Pattern(
+        regexp = "^(?=.*[A-Za-z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?~]).{8,64}$",
+        message = "비밀번호는 8자 이상이며 영문, 숫자, 특수문자를 모두 포함해야 합니다."
+    )
+    val newPassword: String
+)
+
 @RestController
 @RequestMapping("/api/users/me/identities")
 class UserIdentityController(
@@ -45,6 +58,23 @@ class UserIdentityController(
         @Valid @RequestBody request: SetPasswordRequest
     ): ResponseEntity<Void> {
         userIdentityService.setPassword(principal.id, request.currentPassword, request.newPassword)
+        return ResponseEntity.ok().build()
+    }
+
+    @PostMapping("/password-setup/request")
+    fun requestPasswordSetup(
+        @AuthenticationPrincipal principal: UserPrincipal
+    ): ResponseEntity<Void> {
+        userIdentityService.requestPasswordSetup(principal.id)
+        return ResponseEntity.ok().build()
+    }
+
+    @PostMapping("/password-setup/confirm")
+    fun confirmPasswordSetup(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @Valid @RequestBody request: ConfirmPasswordSetupRequest
+    ): ResponseEntity<Void> {
+        userIdentityService.confirmPasswordSetup(principal.id, request.code, request.newPassword)
         return ResponseEntity.ok().build()
     }
 

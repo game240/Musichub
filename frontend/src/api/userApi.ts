@@ -26,6 +26,17 @@ export const userApi = {
     await apiClient.post('/users/me/identities/password', data);
   },
 
+  async requestPasswordSetupCode(): Promise<void> {
+    await apiClient.post('/users/me/identities/password-setup/request');
+  },
+
+  async confirmPasswordSetup(code: string, newPassword: string): Promise<void> {
+    await apiClient.post('/users/me/identities/password-setup/confirm', {
+      code,
+      newPassword,
+    });
+  },
+
   async linkGoogle(idToken: string): Promise<void> {
     await apiClient.post('/users/me/identities/google', { idToken });
   },

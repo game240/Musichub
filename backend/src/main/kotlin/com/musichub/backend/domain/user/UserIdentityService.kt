@@ -3,6 +3,7 @@ package com.musichub.backend.domain.user
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
+import com.musichub.backend.global.mail.EmailService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
@@ -26,6 +27,8 @@ class UserIdentityService(
     private val userRepository: UserRepository,
     private val userIdentityRepository: UserIdentityRepository,
     private val passwordEncoder: PasswordEncoder,
+    private val verificationManager: PasswordSetupVerificationManager,
+    private val emailService: EmailService,
     @Value("\${musichub.auth.google.client-id}") private val googleClientId: String
 ) {
     companion object {
@@ -59,6 +62,51 @@ class UserIdentityService(
             hasPassword = hasPassword,
             identities = dtos
         )
+    }
+
+    @Transactional
+    fun requestPasswordSetup(userId: Long) {
+        val user = userRepository.findById(userId)
+            .orElseThrow { NoSuchElementException("사용자를 찾을 수 없습니다.") }
+
+        val hasPassword = userIdentityRepository.findByUserIdAndProvider(userId, AuthProvider.LOCAL)
+            .map { it.passwordHash != null }
+            .orElse(false) || user.passwordHash != null
+
+        if (hasPassword) {
+            throw IllegalStateException("이미 비밀번호가 등록되어 있습니다. 비밀번호 변경 기능을 이용해 주세요.")
+        }
+
+        val code = verificationManager.createCode(userId)
+        emailService.sendPasswordSetupCode(user.email, code)
+    }
+
+    @Transactional
+    fun confirmPasswordSetup(userId: Long, code: String, newPassword: String) {
+        require(PASSWORD_REGEX.matches(newPassword)) { "비밀번호는 8자 이상이며 영문, 숫자, 특수문자를 모두 포함해야 합니다." }
+
+        verificationManager.verifyCode(userId, code)
+
+        val user = userRepository.findById(userId)
+            .orElseThrow { NoSuchElementException("사용자를 찾을 수 없습니다.") }
+
+        val localIdentityOpt = userIdentityRepository.findByUserIdAndProvider(userId, AuthProvider.LOCAL)
+        val hashed = passwordEncoder.encode(newPassword)
+
+        if (localIdentityOpt.isPresent) {
+            val identity = localIdentityOpt.get()
+            identity.passwordHash = hashed
+        } else {
+            userIdentityRepository.save(
+                UserIdentity(
+                    user = user,
+                    provider = AuthProvider.LOCAL,
+                    providerId = user.email,
+                    passwordHash = hashed
+                )
+            )
+        }
+        user.passwordHash = hashed
     }
 
     @Transactional
