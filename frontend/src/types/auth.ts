@@ -16,3 +16,14 @@ export interface AuthResponse {
 export interface GoogleLoginRequest {
   idToken: string;
 }
+
+export interface LocalLoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface LocalRegisterRequest {
+  email: string;
+  password: string;
+  displayName?: string;
+}

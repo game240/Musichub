@@ -8,6 +8,7 @@ import com.musichub.backend.domain.user.User
 import com.musichub.backend.domain.user.UserRepository
 import com.musichub.backend.global.security.JwtProvider
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -25,12 +26,56 @@ class AuthService(
     private val userRepository: UserRepository,
     private val refreshTokenRepository: RefreshTokenRepository,
     private val jwtProvider: JwtProvider,
+    private val passwordEncoder: PasswordEncoder,
     @Value("\${musichub.auth.google.client-id}") private val googleClientId: String
 ) {
     private val verifier by lazy {
         GoogleIdTokenVerifier.Builder(NetHttpTransport(), GsonFactory.getDefaultInstance())
             .setAudience(Collections.singletonList(googleClientId))
             .build()
+    }
+
+    @Transactional
+    fun register(request: LocalRegisterRequest, deviceInfo: String?): TokenResult {
+        val normalizedEmail = request.email.trim().lowercase()
+
+        val existingUser = userRepository.findByAuthProviderAndProviderId(AuthProvider.LOCAL, normalizedEmail)
+        if (existingUser.isPresent) {
+            throw IllegalArgumentException("이미 가입된 이메일입니다.")
+        }
+
+        val hashedPassword = passwordEncoder.encode(request.password)
+        val defaultDisplayName = request.displayName?.trim()?.ifBlank { null }
+            ?: normalizedEmail.substringBefore("@")
+
+        val user = userRepository.save(
+            User(
+                authProvider = AuthProvider.LOCAL,
+                providerId = normalizedEmail,
+                email = normalizedEmail,
+                passwordHash = hashedPassword,
+                displayName = defaultDisplayName
+            )
+        )
+
+        return issueTokens(user, deviceInfo)
+    }
+
+    @Transactional
+    fun loginWithLocal(request: LocalLoginRequest, deviceInfo: String?): TokenResult {
+        val normalizedEmail = request.email.trim().lowercase()
+
+        val user = userRepository.findByAuthProviderAndProviderId(AuthProvider.LOCAL, normalizedEmail)
+            .orElseThrow { IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.") }
+
+        val passwordHash = user.passwordHash
+            ?: throw IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.")
+
+        if (!passwordEncoder.matches(request.password, passwordHash)) {
+            throw IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.")
+        }
+
+        return issueTokens(user, deviceInfo)
     }
 
     @Transactional
