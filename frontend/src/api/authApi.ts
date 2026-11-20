@@ -1,7 +1,22 @@
 import { apiClient } from './client';
-import type { AuthResponse, GoogleLoginRequest } from '../types/auth';
+import type {
+  AuthResponse,
+  GoogleLoginRequest,
+  LocalLoginRequest,
+  LocalRegisterRequest,
+} from '../types/auth';
 
 export const authApi = {
+  async loginWithLocal(data: LocalLoginRequest): Promise<AuthResponse> {
+    const response = await apiClient.post<AuthResponse>('/auth/login', data);
+    return response.data;
+  },
+
+  async register(data: LocalRegisterRequest): Promise<AuthResponse> {
+    const response = await apiClient.post<AuthResponse>('/auth/register', data);
+    return response.data;
+  },
+
   async loginWithGoogle(idToken: string): Promise<AuthResponse> {
     const payload: GoogleLoginRequest = { idToken };
     const response = await apiClient.post<AuthResponse>('/auth/google', payload);

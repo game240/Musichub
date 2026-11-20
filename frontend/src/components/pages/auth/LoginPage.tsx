@@ -1,14 +1,96 @@
 import React, { useState } from 'react';
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
-import { Disc3, Cloud, ShieldCheck, Sparkles, AlertCircle } from 'lucide-react';
+import { Disc3, Cloud, ShieldCheck, Sparkles, AlertCircle, Mail, Lock, User as UserIcon } from 'lucide-react';
+import axios from 'axios';
 import { useAuthStore } from '../../../stores/authStore';
 import { authApi } from '../../../api/authApi';
 import { Button } from '../../atoms/Button';
+import { Input } from '../../atoms/Input';
 
 export const LoginPage: React.FC = () => {
   const { setAuth } = useAuthStore();
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const resetForm = (newMode: 'login' | 'register') => {
+    setMode(newMode);
+    setError(null);
+    setPassword('');
+    setConfirmPassword('');
+  };
+
+  const handleLocalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setError('이메일을 입력해 주세요.');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setError('올바른 이메일 형식을 입력해 주세요.');
+      return;
+    }
+
+    if (!password) {
+      setError('비밀번호를 입력해 주세요.');
+      return;
+    }
+
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~]).{8,64}$/;
+    if (mode === 'register' && !passwordRegex.test(password)) {
+      setError('비밀번호는 8자 이상이며 영문, 숫자, 특수문자를 모두 포함해야 합니다.');
+      return;
+    }
+
+    if (password.length < 8) {
+      setError('비밀번호는 최소 8자 이상이어야 합니다.');
+      return;
+    }
+
+    if (mode === 'register') {
+      if (password !== confirmPassword) {
+        setError('비밀번호가 일치하지 않습니다.');
+        return;
+      }
+    }
+
+    try {
+      setIsLoading(true);
+      if (mode === 'login') {
+        const res = await authApi.loginWithLocal({
+          email: trimmedEmail,
+          password,
+        });
+        setAuth(res.user, res.accessToken);
+      } else {
+        const res = await authApi.register({
+          email: trimmedEmail,
+          password,
+          displayName: displayName.trim() || undefined,
+        });
+        setAuth(res.user, res.accessToken);
+      }
+    } catch (err: unknown) {
+      let message = mode === 'login' ? '로그인에 실패했습니다.' : '회원가입에 실패했습니다.';
+      if (axios.isAxiosError(err) && err.response?.data?.message) {
+        message = err.response.data.message;
+      } else if (err instanceof Error) {
+        message = err.message;
+      }
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
     if (!credentialResponse.credential) {
@@ -22,7 +104,12 @@ export const LoginPage: React.FC = () => {
       const res = await authApi.loginWithGoogle(credentialResponse.credential);
       setAuth(res.user, res.accessToken);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Google 로그인에 실패했습니다.';
+      let message = 'Google 로그인에 실패했습니다.';
+      if (axios.isAxiosError(err) && err.response?.data?.message) {
+        message = err.response.data.message;
+      } else if (err instanceof Error) {
+        message = err.message;
+      }
       setError(message);
     } finally {
       setIsLoading(false);
@@ -80,27 +167,136 @@ export const LoginPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Mode Toggle Tabs */}
+        <div className="grid grid-cols-2 p-1 bg-white/[0.04] rounded-xl border border-white/[0.08] w-full mb-5">
+          <button
+            type="button"
+            onClick={() => resetForm('login')}
+            className={`py-2 text-xs font-medium rounded-lg transition-all cursor-pointer ${
+              mode === 'login'
+                ? 'bg-[#5e6ad2] text-white shadow-sm'
+                : 'text-neutral-400 hover:text-neutral-200'
+            }`}
+          >
+            로그인
+          </button>
+          <button
+            type="button"
+            onClick={() => resetForm('register')}
+            className={`py-2 text-xs font-medium rounded-lg transition-all cursor-pointer ${
+              mode === 'register'
+                ? 'bg-[#5e6ad2] text-white shadow-sm'
+                : 'text-neutral-400 hover:text-neutral-200'
+            }`}
+          >
+            회원가입
+          </button>
+        </div>
+
         {error ? (
-          <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 text-red-300 text-xs rounded-xl w-full mb-6 text-left">
+          <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 text-red-300 text-xs rounded-xl w-full mb-4 text-left">
             <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
             <span>{error}</span>
           </div>
         ) : null}
 
+        {/* Local Auth Form */}
+        <form onSubmit={handleLocalSubmit} className="w-full flex flex-col gap-3 mb-5 text-left">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-neutral-500">
+              <Mail className="w-4 h-4" />
+            </div>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="이메일 주소"
+              className="pl-9"
+              autoComplete="email"
+              disabled={isLoading}
+            />
+          </div>
+
+          {mode === 'register' ? (
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-neutral-500">
+                <UserIcon className="w-4 h-4" />
+              </div>
+              <Input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="표시 이름 / 닉네임 (선택)"
+                className="pl-9"
+                autoComplete="nickname"
+                disabled={isLoading}
+              />
+            </div>
+          ) : null}
+
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-neutral-500">
+              <Lock className="w-4 h-4" />
+            </div>
+            <Input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder={mode === 'register' ? '비밀번호 (8자 이상, 영문/숫자/특수문자)' : '비밀번호'}
+              className="pl-9"
+              autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+              disabled={isLoading}
+            />
+          </div>
+
+          {mode === 'register' ? (
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-neutral-500">
+                <Lock className="w-4 h-4" />
+              </div>
+              <Input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="비밀번호 확인"
+                className="pl-9"
+                autoComplete="new-password"
+                disabled={isLoading}
+              />
+            </div>
+          ) : null}
+
+          <Button
+            type="submit"
+            variant="primary"
+            size="md"
+            className="w-full mt-1"
+            isLoading={isLoading}
+          >
+            {mode === 'login' ? '로그인' : '회원가입 완료'}
+          </Button>
+        </form>
+
+        {/* Divider */}
+        <div className="relative w-full my-4">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-white/[0.08]" />
+          </div>
+          <div className="relative flex justify-center text-[11px]">
+            <span className="bg-[#0f1011] px-3 text-neutral-500">또는 Google 계정으로 계속하기</span>
+          </div>
+        </div>
+
         {/* Google Login Provider */}
         <div className="w-full flex justify-center mb-6">
-          {isLoading ? (
-            <p className="text-sm text-[#8590ea]">Music Hub 로그인 중...</p>
-          ) : (
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleError}
-              theme="filled_black"
-              shape="pill"
-              size="large"
-              width="100%"
-            />
-          )}
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+            theme="filled_black"
+            shape="pill"
+            size="large"
+            width="100%"
+          />
         </div>
 
         {/* Developer Sandbox Mode Bypass */}

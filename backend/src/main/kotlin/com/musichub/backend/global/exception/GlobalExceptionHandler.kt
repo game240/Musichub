@@ -3,6 +3,7 @@ package com.musichub.backend.global.exception
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import java.time.Instant
@@ -18,6 +19,18 @@ data class ErrorResponse(
 class GlobalExceptionHandler {
 
     private val logger = LoggerFactory.getLogger(javaClass)
+
+    @ExceptionHandler(MethodArgumentNotValidException::class)
+    fun handleValidation(e: MethodArgumentNotValidException): ResponseEntity<ErrorResponse> {
+        val errorMessage = e.bindingResult.fieldErrors.firstOrNull()?.defaultMessage ?: "입력값 검증에 실패했습니다."
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+            ErrorResponse(
+                status = HttpStatus.BAD_REQUEST.value(),
+                error = "Bad Request",
+                message = errorMessage
+            )
+        )
+    }
 
     @ExceptionHandler(NoSuchElementException::class)
     fun handleNotFound(e: NoSuchElementException): ResponseEntity<ErrorResponse> {
