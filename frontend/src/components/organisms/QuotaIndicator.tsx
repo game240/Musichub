@@ -2,6 +2,7 @@ import React from 'react';
 import { HardDrive } from 'lucide-react';
 import { formatBytes } from '../../utils/formatBytes';
 import { Tooltip } from '../atoms/Tooltip';
+import { cn } from '../../utils/cn';
 
 export interface QuotaIndicatorProps {
   usedBytes: number;
@@ -28,7 +29,7 @@ export const QuotaIndicator: React.FC<QuotaIndicatorProps> = ({
       content={`보관함 사용량: ${formatBytes(usedBytes)} / ${formatBytes(maxBytes)} (${Math.round(percentage)}%)`}
       side="bottom"
     >
-      <div className={`flex flex-col gap-1.5 min-w-[160px] cursor-pointer ${className}`}>
+      <div className={cn('flex flex-col gap-1.5 w-45 cursor-pointer', className)}>
         <div className="flex items-center justify-between text-xs text-neutral-400">
           <span className="flex items-center gap-1.5 font-medium">
             <HardDrive className="w-3.5 h-3.5 text-neutral-400" />
