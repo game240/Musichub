@@ -8,8 +8,9 @@ export interface PlayerQueueDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   queue: MusicFileDto[];
+  isShuffle?: boolean;
   currentTrackId?: number;
-  onPlayTrack: (track: MusicFileDto) => void;
+  onPlayTrack: (track: MusicFileDto, index?: number) => void;
   onRemoveTrack: (index: number) => void;
   onClearQueue: () => void;
 }
@@ -18,6 +19,7 @@ export const PlayerQueueDrawer: React.FC<PlayerQueueDrawerProps> = ({
   isOpen,
   onClose,
   queue,
+  isShuffle = false,
   currentTrackId,
   onPlayTrack,
   onRemoveTrack,
@@ -34,6 +36,11 @@ export const PlayerQueueDrawer: React.FC<PlayerQueueDrawerProps> = ({
         <div className="flex items-center gap-2">
           <ListMusic className="w-4 h-4 text-[#8590ea]" />
           <h3 className="text-sm font-semibold text-neutral-100">재생목록</h3>
+          {isShuffle ? (
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#5e6ad2]/20 text-[#8590ea] border border-[#5e6ad2]/30">
+              셔플
+            </span>
+          ) : null}
           <span className="text-xs text-neutral-500">({queue.length}곡)</span>
         </div>
         <div className="flex items-center gap-1">
@@ -79,7 +86,7 @@ export const PlayerQueueDrawer: React.FC<PlayerQueueDrawerProps> = ({
                     : 'hover:bg-white/[0.04] text-neutral-200 border border-transparent'
                 }`}
                 onClick={() => {
-                  onPlayTrack(track);
+                  onPlayTrack(track, idx);
                 }}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
