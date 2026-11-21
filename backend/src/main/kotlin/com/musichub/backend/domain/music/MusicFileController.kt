@@ -122,7 +122,7 @@ class MusicFileController(
     @GetMapping
     fun listMusicFiles(
         @AuthenticationPrincipal user: UserPrincipal,
-        @PageableDefault(size = 30, sort = ["createdAt"], direction = Sort.Direction.DESC) pageable: Pageable
+        @PageableDefault(size = 30, sort = ["title"], direction = Sort.Direction.ASC) pageable: Pageable
     ): ResponseEntity<Page<MusicFileDto>> {
         val page = musicFileService.listMusicFiles(user.id, pageable).map { MusicFileDto.from(it) }
         return ResponseEntity.ok(page)

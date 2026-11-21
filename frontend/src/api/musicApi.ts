@@ -60,7 +60,7 @@ export const musicApi = {
   async listMusicFiles(
     page: number = 0,
     size: number = 50,
-    sort: string = 'createdAt,desc',
+    sort: string = 'title,asc',
   ): Promise<Page<MusicFileDto>> {
     const response = await apiClient.get<Page<MusicFileDto>>('/music-files', {
       params: { page, size, sort },

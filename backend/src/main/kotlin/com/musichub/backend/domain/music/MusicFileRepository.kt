@@ -15,6 +15,28 @@ interface MusicFileRepository : JpaRepository<MusicFile, Long> {
         pageable: Pageable
     ): Page<MusicFile>
 
+    @Query(
+        value = """
+            SELECT * FROM music_file
+            WHERE user_id = :userId AND status = 'ACTIVE'
+            ORDER BY
+                CASE
+                    WHEN TRIM(COALESCE(title, file_name)) ~ '^[가-힣ㄱ-ㅎ]' THEN 1
+                    WHEN TRIM(COALESCE(title, file_name)) ~* '^[a-z]' THEN 2
+                    WHEN TRIM(COALESCE(title, file_name)) ~ '^[0-9]' THEN 3
+                    ELSE 4
+                END ASC,
+                LOWER(TRIM(COALESCE(title, file_name))) ASC,
+                id ASC
+        """,
+        countQuery = "SELECT COUNT(*) FROM music_file WHERE user_id = :userId AND status = 'ACTIVE'",
+        nativeQuery = true
+    )
+    fun findAllByUserIdAndStatusOrderByKoreanPriority(
+        userId: Long,
+        pageable: Pageable
+    ): Page<MusicFile>
+
     @Query("SELECT COALESCE(SUM(m.fileSize), 0) FROM MusicFile m WHERE m.user.id = :userId")
     fun sumFileSizeByUserId(userId: Long): Long
 
