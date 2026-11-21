@@ -10,7 +10,7 @@ export interface PlayerQueueDrawerProps {
   queue: MusicFileDto[];
   isShuffle?: boolean;
   currentTrackId?: number;
-  onPlayTrack: (track: MusicFileDto) => void;
+  onPlayTrack: (track: MusicFileDto, index?: number) => void;
   onRemoveTrack: (index: number) => void;
   onClearQueue: () => void;
 }
@@ -86,7 +86,7 @@ export const PlayerQueueDrawer: React.FC<PlayerQueueDrawerProps> = ({
                     : 'hover:bg-white/[0.04] text-neutral-200 border border-transparent'
                 }`}
                 onClick={() => {
-                  onPlayTrack(track);
+                  onPlayTrack(track, idx);
                 }}
               >
                 <div className="flex items-center gap-2.5 min-w-0">

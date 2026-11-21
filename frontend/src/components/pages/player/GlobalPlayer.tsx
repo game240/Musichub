@@ -113,7 +113,9 @@ export const GlobalPlayer: React.FC = () => {
         queue={isShuffle && shuffledQueue.length > 0 ? shuffledQueue : queue}
         isShuffle={isShuffle}
         currentTrackId={currentTrack.id}
-        onPlayTrack={playTrack}
+        onPlayTrack={(track, index) => {
+          playTrack(track, { targetIndex: index, preserveShuffle: true });
+        }}
         onRemoveTrack={removeFromQueue}
         onClearQueue={clearQueue}
       />
