@@ -148,10 +148,10 @@ export const GlobalPlayer: React.FC = () => {
               type="button"
               onClick={() => setIsQueueOpen((prev) => !prev)}
               aria-label="재생목록 열기"
-              className={`p-1.5 rounded-lg transition-all cursor-pointer ml-0.5 ${
+              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ml-0.5 ${
                 isQueueOpen
-                  ? 'text-[#8590ea] bg-[#5e6ad2]/20 border border-[#5e6ad2]/30'
-                  : 'text-neutral-400 hover:text-white'
+                  ? 'text-[#8590ea] bg-[#5e6ad2]/20 border-[#5e6ad2]/30'
+                  : 'border-transparent text-neutral-400 hover:text-white'
               }`}
             >
               <ListMusic className="w-4 h-4" />
@@ -210,7 +210,7 @@ export const GlobalPlayer: React.FC = () => {
               type="button"
               onClick={handleDownloadCurrent}
               disabled={isDownloadingCurrent}
-              className="p-2 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors cursor-pointer disabled:opacity-50"
+              className="p-2 text-neutral-400 hover:text-white rounded-lg border border-transparent hover:bg-white/[0.05] transition-colors cursor-pointer disabled:opacity-50"
             >
               {isDownloadingCurrent ? (
                 <Spinner size="sm" className="w-5 h-5 text-[#8590ea]" />
@@ -226,10 +226,10 @@ export const GlobalPlayer: React.FC = () => {
               onClick={() => {
                 setIsQueueOpen((prev) => !prev);
               }}
-              className={`p-2 rounded-lg transition-all duration-150 cursor-pointer ${
+              className={`p-2 rounded-lg border transition-colors duration-150 cursor-pointer ${
                 isQueueOpen
-                  ? 'text-[#8590ea] bg-[#5e6ad2]/15 border border-[#5e6ad2]/30'
-                  : 'text-neutral-400 hover:text-white hover:bg-white/[0.05]'
+                  ? 'text-[#8590ea] bg-[#5e6ad2]/15 border-[#5e6ad2]/30'
+                  : 'border-transparent text-neutral-400 hover:text-white hover:bg-white/[0.05]'
               }`}
             >
               <ListMusic className="w-5 h-5" />

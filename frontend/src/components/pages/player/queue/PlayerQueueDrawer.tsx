@@ -90,10 +90,10 @@ export const PlayerQueueDrawer: React.FC<PlayerQueueDrawerProps> = ({
                 <button
                   type="button"
                   onClick={onToggleShuffle}
-                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                  className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
                     isShuffle
-                      ? 'text-[#8590ea] bg-[#5e6ad2]/20 border border-[#5e6ad2]/30'
-                      : 'text-neutral-400 hover:text-white hover:bg-white/[0.05]'
+                      ? 'text-[#8590ea] bg-[#5e6ad2]/20 border-[#5e6ad2]/30'
+                      : 'border-transparent text-neutral-400 hover:text-white hover:bg-white/[0.05]'
                   }`}
                   aria-label={isShuffle ? '셔플 끄기' : '셔플 켜기'}
                 >

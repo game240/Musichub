@@ -46,10 +46,10 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         <button
           type="button"
           onClick={onToggleShuffle}
-          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+          className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
             isShuffle
-              ? 'text-[#8590ea] bg-[#5e6ad2]/15 border border-[#5e6ad2]/30'
-              : 'text-neutral-400 hover:text-white hover:bg-white/[0.05]'
+              ? 'text-[#8590ea] bg-[#5e6ad2]/15 border-[#5e6ad2]/30'
+              : 'border-transparent text-neutral-400 hover:text-white hover:bg-white/[0.05]'
           }`}
         >
           <Shuffle className="w-4 h-4" />
@@ -61,7 +61,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         <button
           type="button"
           onClick={onPlayPrev}
-          className="p-1.5 text-neutral-300 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors cursor-pointer"
+          className="p-1.5 text-neutral-300 hover:text-white rounded-lg border border-transparent hover:bg-white/[0.05] transition-colors cursor-pointer"
         >
           <SkipBack className="w-4 h-4 fill-current" />
         </button>
@@ -88,7 +88,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         <button
           type="button"
           onClick={onPlayNext}
-          className="p-1.5 text-neutral-300 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors cursor-pointer"
+          className="p-1.5 text-neutral-300 hover:text-white rounded-lg border border-transparent hover:bg-white/[0.05] transition-colors cursor-pointer"
         >
           <SkipForward className="w-4 h-4 fill-current" />
         </button>
@@ -99,10 +99,10 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         <button
           type="button"
           onClick={onToggleRepeat}
-          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+          className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
             repeatMode !== 'OFF'
-              ? 'bg-[#5e6ad2]/15 border border-[#5e6ad2]/30'
-              : 'hover:text-white hover:bg-white/[0.05]'
+              ? 'bg-[#5e6ad2]/15 border-[#5e6ad2]/30'
+              : 'border-transparent hover:text-white hover:bg-white/[0.05]'
           }`}
         >
           {renderRepeatIcon()}
