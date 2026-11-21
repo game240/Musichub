@@ -150,6 +150,7 @@ export const GlobalPlayer: React.FC = () => {
         }}
         onRemoveTrack={removeFromQueue}
         onClearQueue={clearQueue}
+        onToggleShuffle={toggleShuffle}
       />
     </>
   );
