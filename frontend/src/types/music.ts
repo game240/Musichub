@@ -38,6 +38,12 @@ export interface PlayUrlResult {
   durationMs: number | null;
 }
 
+export interface DownloadUrlResult {
+  downloadUrl: string;
+  fileName: string;
+  fileSize: number;
+}
+
 export interface Page<T> {
   content: T[];
   totalElements: number;

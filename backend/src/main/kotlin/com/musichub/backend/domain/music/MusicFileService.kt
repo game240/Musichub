@@ -7,12 +7,15 @@ import com.musichub.backend.domain.user.UserRepository
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
+import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.multipart.MultipartFile
 import java.io.ByteArrayInputStream
 import java.nio.file.Files
+import java.time.Duration
 import java.util.*
 import java.util.concurrent.CompletableFuture
 
@@ -24,6 +27,12 @@ data class UploadInitResult(
 data class PlayUrlResult(
     val playUrl: String,
     val durationMs: Long?
+)
+
+data class DownloadUrlResult(
+    val downloadUrl: String,
+    val fileName: String,
+    val fileSize: Long
 )
 
 @Service
@@ -198,6 +207,49 @@ class MusicFileService(
     }
 
     /**
+     * 다운로드용 파일명 결정 (기본 filename 우선, 누락 시 메타데이터 폴백, 파일시스템 특수문자 정제)
+     */
+    fun resolveDownloadFilename(musicFile: MusicFile): String {
+        val candidate = if (musicFile.fileName.isNotBlank()) {
+            musicFile.fileName.trim()
+        } else {
+            val extension = musicFile.mimeType.substringAfterLast('/', "mp3").replace("mpeg", "mp3")
+            when {
+                !musicFile.artist.isNullOrBlank() && !musicFile.title.isNullOrBlank() ->
+                    "${musicFile.artist!!.trim()} - ${musicFile.title!!.trim()}.$extension"
+                !musicFile.title.isNullOrBlank() ->
+                    "${musicFile.title!!.trim()}.$extension"
+                else ->
+                    "audio.$extension"
+            }
+        }
+        return candidate.replace(Regex("[\\\\/:*?\"<>|]"), "_").trim()
+    }
+
+    /**
+     * 4-1. 음원 파일 다운로드용 Presigned GET URL 발급 (Content-Disposition: attachment)
+     */
+    @Transactional(readOnly = true)
+    fun getDownloadUrl(userId: Long, musicFileId: Long): DownloadUrlResult {
+        val musicFile = musicFileRepository.findByIdAndUserId(musicFileId, userId)
+            .filter { it.status == MusicFileStatus.ACTIVE }
+            .orElseThrow { NoSuchElementException("음악 파일을 찾을 수 없습니다.") }
+
+        val downloadFilename = resolveDownloadFilename(musicFile)
+        val downloadUrl = storageService.generatePresignedDownloadUrl(
+            key = musicFile.storageKey,
+            downloadFilename = downloadFilename,
+            duration = Duration.ofMinutes(15)
+        )
+
+        return DownloadUrlResult(
+            downloadUrl = downloadUrl,
+            fileName = downloadFilename,
+            fileSize = musicFile.fileSize
+        )
+    }
+
+    /**
      * 5. 앨범 커버 이미지 Presigned URL 발급
      */
     @Transactional(readOnly = true)
@@ -210,7 +262,15 @@ class MusicFileService(
 
     @Transactional(readOnly = true)
     fun listMusicFiles(userId: Long, pageable: Pageable): Page<MusicFile> {
-        return musicFileRepository.findAllByUserIdAndStatus(userId, MusicFileStatus.ACTIVE, pageable)
+        val titleOrder = pageable.sort.getOrderFor("title")
+        val isDefaultOrTitleSort = pageable.sort.isUnsorted || (titleOrder != null && titleOrder.direction == Sort.Direction.ASC)
+
+        return if (isDefaultOrTitleSort) {
+            val unsortedPageable = PageRequest.of(pageable.pageNumber, pageable.pageSize)
+            musicFileRepository.findAllByUserIdAndStatusOrderByKoreanPriority(userId, unsortedPageable)
+        } else {
+            musicFileRepository.findAllByUserIdAndStatus(userId, MusicFileStatus.ACTIVE, pageable)
+        }
     }
 
     @Transactional

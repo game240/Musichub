@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ListMusic } from 'lucide-react';
+import { ListMusic, Download } from 'lucide-react';
 import { usePlayerStore } from '../../../stores/playerStore';
 import { TrackArtwork } from '../library/track/TrackArtwork';
 import { PlayerControls } from './PlayerControls';
@@ -7,11 +7,15 @@ import { PlayerSeekBar } from './PlayerSeekBar';
 import { VolumeSlider } from '../../molecules/VolumeSlider';
 import { PlayerQueueDrawer } from './queue/PlayerQueueDrawer';
 import { Tooltip } from '../../atoms/Tooltip';
+import { Spinner } from '../../atoms/Spinner';
+import { musicApi } from '../../../api/musicApi';
+import { triggerBrowserDownload } from '../../../utils/downloadFile';
 
 export const GlobalPlayer: React.FC = () => {
   const {
     currentTrack,
     queue,
+    shuffledQueue,
     isPlaying,
     isLoading,
     currentTime,
@@ -34,6 +38,20 @@ export const GlobalPlayer: React.FC = () => {
   } = usePlayerStore();
 
   const [isQueueOpen, setIsQueueOpen] = useState(false);
+  const [isDownloadingCurrent, setIsDownloadingCurrent] = useState(false);
+
+  const handleDownloadCurrent = async () => {
+    if (!currentTrack || isDownloadingCurrent) return;
+    try {
+      setIsDownloadingCurrent(true);
+      const { downloadUrl, fileName } = await musicApi.getDownloadUrl(currentTrack.id);
+      triggerBrowserDownload(downloadUrl, fileName);
+    } catch (err) {
+      console.error('Failed to download current track:', err);
+    } finally {
+      setIsDownloadingCurrent(false);
+    }
+  };
 
   if (!currentTrack) {
     return null;
@@ -85,6 +103,21 @@ export const GlobalPlayer: React.FC = () => {
             onToggleMute={toggleMute}
           />
 
+          <Tooltip content="현재 곡 다운로드" side="top">
+            <button
+              type="button"
+              onClick={handleDownloadCurrent}
+              disabled={isDownloadingCurrent}
+              className="p-2 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {isDownloadingCurrent ? (
+                <Spinner size="sm" className="w-5 h-5 text-[#8590ea]" />
+              ) : (
+                <Download className="w-5 h-5" />
+              )}
+            </button>
+          </Tooltip>
+
           <Tooltip content="재생목록" side="top">
             <button
               type="button"
@@ -109,11 +142,15 @@ export const GlobalPlayer: React.FC = () => {
         onClose={() => {
           setIsQueueOpen(false);
         }}
-        queue={queue}
+        queue={isShuffle && shuffledQueue.length > 0 ? shuffledQueue : queue}
+        isShuffle={isShuffle}
         currentTrackId={currentTrack.id}
-        onPlayTrack={playTrack}
+        onPlayTrack={(track, index) => {
+          playTrack(track, { targetIndex: index, preserveShuffle: true });
+        }}
         onRemoveTrack={removeFromQueue}
         onClearQueue={clearQueue}
+        onToggleShuffle={toggleShuffle}
       />
     </>
   );

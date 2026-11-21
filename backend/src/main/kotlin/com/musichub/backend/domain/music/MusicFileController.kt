@@ -122,7 +122,7 @@ class MusicFileController(
     @GetMapping
     fun listMusicFiles(
         @AuthenticationPrincipal user: UserPrincipal,
-        @PageableDefault(size = 30, sort = ["createdAt"], direction = Sort.Direction.DESC) pageable: Pageable
+        @PageableDefault(size = 30, sort = ["title"], direction = Sort.Direction.ASC) pageable: Pageable
     ): ResponseEntity<Page<MusicFileDto>> {
         val page = musicFileService.listMusicFiles(user.id, pageable).map { MusicFileDto.from(it) }
         return ResponseEntity.ok(page)
@@ -134,6 +134,15 @@ class MusicFileController(
         @PathVariable id: Long
     ): ResponseEntity<PlayUrlResult> {
         val result = musicFileService.getStreamingUrl(user.id, id)
+        return ResponseEntity.ok(result)
+    }
+
+    @GetMapping("/{id}/download")
+    fun getDownloadUrl(
+        @AuthenticationPrincipal user: UserPrincipal,
+        @PathVariable id: Long
+    ): ResponseEntity<DownloadUrlResult> {
+        val result = musicFileService.getDownloadUrl(user.id, id)
         return ResponseEntity.ok(result)
     }
 

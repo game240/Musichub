@@ -7,10 +7,12 @@ export interface TrackTableProps {
   tracks: MusicFileDto[];
   currentTrackId?: number;
   isPlaying: boolean;
+  downloadingTrackId?: number | null;
   onPlay: (track: MusicFileDto) => void;
   onAddToQueue: (track: MusicFileDto) => void;
   onEdit: (track: MusicFileDto) => void;
   onDelete: (track: MusicFileDto) => void;
+  onDownload: (track: MusicFileDto) => void;
   onUploadClick: () => void;
   isFiltered?: boolean;
 }
@@ -19,10 +21,12 @@ export const TrackTable: React.FC<TrackTableProps> = ({
   tracks,
   currentTrackId,
   isPlaying,
+  downloadingTrackId,
   onPlay,
   onAddToQueue,
   onEdit,
   onDelete,
+  onDownload,
   onUploadClick,
   isFiltered = false,
 }) => {
@@ -52,7 +56,7 @@ export const TrackTable: React.FC<TrackTableProps> = ({
             <th className="py-2.5 px-4 hidden md:table-cell">앨범</th>
             <th className="py-2.5 px-4 hidden sm:table-cell">재생 시간</th>
             <th className="py-2.5 px-4 hidden lg:table-cell">파일 크기</th>
-            <th className="py-2.5 px-4 text-right w-28">관리</th>
+            <th className="py-2.5 px-4 text-right w-36">관리</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-white/[0.04]">
@@ -63,10 +67,12 @@ export const TrackTable: React.FC<TrackTableProps> = ({
               index={idx}
               isCurrent={track.id === currentTrackId}
               isPlaying={isPlaying}
+              isDownloading={track.id === downloadingTrackId}
               onPlay={onPlay}
               onAddToQueue={onAddToQueue}
               onEdit={onEdit}
               onDelete={onDelete}
+              onDownload={onDownload}
             />
           ))}
         </tbody>

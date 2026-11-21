@@ -9,9 +9,37 @@ import java.util.Optional
 interface MusicFileRepository : JpaRepository<MusicFile, Long> {
     fun findByIdAndUserId(id: Long, userId: Long): Optional<MusicFile>
 
+    fun findAllByIdInAndUserIdAndStatus(
+        ids: Collection<Long>,
+        userId: Long,
+        status: MusicFileStatus
+    ): List<MusicFile>
+
     fun findAllByUserIdAndStatus(
         userId: Long,
         status: MusicFileStatus,
+        pageable: Pageable
+    ): Page<MusicFile>
+
+    @Query(
+        value = """
+            SELECT * FROM music_file
+            WHERE user_id = :userId AND status = 'ACTIVE'
+            ORDER BY
+                CASE
+                    WHEN TRIM(COALESCE(title, file_name)) ~ '^[가-힣ㄱ-ㅎ]' THEN 1
+                    WHEN TRIM(COALESCE(title, file_name)) ~* '^[a-z]' THEN 2
+                    WHEN TRIM(COALESCE(title, file_name)) ~ '^[0-9]' THEN 3
+                    ELSE 4
+                END ASC,
+                LOWER(TRIM(COALESCE(title, file_name))) ASC,
+                id ASC
+        """,
+        countQuery = "SELECT COUNT(*) FROM music_file WHERE user_id = :userId AND status = 'ACTIVE'",
+        nativeQuery = true
+    )
+    fun findAllByUserIdAndStatusOrderByKoreanPriority(
+        userId: Long,
         pageable: Pageable
     ): Page<MusicFile>
 

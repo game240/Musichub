@@ -3,6 +3,7 @@ import { apiClient } from './client';
 import type {
   DirectUploadCompleteRequest,
   DirectUploadInitRequest,
+  DownloadUrlResult,
   MusicFileDto,
   Page,
   PlayUrlResult,
@@ -60,7 +61,7 @@ export const musicApi = {
   async listMusicFiles(
     page: number = 0,
     size: number = 50,
-    sort: string = 'createdAt,desc',
+    sort: string = 'title,asc',
   ): Promise<Page<MusicFileDto>> {
     const response = await apiClient.get<Page<MusicFileDto>>('/music-files', {
       params: { page, size, sort },
@@ -70,6 +71,11 @@ export const musicApi = {
 
   async getPlayUrl(id: number): Promise<PlayUrlResult> {
     const response = await apiClient.get<PlayUrlResult>(`/music-files/${id}/play`);
+    return response.data;
+  },
+
+  async getDownloadUrl(id: number): Promise<DownloadUrlResult> {
+    const response = await apiClient.get<DownloadUrlResult>(`/music-files/${id}/download`);
     return response.data;
   },
 
