@@ -9,6 +9,9 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.springframework.data.domain.PageImpl
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
 import org.mockito.BDDMockito.given
 import org.mockito.BDDMockito.verify
 import org.mockito.Mockito
@@ -230,5 +233,43 @@ class MusicFileServiceUpdateTest {
         assertThrows<NoSuchElementException> {
             musicFileService.updateMetadata(1L, 999L, request)
         }
+    }
+
+    @Test
+    fun `listMusicFiles uses Korean priority sorting when unsorted or sorted by title asc`() {
+        val user = User(id = 1L, providerId = "test", email = "test@test.com")
+        val track = MusicFile(
+            id = 1L,
+            user = user,
+            storageKey = "k1",
+            fileName = "가나다.mp3",
+            fileSize = 100L,
+            title = "가나다"
+        )
+        val expectedPage = PageImpl(listOf(track))
+
+        given(musicFileRepository.findAllByUserIdAndStatusOrderByKoreanPriority(1L, PageRequest.of(0, 30)))
+            .willReturn(expectedPage)
+
+        val resultUnsorted = musicFileService.listMusicFiles(1L, PageRequest.of(0, 30))
+        assertEquals(1, resultUnsorted.totalElements)
+        verify(musicFileRepository).findAllByUserIdAndStatusOrderByKoreanPriority(1L, PageRequest.of(0, 30))
+
+        val resultTitleAsc = musicFileService.listMusicFiles(1L, PageRequest.of(0, 30, Sort.by("title").ascending()))
+        assertEquals(1, resultTitleAsc.totalElements)
+        verify(musicFileRepository, Mockito.times(2)).findAllByUserIdAndStatusOrderByKoreanPriority(1L, PageRequest.of(0, 30))
+    }
+
+    @Test
+    fun `listMusicFiles delegates to standard repository method when non-title sort is specified`() {
+        val pageable = PageRequest.of(0, 30, Sort.by("createdAt").descending())
+        val expectedPage = PageImpl(emptyList<MusicFile>())
+
+        given(musicFileRepository.findAllByUserIdAndStatus(1L, MusicFileStatus.ACTIVE, pageable))
+            .willReturn(expectedPage)
+
+        val result = musicFileService.listMusicFiles(1L, pageable)
+        assertEquals(0, result.totalElements)
+        verify(musicFileRepository).findAllByUserIdAndStatus(1L, MusicFileStatus.ACTIVE, pageable)
     }
 }

@@ -7,7 +7,9 @@ import com.musichub.backend.domain.user.UserRepository
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
+import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.multipart.MultipartFile
@@ -210,7 +212,15 @@ class MusicFileService(
 
     @Transactional(readOnly = true)
     fun listMusicFiles(userId: Long, pageable: Pageable): Page<MusicFile> {
-        return musicFileRepository.findAllByUserIdAndStatus(userId, MusicFileStatus.ACTIVE, pageable)
+        val titleOrder = pageable.sort.getOrderFor("title")
+        val isDefaultOrTitleSort = pageable.sort.isUnsorted || (titleOrder != null && titleOrder.direction == Sort.Direction.ASC)
+
+        return if (isDefaultOrTitleSort) {
+            val unsortedPageable = PageRequest.of(pageable.pageNumber, pageable.pageSize)
+            musicFileRepository.findAllByUserIdAndStatusOrderByKoreanPriority(userId, unsortedPageable)
+        } else {
+            musicFileRepository.findAllByUserIdAndStatus(userId, MusicFileStatus.ACTIVE, pageable)
+        }
     }
 
     @Transactional
