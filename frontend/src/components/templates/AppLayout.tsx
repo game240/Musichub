@@ -16,12 +16,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, headerRight, bot
           <div className="p-1.5 bg-[#5e6ad2]/15 border border-[#5e6ad2]/30 rounded-lg text-[#5e6ad2] shrink-0">
             <Disc3 className="w-5 h-5 animate-spin-slow" />
           </div>
-          <div className="flex items-center gap-2 min-w-0">
-            <h1 className="text-sm font-semibold text-neutral-100 truncate">Music Hub</h1>
-            <span className="hidden sm:inline-block text-[10px] border border-white/10 bg-white/[0.04] text-neutral-400 px-1.5 py-0.5 rounded shrink-0">
-              클라우드 보관함
-            </span>
-          </div>
+          <h1 className="text-sm font-semibold text-neutral-100 truncate">Music Hub</h1>
         </div>
 
         {headerRight ? (
