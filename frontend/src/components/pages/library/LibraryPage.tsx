@@ -103,11 +103,12 @@ export const LibraryPage: React.FC = () => {
     <div className="flex flex-col gap-5">
       {/* Action Toolbar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-1">
           <SearchInput
             value={searchQuery}
             onChange={setSearchQuery}
             placeholder="곡 제목, 아티스트, 앨범 검색..."
+            className="flex-1 max-w-full sm:max-w-md"
           />
           <Tooltip content="보관함 새로고침" side="bottom">
             <button
@@ -115,7 +116,7 @@ export const LibraryPage: React.FC = () => {
               onClick={() => {
                 refetch();
               }}
-              className={`p-2 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors cursor-pointer ${
+              className={`p-2 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors cursor-pointer shrink-0 ${
                 isRefetching ? 'animate-spin' : ''
               }`}
             >
@@ -124,8 +125,8 @@ export const LibraryPage: React.FC = () => {
           </Tooltip>
         </div>
 
-        <div className="flex items-center gap-3 justify-between sm:justify-end">
-          <span className="text-xs text-neutral-400 border border-white/10 bg-white/[0.03] px-2.5 py-1 rounded-md flex items-center gap-1.5">
+        <div className="flex items-center gap-2.5 sm:gap-3 justify-between sm:justify-end shrink-0">
+          <span className="text-xs text-neutral-400 border border-white/10 bg-white/[0.03] px-2.5 py-1.5 rounded-md flex items-center gap-1.5">
             <Music className="w-3.5 h-3.5 text-[#5e6ad2]" />
             <span>총 {filteredTracks.length}곡</span>
           </span>

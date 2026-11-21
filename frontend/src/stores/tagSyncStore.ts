@@ -38,9 +38,7 @@ const setupPolling = (
         activePollers.delete(id);
 
         set((state) => ({
-          tasks: state.tasks.map((t) =>
-            t.id === id ? { ...t, status: 'completed' as const } : t,
-          ),
+          tasks: state.tasks.map((t) => (t.id === id ? { ...t, status: 'completed' as const } : t)),
         }));
 
         // 3.5초 후 위젯에서 자동 제거

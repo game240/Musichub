@@ -107,7 +107,7 @@ const EditMetadataForm: React.FC<EditMetadataFormProps> = ({ track, onClose, onS
       </div>
 
       {/* Year, Genre, Track Number */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
           <label className="block text-xs font-medium text-neutral-300 mb-1.5">발매년도</label>
           <Input

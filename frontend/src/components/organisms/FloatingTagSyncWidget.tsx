@@ -13,7 +13,7 @@ export const FloatingTagSyncWidget: React.FC = () => {
   return (
     <aside
       aria-label="클라우드 동기화 상태"
-      className="fixed bottom-24 right-6 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none select-none"
+      className="fixed bottom-20 sm:bottom-24 left-4 right-4 sm:left-auto sm:right-6 sm:w-80 max-w-[calc(100vw-32px)] z-50 flex flex-col gap-2 pointer-events-none select-none"
     >
       {tasks.map((task) => {
         const isSyncing = task.status === 'syncing';

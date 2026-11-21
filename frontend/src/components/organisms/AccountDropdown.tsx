@@ -37,7 +37,10 @@ export const AccountDropdown: React.FC<AccountDropdownProps> = ({
   }, [isOpen]);
 
   const maxStorageBytes = 2 * 1024 * 1024 * 1024; // 2.0 GB
-  const usagePercentage = Math.min(100, Math.round((user.storageUsedBytes / maxStorageBytes) * 100));
+  const usagePercentage = Math.min(
+    100,
+    Math.round((user.storageUsedBytes / maxStorageBytes) * 100),
+  );
 
   return (
     <div className="relative" ref={containerRef}>
