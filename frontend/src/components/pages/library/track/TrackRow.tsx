@@ -1,5 +1,5 @@
-import React from 'react';
-import { Play, Pause, Trash2, ListPlus, Pencil, Download } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Play, Pause, Trash2, ListPlus, Pencil, Download, MoreVertical } from 'lucide-react';
 import type { MusicFileDto } from '../../../../types/music';
 import { TrackArtwork } from './TrackArtwork';
 import { formatDurationMs } from '../../../../utils/formatTime';
@@ -33,6 +33,27 @@ export const TrackRow: React.FC<TrackRowProps> = ({
   onDelete,
   onDownload,
 }) => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    if (isMobileMenuOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+      document.addEventListener('touchstart', handleOutsideClick);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+    };
+  }, [isMobileMenuOpen]);
+
   return (
     <tr
       onDoubleClick={() => {
@@ -40,16 +61,17 @@ export const TrackRow: React.FC<TrackRowProps> = ({
       }}
       className={cn(
         'group border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors duration-150 select-none',
-        isCurrent && 'bg-[#5e6ad2]/10'
+        isCurrent && 'bg-[#5e6ad2]/10',
       )}
     >
       {/* Index & Play button */}
-      <td className="w-14 py-2.5 px-3 text-center relative">
+      <td className="w-10 sm:w-14 py-2.5 px-1 sm:px-3 text-center relative">
         {isCurrent && (
           <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[#5e6ad2] rounded-r" />
         )}
         <div className="w-7 h-7 mx-auto relative flex items-center justify-center">
-          <div className="group-hover:hidden flex items-center justify-center">
+          {/* Desktop track number or equalizer */}
+          <div className="hidden sm:flex group-hover:hidden items-center justify-center">
             {isCurrent && isPlaying ? (
               <div className="flex items-end justify-center gap-0.5 h-3.5 w-3.5">
                 <span className="w-0.5 bg-[#8590ea] h-full animate-bounce" />
@@ -60,7 +82,7 @@ export const TrackRow: React.FC<TrackRowProps> = ({
               <span
                 className={cn(
                   'text-xs',
-                  isCurrent ? 'text-[#8590ea] font-semibold' : 'text-neutral-500'
+                  isCurrent ? 'text-[#8590ea] font-semibold' : 'text-neutral-500',
                 )}
               >
                 {index + 1}
@@ -68,12 +90,21 @@ export const TrackRow: React.FC<TrackRowProps> = ({
             )}
           </div>
 
+          {/* Play/Pause Button: always visible on mobile, hover-only on desktop */}
           <button
             type="button"
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               onPlay(track);
             }}
-            className="hidden group-hover:flex w-7 h-7 items-center justify-center text-white bg-[#5e6ad2] hover:bg-[#6f7cf4] rounded-full shadow-md cursor-pointer transition-colors"
+            aria-label={isCurrent && isPlaying ? '일시정지' : '재생'}
+            className={cn(
+              'w-7 h-7 items-center justify-center rounded-full shadow-md cursor-pointer transition-colors',
+              'flex sm:hidden sm:group-hover:flex',
+              isCurrent
+                ? 'text-white bg-[#5e6ad2] hover:bg-[#6f7cf4]'
+                : 'text-neutral-300 bg-white/[0.08] hover:bg-white/[0.15] sm:bg-[#5e6ad2] sm:text-white sm:hover:bg-[#6f7cf4]',
+            )}
           >
             {isCurrent && isPlaying ? (
               <Pause className="w-3.5 h-3.5 fill-current" />
@@ -85,19 +116,24 @@ export const TrackRow: React.FC<TrackRowProps> = ({
       </td>
 
       {/* Artwork + Title & Artist */}
-      <td className="py-2.5 px-4">
-        <div className="flex items-center gap-3">
+      <td className="py-2.5 px-2 sm:px-4">
+        <div
+          className="flex items-center gap-2.5 sm:gap-3 cursor-pointer"
+          onClick={() => {
+            onPlay(track);
+          }}
+        >
           <TrackArtwork
             trackId={track.id}
             hasArtwork={track.hasArtwork}
             title={track.title}
             size="md"
           />
-          <div className="min-w-0 max-w-xs md:max-w-md">
+          <div className="min-w-0 max-w-[190px] sm:max-w-xs md:max-w-md">
             <p
               className={cn(
                 'text-sm font-medium truncate',
-                isCurrent ? 'text-[#8590ea] font-semibold' : 'text-neutral-100'
+                isCurrent ? 'text-[#8590ea] font-semibold' : 'text-neutral-100',
               )}
             >
               {track.title || track.fileName}
@@ -127,8 +163,9 @@ export const TrackRow: React.FC<TrackRowProps> = ({
       </td>
 
       {/* Actions */}
-      <td className="w-36 py-2.5 px-4 text-right">
-        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <td className="w-14 sm:w-36 py-2.5 px-3 sm:px-4 text-center sm:text-right relative">
+        {/* Desktop actions (>= sm) */}
+        <div className="hidden sm:flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <Tooltip content="음원 다운로드" side="top">
             <button
               type="button"
@@ -179,6 +216,88 @@ export const TrackRow: React.FC<TrackRowProps> = ({
             </button>
           </Tooltip>
         </div>
+
+        {/* Mobile action trigger (< sm) */}
+        <div className="sm:hidden flex items-center justify-center sm:justify-end">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsMobileMenuOpen((prev) => !prev);
+            }}
+            aria-label="음원 메뉴 열기"
+            className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.08] transition-colors cursor-pointer"
+          >
+            <MoreVertical className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Mobile dropdown menu */}
+        {isMobileMenuOpen && (
+          <div
+            ref={menuRef}
+            className="absolute right-3 top-11 z-30 w-44 bg-[#0f1011] border border-white/[0.1] rounded-xl shadow-2xl p-1.5 flex flex-col gap-0.5 backdrop-blur-2xl animate-in fade-in zoom-in-95 text-left"
+          >
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsMobileMenuOpen(false);
+                onDownload(track);
+              }}
+              disabled={isDownloading}
+              className="flex items-center gap-2.5 px-3 py-2 text-xs text-neutral-300 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {isDownloading ? (
+                <Spinner size="sm" className="w-3.5 h-3.5 text-[#8590ea]" />
+              ) : (
+                <Download className="w-3.5 h-3.5" />
+              )}
+              <span>음원 다운로드</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsMobileMenuOpen(false);
+                onAddToQueue(track);
+              }}
+              className="flex items-center gap-2.5 px-3 py-2 text-xs text-neutral-300 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"
+            >
+              <ListPlus className="w-3.5 h-3.5" />
+              <span>재생목록에 추가</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsMobileMenuOpen(false);
+                onEdit(track);
+              }}
+              className="flex items-center gap-2.5 px-3 py-2 text-xs text-neutral-300 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              <span>정보 수정</span>
+            </button>
+
+            <div className="h-px bg-white/[0.06] my-1" />
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsMobileMenuOpen(false);
+                onDelete(track);
+              }}
+              className="flex items-center gap-2.5 px-3 py-2 text-xs text-red-400 hover:text-red-300 rounded-lg hover:bg-red-500/10 transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>음원 삭제</span>
+            </button>
+          </div>
+        )}
       </td>
     </tr>
   );

@@ -33,9 +33,12 @@ export const useAuthStore = create<AuthState>((set, get) => {
       if (typeof user.volume === 'number') {
         usePlayerStore.getState().initVolumeFromUser(user.volume);
       }
-      playbackApi.getPlaybackState().then((playback) => {
-        usePlayerStore.getState().initPlaybackState(playback);
-      }).catch(() => {});
+      playbackApi
+        .getPlaybackState()
+        .then((playback) => {
+          usePlayerStore.getState().initPlaybackState(playback);
+        })
+        .catch(() => {});
     },
 
     updateStorageUsage: (deltaBytes: number) => {
@@ -64,9 +67,12 @@ export const useAuthStore = create<AuthState>((set, get) => {
         if (typeof response.user.volume === 'number') {
           usePlayerStore.getState().initVolumeFromUser(response.user.volume);
         }
-        playbackApi.getPlaybackState().then((playback) => {
-          usePlayerStore.getState().initPlaybackState(playback);
-        }).catch(() => {});
+        playbackApi
+          .getPlaybackState()
+          .then((playback) => {
+            usePlayerStore.getState().initPlaybackState(playback);
+          })
+          .catch(() => {});
         return true;
       } catch {
         setAccessToken(null);

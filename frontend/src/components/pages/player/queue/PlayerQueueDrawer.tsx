@@ -58,7 +58,7 @@ export const PlayerQueueDrawer: React.FC<PlayerQueueDrawerProps> = ({
     <>
       {/* Backdrop overlay */}
       <div
-        className={`fixed inset-0 top-0 bottom-20 z-40 bg-black/40 backdrop-blur-xs transition-opacity duration-300 ${
+        className={`fixed inset-0 top-0 bottom-16 md:bottom-20 z-40 bg-black/40 backdrop-blur-xs transition-opacity duration-300 ${
           isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
         onClick={onClose}
@@ -68,7 +68,7 @@ export const PlayerQueueDrawer: React.FC<PlayerQueueDrawerProps> = ({
       {/* Slide-expand drawer panel */}
       <aside
         aria-label="재생목록 대기열"
-        className={`fixed top-0 bottom-20 right-0 w-80 sm:w-96 bg-[#0f1011]/95 border-l border-white/[0.08] z-40 backdrop-blur-xl flex flex-col transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+        className={`fixed top-0 bottom-16 md:bottom-20 right-0 w-full max-w-[380px] sm:w-96 bg-[#0f1011]/95 border-l border-white/[0.08] z-40 backdrop-blur-xl flex flex-col transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
           isOpen
             ? 'translate-x-0 opacity-100 pointer-events-auto shadow-[-12px_0_36px_rgba(0,0,0,0.5)]'
             : 'translate-x-full opacity-0 pointer-events-none'
@@ -79,8 +79,8 @@ export const PlayerQueueDrawer: React.FC<PlayerQueueDrawerProps> = ({
           <div className="flex items-center gap-2">
             <ListMusic className="w-4 h-4 text-[#8590ea]" />
             <div className="flex items-end gap-2">
-            <h3 className="text-sm font-semibold text-neutral-100">재생목록</h3>
-            <span className="text-xs text-neutral-500">({queue.length}곡)</span>
+              <h3 className="text-sm font-semibold text-neutral-100">재생목록</h3>
+              <span className="text-xs text-neutral-500">({queue.length}곡)</span>
             </div>
           </div>
 
@@ -90,10 +90,10 @@ export const PlayerQueueDrawer: React.FC<PlayerQueueDrawerProps> = ({
                 <button
                   type="button"
                   onClick={onToggleShuffle}
-                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                  className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
                     isShuffle
-                      ? 'text-[#8590ea] bg-[#5e6ad2]/20 border border-[#5e6ad2]/30'
-                      : 'text-neutral-400 hover:text-white hover:bg-white/[0.05]'
+                      ? 'text-[#8590ea] bg-[#5e6ad2]/20 border-[#5e6ad2]/30'
+                      : 'border-transparent text-neutral-400 hover:text-white hover:bg-white/[0.05]'
                   }`}
                   aria-label={isShuffle ? '셔플 끄기' : '셔플 켜기'}
                 >
@@ -175,7 +175,7 @@ export const PlayerQueueDrawer: React.FC<PlayerQueueDrawerProps> = ({
                           e.stopPropagation();
                           onRemoveTrack(idx);
                         }}
-                        className="p-1 text-neutral-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        className="p-1 text-neutral-500 hover:text-red-400 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity cursor-pointer"
                         aria-label={`${track.title || track.fileName} 대기열에서 제거`}
                       >
                         <X className="w-3.5 h-3.5" />

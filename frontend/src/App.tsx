@@ -91,10 +91,14 @@ const AppContent: React.FC = () => {
 
   const headerRight = (
     <>
-      {user ? <QuotaIndicator usedBytes={user.storageUsedBytes} /> : null}
+      {user ? (
+        <div className="hidden md:flex">
+          <QuotaIndicator usedBytes={user.storageUsedBytes} />
+        </div>
+      ) : null}
 
       {user ? (
-        <div className="pl-3 border-l border-white/[0.08]">
+        <div className="md:pl-3 md:border-l border-white/[0.08]">
           <AccountDropdown
             user={user}
             onOpenSecurityModal={() => setIsSecurityModalOpen(true)}

@@ -51,12 +51,12 @@ export const TrackTable: React.FC<TrackTableProps> = ({
       <table className="w-full text-left border-collapse">
         <thead>
           <tr className="border-b border-white/[0.08] text-[11px] font-medium text-neutral-400 bg-white/[0.02]">
-            <th className="py-2.5 px-3 w-14 text-center">#</th>
-            <th className="py-2.5 px-4">곡 제목 / 아티스트</th>
+            <th className="py-2.5 px-1 sm:px-3 w-10 sm:w-14 text-center">#</th>
+            <th className="py-2.5 px-2 sm:px-4">곡 제목 / 아티스트</th>
             <th className="py-2.5 px-4 hidden md:table-cell">앨범</th>
             <th className="py-2.5 px-4 hidden sm:table-cell">재생 시간</th>
             <th className="py-2.5 px-4 hidden lg:table-cell">파일 크기</th>
-            <th className="py-2.5 px-4 text-right w-36">관리</th>
+            <th className="py-2.5 px-3 sm:px-4 text-center sm:text-right w-14 sm:w-36">관리</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-white/[0.04]">

@@ -549,7 +549,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 
     removeFromQueue: (index: number) => {
       set((prev) => {
-        const activeQueue = prev.isShuffle && prev.shuffledQueue.length > 0 ? prev.shuffledQueue : prev.queue;
+        const activeQueue =
+          prev.isShuffle && prev.shuffledQueue.length > 0 ? prev.shuffledQueue : prev.queue;
         const trackToRemove = activeQueue[index];
         if (!trackToRemove) return prev;
 
@@ -612,7 +613,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     updateTrackInfo: (track: MusicFileDto) => {
       const { currentTrack, queue, shuffledQueue } = get();
       const updatedQueue = queue.map((t) => (t.id === track.id ? { ...t, ...track } : t));
-      const updatedShuffled = shuffledQueue.map((t) => (t.id === track.id ? { ...t, ...track } : t));
+      const updatedShuffled = shuffledQueue.map((t) =>
+        t.id === track.id ? { ...t, ...track } : t,
+      );
       const updatedCurrent =
         currentTrack?.id === track.id ? { ...currentTrack, ...track } : currentTrack;
       set({

@@ -90,10 +90,7 @@ export const musicApi = {
     await apiClient.delete(`/music-files/${id}`);
   },
 
-  async updateMetadata(
-    id: number,
-    request: UpdateMusicMetadataDto,
-  ): Promise<MusicFileDto> {
+  async updateMetadata(id: number, request: UpdateMusicMetadataDto): Promise<MusicFileDto> {
     const response = await apiClient.patch<MusicFileDto>(`/music-files/${id}`, request);
     return response.data;
   },
@@ -107,9 +104,7 @@ export const musicApi = {
     return response.data;
   },
 
-  async resyncTags(
-    id: number,
-  ): Promise<{ id: number; status: 'SYNCED' | 'SYNCING' | 'FAILED' }> {
+  async resyncTags(id: number): Promise<{ id: number; status: 'SYNCED' | 'SYNCING' | 'FAILED' }> {
     const response = await apiClient.post<{ id: number; status: 'SYNCED' | 'SYNCING' | 'FAILED' }>(
       `/music-files/${id}/resync-tags`,
     );

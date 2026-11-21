@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
-import { ShieldCheck, Lock, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Unlink, Mail } from 'lucide-react';
+import {
+  ShieldCheck,
+  Lock,
+  AlertCircle,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Unlink,
+  Mail,
+} from 'lucide-react';
 import axios from 'axios';
 import { Modal } from './Modal';
 import { Button } from '../atoms/Button';
@@ -93,7 +102,9 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
     mutationFn: ({ code, newPassword }: { code: string; newPassword: string }) =>
       userApi.confirmPasswordSetup(code, newPassword),
     onSuccess: () => {
-      setPasswordSuccess('비밀번호가 성공적으로 설정되었습니다. 이제 이메일/비밀번호로도 로그인하실 수 있습니다.');
+      setPasswordSuccess(
+        '비밀번호가 성공적으로 설정되었습니다. 이제 이메일/비밀번호로도 로그인하실 수 있습니다.',
+      );
       setPasswordError(null);
       setVerificationCode('');
       setNewPassword('');
@@ -156,7 +167,8 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
     setPasswordError(null);
     setPasswordSuccess(null);
 
-    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~]).{8,64}$/;
+    const passwordRegex =
+      /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~]).{8,64}$/;
     if (!passwordRegex.test(newPassword)) {
       setPasswordError('비밀번호는 8자 이상이며 영문, 숫자, 특수문자를 모두 포함해야 합니다.');
       return;
@@ -220,8 +232,8 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title="로그인 수단 및 계정 보안" maxWidth="lg">
       <div className="flex flex-col gap-5">
         <p className="text-xs text-neutral-400 leading-relaxed">
-          Music Hub에 접속할 수 있는 로그인 수단을 관리합니다. Google 원클릭 로그인과 일반 비밀번호 로그인을
-          모두 등록하여 편리하게 이용하실 수 있습니다.
+          Music Hub에 접속할 수 있는 로그인 수단을 관리합니다. Google 원클릭 로그인과 일반 비밀번호
+          로그인을 모두 등록하여 편리하게 이용하실 수 있습니다.
         </p>
 
         {isLoading ? (
@@ -232,12 +244,12 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
           <div className="flex flex-col gap-4">
             {/* Google Authentication Method Card */}
             <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-white/[0.05] border border-white/[0.08] flex items-center justify-center font-bold text-sm text-neutral-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-white/[0.05] border border-white/[0.08] flex items-center justify-center font-bold text-sm text-neutral-200 shrink-0">
                     G
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-neutral-100">Google 계정</span>
                       {isGoogleLinked ? (
@@ -246,7 +258,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                         <Badge variant="default">미연결</Badge>
                       )}
                     </div>
-                    <p className="text-xs text-neutral-400 mt-0.5">
+                    <p className="text-xs text-neutral-400 mt-0.5 leading-relaxed">
                       {isGoogleLinked
                         ? 'Google 계정으로 원클릭 로그인이 활성화되어 있습니다.'
                         : 'Google 계정을 연결하여 간편하게 원클릭으로 로그인하세요.'}
@@ -254,7 +266,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                   </div>
                 </div>
 
-                <div>
+                <div className="self-end sm:self-auto shrink-0">
                   {isGoogleLinked ? (
                     <Button
                       variant="danger"
@@ -271,9 +283,9 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
               </div>
 
               {!isGoogleLinked ? (
-                <div className="pt-2 border-t border-white/[0.05] flex items-center justify-between">
+                <div className="pt-2 border-t border-white/[0.05] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                   <span className="text-xs text-neutral-400">현재 계정에 Google 계정 추가:</span>
-                  <div className="scale-90 origin-right">
+                  <div className="scale-90 origin-left sm:origin-right">
                     <GoogleLogin
                       onSuccess={handleGoogleSuccess}
                       onError={() => setGoogleActionError('Google 계정 인증이 취소되었습니다.')}
@@ -303,21 +315,23 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
 
             {/* Email / Password Method Card */}
             <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-[#5e6ad2]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-[#5e6ad2] shrink-0">
                     <Lock className="w-4 h-4" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-neutral-100">이메일 비밀번호 로그인</span>
+                      <span className="text-sm font-medium text-neutral-100">
+                        이메일 비밀번호 로그인
+                      </span>
                       {hasPassword ? (
                         <Badge variant="success">설정됨</Badge>
                       ) : (
                         <Badge variant="default">미설정</Badge>
                       )}
                     </div>
-                    <p className="text-xs text-neutral-400 mt-0.5">
+                    <p className="text-xs text-neutral-400 mt-0.5 leading-relaxed truncate sm:whitespace-normal">
                       {userEmail} 계정으로 비밀번호를 입력하여 직접 로그인합니다.
                     </p>
                   </div>
@@ -326,6 +340,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                 <Button
                   variant="secondary"
                   size="sm"
+                  className="self-end sm:self-auto shrink-0"
                   onClick={() => {
                     setIsPasswordFormOpen((prev) => !prev);
                     setPasswordError(null);
@@ -334,7 +349,11 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                   }}
                 >
                   <span>{hasPassword ? '비밀번호 변경' : '비밀번호 설정'}</span>
-                  {isPasswordFormOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  {isPasswordFormOpen ? (
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  )}
                 </Button>
               </div>
 
@@ -347,9 +366,12 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                       <div className="flex items-start gap-2.5 text-xs text-neutral-300">
                         <Mail className="w-4 h-4 text-[#5e6ad2] shrink-0 mt-0.5" />
                         <div>
-                          <p className="font-medium text-neutral-100 mb-0.5">이메일 본인 확인 필요</p>
+                          <p className="font-medium text-neutral-100 mb-0.5">
+                            이메일 본인 확인 필요
+                          </p>
                           <p className="text-neutral-400 leading-relaxed">
-                            계정 보안을 위해 Google 계정 이메일 (<span className="text-neutral-200 font-medium">{userEmail}</span>)로
+                            계정 보안을 위해 Google 계정 이메일 (
+                            <span className="text-neutral-200 font-medium">{userEmail}</span>)로
                             6자리 일회용 인증번호를 발송합니다.
                           </p>
                         </div>
@@ -422,7 +444,9 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                       {/* 기존 비밀번호 변경 시 현재 비밀번호 입력란 */}
                       {hasPassword ? (
                         <div>
-                          <label className="block text-xs text-neutral-300 mb-1">현재 비밀번호</label>
+                          <label className="block text-xs text-neutral-300 mb-1">
+                            현재 비밀번호
+                          </label>
                           <Input
                             type="password"
                             value={currentPassword}
@@ -435,14 +459,19 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
 
                       <div>
                         <label className="block text-xs text-neutral-300 mb-1">
-                          {hasPassword ? '새 비밀번호' : '설정할 비밀번호'} (8자 이상, 영문/숫자/특수문자 포함)
+                          {hasPassword ? '새 비밀번호' : '설정할 비밀번호'} (8자 이상,
+                          영문/숫자/특수문자 포함)
                         </label>
                         <Input
                           type="password"
                           value={newPassword}
                           onChange={(e) => setNewPassword(e.target.value)}
                           placeholder="영문, 숫자, 특수문자를 포함한 8자 이상 비밀번호"
-                          disabled={hasPassword ? setPasswordMutation.isPending : confirmSetupMutation.isPending}
+                          disabled={
+                            hasPassword
+                              ? setPasswordMutation.isPending
+                              : confirmSetupMutation.isPending
+                          }
                         />
                       </div>
 
@@ -453,7 +482,11 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
                           placeholder="비밀번호를 다시 한번 입력하세요"
-                          disabled={hasPassword ? setPasswordMutation.isPending : confirmSetupMutation.isPending}
+                          disabled={
+                            hasPassword
+                              ? setPasswordMutation.isPending
+                              : confirmSetupMutation.isPending
+                          }
                         />
                       </div>
 
@@ -480,7 +513,11 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                             setIsPasswordFormOpen(false);
                             setSetupStep('initial');
                           }}
-                          disabled={hasPassword ? setPasswordMutation.isPending : confirmSetupMutation.isPending}
+                          disabled={
+                            hasPassword
+                              ? setPasswordMutation.isPending
+                              : confirmSetupMutation.isPending
+                          }
                         >
                           취소
                         </Button>
@@ -488,7 +525,11 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                           type="submit"
                           variant="primary"
                           size="sm"
-                          isLoading={hasPassword ? setPasswordMutation.isPending : confirmSetupMutation.isPending}
+                          isLoading={
+                            hasPassword
+                              ? setPasswordMutation.isPending
+                              : confirmSetupMutation.isPending
+                          }
                         >
                           {hasPassword ? '비밀번호 변경 완료' : '비밀번호 등록 완료'}
                         </Button>
@@ -503,8 +544,8 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
             <div className="p-3 bg-white/[0.02] border border-white/[0.05] rounded-xl flex items-start gap-2.5 text-xs text-neutral-400">
               <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               <span>
-                안전을 위해 최소 하나 이상의 로그인 수단이 항상 유지되어야 합니다. Google 계정과 비밀번호를 둘
-                다 설정하시면 어느 기기에서든 제약 없이 접속하실 수 있습니다.
+                안전을 위해 최소 하나 이상의 로그인 수단이 항상 유지되어야 합니다. Google 계정과
+                비밀번호를 둘 다 설정하시면 어느 기기에서든 제약 없이 접속하실 수 있습니다.
               </span>
             </div>
           </div>
