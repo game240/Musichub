@@ -56,7 +56,7 @@ export const TrackTable: React.FC<TrackTableProps> = ({
             <th className="py-2.5 px-4 hidden md:table-cell">앨범</th>
             <th className="py-2.5 px-4 hidden sm:table-cell">재생 시간</th>
             <th className="py-2.5 px-4 hidden lg:table-cell">파일 크기</th>
-            <th className="py-2.5 px-2 sm:px-4 text-right w-12 sm:w-36">관리</th>
+            <th className="py-2.5 px-3 sm:px-4 text-center sm:text-right w-14 sm:w-36">관리</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-white/[0.04]">

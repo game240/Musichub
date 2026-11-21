@@ -163,7 +163,7 @@ export const TrackRow: React.FC<TrackRowProps> = ({
       </td>
 
       {/* Actions */}
-      <td className="w-12 sm:w-36 py-2.5 px-2 sm:px-4 text-right relative">
+      <td className="w-14 sm:w-36 py-2.5 px-3 sm:px-4 text-center sm:text-right relative">
         {/* Desktop actions (>= sm) */}
         <div className="hidden sm:flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <Tooltip content="음원 다운로드" side="top">
@@ -218,7 +218,7 @@ export const TrackRow: React.FC<TrackRowProps> = ({
         </div>
 
         {/* Mobile action trigger (< sm) */}
-        <div className="sm:hidden flex items-center justify-end">
+        <div className="sm:hidden flex items-center justify-center sm:justify-end">
           <button
             type="button"
             onClick={(e) => {
@@ -236,7 +236,7 @@ export const TrackRow: React.FC<TrackRowProps> = ({
         {isMobileMenuOpen && (
           <div
             ref={menuRef}
-            className="absolute right-2 top-11 z-30 w-44 bg-[#0f1011] border border-white/[0.1] rounded-xl shadow-2xl p-1.5 flex flex-col gap-0.5 backdrop-blur-2xl animate-in fade-in zoom-in-95 text-left"
+            className="absolute right-3 top-11 z-30 w-44 bg-[#0f1011] border border-white/[0.1] rounded-xl shadow-2xl p-1.5 flex flex-col gap-0.5 backdrop-blur-2xl animate-in fade-in zoom-in-95 text-left"
           >
             <button
               type="button"
