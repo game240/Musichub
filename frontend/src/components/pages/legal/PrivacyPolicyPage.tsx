@@ -205,7 +205,7 @@ export const PrivacyPolicyPage: React.FC<PrivacyPolicyPageProps> = ({ onBack }) 
             <Mail className="w-3.5 h-3.5 text-[#5e6ad2]" />
             <span>Music Hub 개인정보 관리팀</span>
           </div>
-          <p className="text-neutral-400">문의 이메일: support@musichub.kr</p>
+          <p className="text-neutral-400">문의 이메일: cjh648666@gmail.com</p>
         </div>
       </section>
     </LegalLayout>
