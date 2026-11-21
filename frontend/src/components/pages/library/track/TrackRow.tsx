@@ -1,10 +1,11 @@
 import React from 'react';
-import { Play, Pause, Trash2, ListPlus, Pencil } from 'lucide-react';
+import { Play, Pause, Trash2, ListPlus, Pencil, Download } from 'lucide-react';
 import type { MusicFileDto } from '../../../../types/music';
 import { TrackArtwork } from './TrackArtwork';
 import { formatDurationMs } from '../../../../utils/formatTime';
 import { formatBytes } from '../../../../utils/formatBytes';
 import { Tooltip } from '../../../atoms/Tooltip';
+import { Spinner } from '../../../atoms/Spinner';
 import { cn } from '../../../../utils/cn';
 
 export interface TrackRowProps {
@@ -12,10 +13,12 @@ export interface TrackRowProps {
   index: number;
   isCurrent: boolean;
   isPlaying: boolean;
+  isDownloading?: boolean;
   onPlay: (track: MusicFileDto) => void;
   onAddToQueue: (track: MusicFileDto) => void;
   onEdit: (track: MusicFileDto) => void;
   onDelete: (track: MusicFileDto) => void;
+  onDownload: (track: MusicFileDto) => void;
 }
 
 export const TrackRow: React.FC<TrackRowProps> = ({
@@ -23,10 +26,12 @@ export const TrackRow: React.FC<TrackRowProps> = ({
   index,
   isCurrent,
   isPlaying,
+  isDownloading = false,
   onPlay,
   onAddToQueue,
   onEdit,
   onDelete,
+  onDownload,
 }) => {
   return (
     <tr
@@ -122,8 +127,24 @@ export const TrackRow: React.FC<TrackRowProps> = ({
       </td>
 
       {/* Actions */}
-      <td className="w-28 py-2.5 px-4 text-right">
+      <td className="w-36 py-2.5 px-4 text-right">
         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Tooltip content="음원 다운로드" side="top">
+            <button
+              type="button"
+              onClick={() => {
+                onDownload(track);
+              }}
+              disabled={isDownloading}
+              className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {isDownloading ? (
+                <Spinner size="sm" className="w-4 h-4 text-[#8590ea]" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+            </button>
+          </Tooltip>
           <Tooltip content="재생목록에 추가" side="top">
             <button
               type="button"

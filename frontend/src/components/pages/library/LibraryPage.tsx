@@ -12,6 +12,7 @@ import { TrackTable } from './track/TrackTable';
 import { UploadModal } from './upload/UploadModal';
 import { EditMetadataModal } from './track/EditMetadataModal';
 import { ConfirmDialog } from '../../organisms/ConfirmDialog';
+import { triggerBrowserDownload } from '../../../utils/downloadFile';
 
 export const LibraryPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -22,6 +23,7 @@ export const LibraryPage: React.FC = () => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [editingTrack, setEditingTrack] = useState<MusicFileDto | null>(null);
   const [trackToDelete, setTrackToDelete] = useState<MusicFileDto | null>(null);
+  const [downloadingTrackId, setDownloadingTrackId] = useState<number | null>(null);
 
   // Fetch track list
   const {
@@ -85,6 +87,18 @@ export const LibraryPage: React.FC = () => {
     }
   };
 
+  const handleDownload = async (track: MusicFileDto) => {
+    try {
+      setDownloadingTrackId(track.id);
+      const { downloadUrl, fileName } = await musicApi.getDownloadUrl(track.id);
+      triggerBrowserDownload(downloadUrl, fileName);
+    } catch (err) {
+      console.error('Failed to download track:', err);
+    } finally {
+      setDownloadingTrackId(null);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-5">
       {/* Action Toolbar */}
@@ -139,10 +153,12 @@ export const LibraryPage: React.FC = () => {
           tracks={filteredTracks}
           currentTrackId={currentTrack?.id}
           isPlaying={isPlaying}
+          downloadingTrackId={downloadingTrackId}
           onPlay={handlePlay}
           onAddToQueue={addToQueue}
           onEdit={setEditingTrack}
           onDelete={setTrackToDelete}
+          onDownload={handleDownload}
           onUploadClick={() => {
             setIsUploadModalOpen(true);
           }}
