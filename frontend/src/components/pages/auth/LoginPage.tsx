@@ -321,7 +321,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateLegal }) => {
           >
             개인정보처리방침
           </button>
-          에 동의하는 것으로 간주됩니다.
+          에 <br /> 동의하는 것으로 간주됩니다.
         </p>
 
         {/* Developer Sandbox Mode Bypass */}
