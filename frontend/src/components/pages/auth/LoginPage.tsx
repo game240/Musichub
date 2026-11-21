@@ -7,7 +7,11 @@ import { authApi } from '../../../api/authApi';
 import { Button } from '../../atoms/Button';
 import { Input } from '../../atoms/Input';
 
-export const LoginPage: React.FC = () => {
+interface LoginPageProps {
+  onNavigateLegal?: (route: 'privacy' | 'terms') => void;
+}
+
+export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateLegal }) => {
   const { setAuth } = useAuthStore();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
@@ -288,7 +292,7 @@ export const LoginPage: React.FC = () => {
         </div>
 
         {/* Google Login Provider */}
-        <div className="w-full flex justify-center mb-6">
+        <div className="w-full flex justify-center mb-2">
           <GoogleLogin
             onSuccess={handleGoogleSuccess}
             onError={handleGoogleError}
@@ -299,6 +303,27 @@ export const LoginPage: React.FC = () => {
           />
         </div>
 
+        {/* Legal Consent Notice */}
+        <p className="text-[11px] text-neutral-500 text-center leading-relaxed mb-6 px-1">
+          계속 진행하면 Music Hub의{' '}
+          <button
+            type="button"
+            onClick={() => (onNavigateLegal ? onNavigateLegal('terms') : (window.location.href = '/terms'))}
+            className="text-neutral-400 underline underline-offset-2 hover:text-[#5e6ad2] transition-colors cursor-pointer"
+          >
+            서비스 이용약관
+          </button>{' '}
+          및{' '}
+          <button
+            type="button"
+            onClick={() => (onNavigateLegal ? onNavigateLegal('privacy') : (window.location.href = '/privacy'))}
+            className="text-neutral-400 underline underline-offset-2 hover:text-[#5e6ad2] transition-colors cursor-pointer"
+          >
+            개인정보처리방침
+          </button>
+          에 동의하는 것으로 간주됩니다.
+        </p>
+
         {/* Developer Sandbox Mode Bypass */}
         <div className="pt-6 border-t border-white/[0.08] w-full flex flex-col items-center gap-2">
           <p className="text-[11px] text-neutral-500">로컬 개발 환경에서 테스트 중이신가요?</p>
@@ -307,6 +332,27 @@ export const LoginPage: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* Footer Legal Links */}
+      <footer className="mt-6 flex items-center justify-center gap-2.5 text-xs text-neutral-500 relative z-10">
+        <span>© 2026 Music Hub</span>
+        <span>·</span>
+        <button
+          type="button"
+          onClick={() => (onNavigateLegal ? onNavigateLegal('terms') : (window.location.href = '/terms'))}
+          className="hover:text-neutral-300 transition-colors cursor-pointer underline-offset-2 hover:underline"
+        >
+          서비스 이용약관
+        </button>
+        <span>·</span>
+        <button
+          type="button"
+          onClick={() => (onNavigateLegal ? onNavigateLegal('privacy') : (window.location.href = '/privacy'))}
+          className="hover:text-neutral-300 transition-colors cursor-pointer underline-offset-2 hover:underline"
+        >
+          개인정보처리방침
+        </button>
+      </footer>
     </div>
   );
 };

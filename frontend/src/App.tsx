@@ -11,6 +11,17 @@ import { FloatingTagSyncWidget } from './components/organisms/FloatingTagSyncWid
 import { AccountDropdown } from './components/organisms/AccountDropdown';
 import { AccountSecurityModal } from './components/organisms/AccountSecurityModal';
 import { TooltipProvider } from './components/atoms/Tooltip';
+import { PrivacyPolicyPage } from './components/pages/legal/PrivacyPolicyPage';
+import { TermsOfServicePage } from './components/pages/legal/TermsOfServicePage';
+
+type LegalRoute = 'privacy' | 'terms' | null;
+
+const getLegalRouteFromPath = (): LegalRoute => {
+  const path = window.location.pathname.toLowerCase();
+  if (path === '/privacy' || path === '/privacy-policy') return 'privacy';
+  if (path === '/terms' || path === '/terms-of-service') return 'terms';
+  return null;
+};
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,10 +39,42 @@ const GOOGLE_CLIENT_ID =
 const AppContent: React.FC = () => {
   const { user, isAuthenticated, isLoading, checkAuthSession, logout } = useAuthStore();
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
+  const [legalRoute, setLegalRoute] = useState<LegalRoute>(getLegalRouteFromPath);
 
   useEffect(() => {
     checkAuthSession();
   }, [checkAuthSession]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setLegalRoute(getLegalRouteFromPath());
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigateToLegal = (route: 'privacy' | 'terms') => {
+    const targetUrl = route === 'privacy' ? '/privacy' : '/terms';
+    if (window.location.pathname !== targetUrl) {
+      window.history.pushState({}, '', targetUrl);
+    }
+    setLegalRoute(route);
+  };
+
+  const navigateBack = () => {
+    if (window.location.pathname !== '/') {
+      window.history.pushState({}, '', '/');
+    }
+    setLegalRoute(null);
+  };
+
+  if (legalRoute === 'privacy') {
+    return <PrivacyPolicyPage onBack={navigateBack} />;
+  }
+
+  if (legalRoute === 'terms') {
+    return <TermsOfServicePage onBack={navigateBack} />;
+  }
 
   if (isLoading) {
     return (
@@ -43,7 +86,7 @@ const AppContent: React.FC = () => {
   }
 
   if (!isAuthenticated) {
-    return <LoginPage />;
+    return <LoginPage onNavigateLegal={navigateToLegal} />;
   }
 
   const headerRight = (
