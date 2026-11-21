@@ -78,13 +78,10 @@ export const PlayerQueueDrawer: React.FC<PlayerQueueDrawerProps> = ({
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.08] shrink-0">
           <div className="flex items-center gap-2">
             <ListMusic className="w-4 h-4 text-[#8590ea]" />
+            <div className="flex items-end gap-2">
             <h3 className="text-sm font-semibold text-neutral-100">재생목록</h3>
-            {isShuffle ? (
-              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#5e6ad2]/20 text-[#8590ea] border border-[#5e6ad2]/30">
-                셔플
-              </span>
-            ) : null}
             <span className="text-xs text-neutral-500">({queue.length}곡)</span>
+            </div>
           </div>
 
           <div className="flex items-center gap-1">
