@@ -1,14 +1,23 @@
 import { create } from 'zustand';
 import type { MusicFileDto } from '../types/music';
+import type { PlaybackStateDto } from '../types/playback';
 import { musicApi } from '../api/musicApi';
 import { userApi } from '../api/userApi';
+import { playbackApi } from '../api/playbackApi';
 
 export type RepeatMode = 'OFF' | 'ALL' | 'ONE';
+
+export interface PlayTrackOptions {
+  playlist?: MusicFileDto[];
+  targetIndex?: number;
+  preserveShuffle?: boolean;
+}
 
 interface PlayerState {
   currentTrack: MusicFileDto | null;
   streamUrl: string | null;
   queue: MusicFileDto[];
+  shuffledQueue: MusicFileDto[];
   queueIndex: number;
   isPlaying: boolean;
   isLoading: boolean;
@@ -20,13 +29,17 @@ interface PlayerState {
   isShuffle: boolean;
 
   // Actions
-  playTrack: (track: MusicFileDto, playlist?: MusicFileDto[]) => Promise<void>;
+  playTrack: (
+    track: MusicFileDto,
+    playlistOrOptions?: MusicFileDto[] | PlayTrackOptions,
+  ) => Promise<void>;
   togglePlay: () => void;
   pause: () => void;
   resume: () => void;
   seekTo: (timeInSeconds: number) => void;
   setVolume: (volume: number) => void;
   initVolumeFromUser: (volumePercent: number) => void;
+  initPlaybackState: (state: PlaybackStateDto) => void;
   toggleMute: () => void;
   toggleRepeat: () => void;
   toggleShuffle: () => void;
@@ -52,7 +65,70 @@ const loadSavedVolume = (): number => {
   return 1;
 };
 
+function fisherYatesShuffle<T>(array: T[]): T[] {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const temp = result[i];
+    result[i] = result[j];
+    result[j] = temp;
+  }
+  return result;
+}
+
+// In-memory stream URL cache to minimize transition delay & network latency
+const STREAM_URL_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+interface CachedStreamUrl {
+  playUrl: string;
+  durationMs?: number;
+  cachedAt: number;
+}
+const streamUrlCache = new Map<number, CachedStreamUrl>();
+
+const getCachedOrFetchPlayUrl = async (trackId: number) => {
+  const cached = streamUrlCache.get(trackId);
+  const now = Date.now();
+  if (cached && now - cached.cachedAt < STREAM_URL_CACHE_TTL_MS) {
+    return { playUrl: cached.playUrl, durationMs: cached.durationMs };
+  }
+  const result = await musicApi.getPlayUrl(trackId);
+  streamUrlCache.set(trackId, {
+    playUrl: result.playUrl,
+    durationMs: result.durationMs,
+    cachedAt: now,
+  });
+  return result;
+};
+
+// Monotonically increasing counter to prevent race conditions during rapid track skipping
+let playSequenceCounter = 0;
+
 let volumeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let playbackDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+const schedulePlaybackSync = () => {
+  if (playbackDebounceTimer) {
+    clearTimeout(playbackDebounceTimer);
+  }
+  playbackDebounceTimer = setTimeout(() => {
+    if (userApi.isLoggedIn()) {
+      const state = usePlayerStore.getState();
+      playbackApi
+        .updatePlaybackState({
+          currentTrackId: state.currentTrack?.id ?? null,
+          queueTrackIds: state.queue.map((t) => t.id),
+          shuffledTrackIds: state.shuffledQueue.map((t) => t.id),
+          queueIndex: state.queueIndex,
+          isShuffle: state.isShuffle,
+          repeatMode: state.repeatMode,
+          currentPositionMs: Math.round(state.currentTime * 1000),
+        })
+        .catch((err) => {
+          console.error('Failed to sync playback state to server:', err);
+        });
+    }
+  }, 2500);
+};
 
 // Native HTML5 Audio singleton
 const initialVolume = loadSavedVolume();
@@ -101,6 +177,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     currentTrack: null,
     streamUrl: null,
     queue: [],
+    shuffledQueue: [],
     queueIndex: -1,
     isPlaying: false,
     isLoading: false,
@@ -111,41 +188,108 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     repeatMode: 'OFF',
     isShuffle: false,
 
-    playTrack: async (track: MusicFileDto, playlist?: MusicFileDto[]) => {
-      const state = get();
-      let updatedQueue = state.queue;
-      let newIndex: number;
+    playTrack: async (
+      track: MusicFileDto,
+      playlistOrOptions?: MusicFileDto[] | PlayTrackOptions,
+    ) => {
+      const currentSeq = ++playSequenceCounter;
 
-      if (playlist && playlist.length > 0) {
+      // 1. 이전 음원 즉시 일시정지 (새 곡 로딩 중 이전 곡이 계속 나오는 현상 차단)
+      audioElement.pause();
+      audioElement.currentTime = 0;
+
+      const state = get();
+      let playlist: MusicFileDto[] | undefined;
+      let targetIndex: number | undefined;
+      let preserveShuffle = false;
+
+      if (Array.isArray(playlistOrOptions)) {
+        playlist = playlistOrOptions;
+      } else if (playlistOrOptions) {
+        playlist = playlistOrOptions.playlist;
+        targetIndex = playlistOrOptions.targetIndex;
+        preserveShuffle = playlistOrOptions.preserveShuffle ?? false;
+      }
+
+      let updatedQueue = state.queue;
+      let updatedShuffledQueue = state.shuffledQueue;
+      let newIndex = targetIndex ?? -1;
+
+      const isNewPlaylist = Boolean(playlist && playlist.length > 0);
+
+      if (isNewPlaylist && playlist) {
         updatedQueue = [...playlist];
-        newIndex = updatedQueue.findIndex((t) => t.id === track.id);
         if (newIndex === -1) {
-          updatedQueue.unshift(track);
+          const idx = updatedQueue.findIndex((t) => t.id === track.id);
+          newIndex = idx !== -1 ? idx : 0;
+        }
+
+        if (state.isShuffle) {
+          const others = updatedQueue.filter((t) => t.id !== track.id);
+          updatedShuffledQueue = [track, ...fisherYatesShuffle(others)];
           newIndex = 0;
+        } else {
+          updatedShuffledQueue = [];
         }
       } else {
-        const existingIdx = updatedQueue.findIndex((t) => t.id === track.id);
-        if (existingIdx !== -1) {
-          newIndex = existingIdx;
+        // 기존 대기열에서 재생 (playNext, playPrev, 또는 대기열 내 트랙 선택)
+        if (state.isShuffle) {
+          if (!preserveShuffle) {
+            // 셔플 모드에서 큐에 없는 외부 곡을 재생하거나 새 컨텍스트일 때만 재셔플
+            const existsInQueue = updatedQueue.some((t) => t.id === track.id);
+            if (!existsInQueue) {
+              updatedQueue = [...updatedQueue, track];
+            }
+            const others = updatedQueue.filter((t) => t.id !== track.id);
+            updatedShuffledQueue = [track, ...fisherYatesShuffle(others)];
+            newIndex = 0;
+          } else {
+            // preserveShuffle === true (playNext / playPrev 등 기존 셔플 순서 유지)
+            if (newIndex === -1) {
+              const foundIdx = updatedShuffledQueue.findIndex((t) => t.id === track.id);
+              newIndex = foundIdx !== -1 ? foundIdx : 0;
+            }
+          }
         } else {
-          updatedQueue = [...updatedQueue, track];
-          newIndex = updatedQueue.length - 1;
+          // 순차 모드
+          if (newIndex === -1) {
+            const foundIdx = updatedQueue.findIndex((t) => t.id === track.id);
+            if (foundIdx !== -1) {
+              newIndex = foundIdx;
+            } else {
+              updatedQueue = [...updatedQueue, track];
+              newIndex = updatedQueue.length - 1;
+            }
+          }
         }
       }
 
       set({
         currentTrack: track,
         queue: updatedQueue,
+        shuffledQueue: updatedShuffledQueue,
         queueIndex: newIndex,
         isLoading: true,
         currentTime: 0,
       });
 
+      schedulePlaybackSync();
+
       try {
-        const { playUrl, durationMs } = await musicApi.getPlayUrl(track.id);
+        const { playUrl, durationMs } = await getCachedOrFetchPlayUrl(track.id);
+
+        // 사용자가 그 사이에 다른 곡을 요청했으면 이 응답은 무시
+        if (currentSeq !== playSequenceCounter) {
+          return;
+        }
+
         audioElement.src = playUrl;
         audioElement.currentTime = 0;
         await audioElement.play();
+
+        if (currentSeq !== playSequenceCounter) {
+          return;
+        }
 
         set({
           streamUrl: playUrl,
@@ -153,7 +297,17 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
           isPlaying: true,
           isLoading: false,
         });
-      } catch {
+      } catch (err: unknown) {
+        if (currentSeq !== playSequenceCounter) {
+          return;
+        }
+
+        // AbortError: 다음 곡 선택으로 인해 이전 play()가 중단된 정상 동작이므로 멈춤 상태로 전환하지 않음
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          return;
+        }
+
+        console.error('Audio playback error:', err);
         set({ isPlaying: false, isLoading: false });
       }
     },
@@ -175,6 +329,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 
     pause: () => {
       audioElement.pause();
+      schedulePlaybackSync();
     },
 
     resume: () => {
@@ -228,6 +383,43 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       }
     },
 
+    initPlaybackState: (state: PlaybackStateDto) => {
+      if (!state.currentTrack && state.queue.length === 0) {
+        return;
+      }
+
+      const posSeconds = state.currentPositionMs / 1000;
+      set({
+        currentTrack: state.currentTrack,
+        queue: state.queue,
+        shuffledQueue: state.shuffledQueue,
+        queueIndex: state.queueIndex,
+        isShuffle: state.isShuffle,
+        repeatMode: state.repeatMode,
+        currentTime: posSeconds,
+        isPlaying: false,
+      });
+
+      if (state.currentTrack) {
+        musicApi
+          .getPlayUrl(state.currentTrack.id)
+          .then(({ playUrl, durationMs }) => {
+            audioElement.src = playUrl;
+            audioElement.currentTime = posSeconds;
+            set({
+              streamUrl: playUrl,
+              duration: durationMs ? durationMs / 1000 : 0,
+              currentTime: posSeconds,
+              isPlaying: false,
+              isLoading: false,
+            });
+          })
+          .catch(() => {
+            set({ isLoading: false });
+          });
+      }
+    },
+
     toggleMute: () => {
       const { isMuted, volume } = get();
       const nextMuted = !isMuted;
@@ -243,39 +435,83 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       const current = get().repeatMode;
       const next: RepeatMode = current === 'OFF' ? 'ALL' : current === 'ALL' ? 'ONE' : 'OFF';
       set({ repeatMode: next });
+      schedulePlaybackSync();
     },
 
     toggleShuffle: () => {
-      set((prev) => ({ isShuffle: !prev.isShuffle }));
+      const { isShuffle, queue, currentTrack } = get();
+      const nextShuffle = !isShuffle;
+
+      if (nextShuffle) {
+        if (queue.length > 0 && currentTrack) {
+          const others = queue.filter((t) => t.id !== currentTrack.id);
+          const shuffled = [currentTrack, ...fisherYatesShuffle(others)];
+          set({
+            isShuffle: true,
+            shuffledQueue: shuffled,
+            queueIndex: 0,
+          });
+        } else {
+          set({
+            isShuffle: true,
+            shuffledQueue: fisherYatesShuffle(queue),
+            queueIndex: 0,
+          });
+        }
+      } else {
+        let originalIdx = 0;
+        if (currentTrack) {
+          const found = queue.findIndex((t) => t.id === currentTrack.id);
+          if (found !== -1) {
+            originalIdx = found;
+          }
+        }
+        set({
+          isShuffle: false,
+          shuffledQueue: [],
+          queueIndex: originalIdx,
+        });
+      }
+      schedulePlaybackSync();
     },
 
     playNext: () => {
-      const { queue, queueIndex, isShuffle, repeatMode, playTrack } = get();
-      if (queue.length === 0) {
+      const { queue, shuffledQueue, queueIndex, isShuffle, repeatMode, playTrack } = get();
+      const activeQueue = isShuffle && shuffledQueue.length > 0 ? shuffledQueue : queue;
+      if (activeQueue.length === 0) {
         return;
       }
 
       let nextIndex = queueIndex + 1;
-      if (isShuffle) {
-        nextIndex = Math.floor(Math.random() * queue.length);
-      } else if (nextIndex >= queue.length) {
+      if (nextIndex >= activeQueue.length) {
         if (repeatMode === 'ALL') {
+          if (isShuffle) {
+            const reShuffled = fisherYatesShuffle(activeQueue);
+            set({ shuffledQueue: reShuffled, queueIndex: 0 });
+            const nextTrack = reShuffled[0];
+            if (nextTrack) {
+              playTrack(nextTrack, { targetIndex: 0, preserveShuffle: true });
+            }
+            return;
+          }
           nextIndex = 0;
         } else {
           set({ isPlaying: false });
+          schedulePlaybackSync();
           return;
         }
       }
 
-      const nextTrack = queue[nextIndex];
+      const nextTrack = activeQueue[nextIndex];
       if (nextTrack) {
-        playTrack(nextTrack);
+        playTrack(nextTrack, { targetIndex: nextIndex, preserveShuffle: true });
       }
     },
 
     playPrev: () => {
-      const { queue, queueIndex, playTrack, currentTime } = get();
-      if (queue.length === 0) {
+      const { queue, shuffledQueue, queueIndex, isShuffle, playTrack, currentTime } = get();
+      const activeQueue = isShuffle && shuffledQueue.length > 0 ? shuffledQueue : queue;
+      if (activeQueue.length === 0) {
         return;
       }
 
@@ -287,47 +523,103 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 
       let prevIndex = queueIndex - 1;
       if (prevIndex < 0) {
-        prevIndex = queue.length - 1;
+        prevIndex = activeQueue.length - 1;
       }
 
-      const prevTrack = queue[prevIndex];
+      const prevTrack = activeQueue[prevIndex];
       if (prevTrack) {
-        playTrack(prevTrack);
+        playTrack(prevTrack, { targetIndex: prevIndex, preserveShuffle: true });
       }
     },
 
     addToQueue: (track: MusicFileDto) => {
-      set((prev) => ({
-        queue: [...prev.queue, track],
-      }));
+      set((prev) => {
+        const nextQueue = [...prev.queue, track];
+        let nextShuffled = prev.shuffledQueue;
+        if (prev.isShuffle) {
+          nextShuffled = [...prev.shuffledQueue, track];
+        }
+        return {
+          queue: nextQueue,
+          shuffledQueue: nextShuffled,
+        };
+      });
+      schedulePlaybackSync();
     },
 
     removeFromQueue: (index: number) => {
       set((prev) => {
-        const nextQueue = prev.queue.filter((_, i) => i !== index);
+        const activeQueue = prev.isShuffle && prev.shuffledQueue.length > 0 ? prev.shuffledQueue : prev.queue;
+        const trackToRemove = activeQueue[index];
+        if (!trackToRemove) return prev;
+
+        const isCurrentPlaying = prev.currentTrack?.id === trackToRemove.id;
+        const nextQueue = prev.queue.filter((t) => t.id !== trackToRemove.id);
+        const nextShuffled = prev.shuffledQueue.filter((t) => t.id !== trackToRemove.id);
+
+        const currentList = prev.isShuffle ? nextShuffled : nextQueue;
         let nextIdx = prev.queueIndex;
         if (index < prev.queueIndex) {
           nextIdx -= 1;
-        } else if (index === prev.queueIndex && nextIdx >= nextQueue.length) {
-          nextIdx = nextQueue.length - 1;
+        } else if (index === prev.queueIndex && nextIdx >= currentList.length) {
+          nextIdx = Math.max(0, currentList.length - 1);
         }
+
+        if (isCurrentPlaying) {
+          playSequenceCounter++;
+          audioElement.pause();
+          audioElement.currentTime = 0;
+          return {
+            currentTrack: null,
+            streamUrl: null,
+            queue: nextQueue,
+            shuffledQueue: nextShuffled,
+            queueIndex: -1,
+            isPlaying: false,
+            isLoading: false,
+            currentTime: 0,
+            duration: 0,
+          };
+        }
+
         return {
           queue: nextQueue,
+          shuffledQueue: nextShuffled,
           queueIndex: nextIdx,
         };
       });
+      schedulePlaybackSync();
     },
 
     clearQueue: () => {
-      set({ queue: [], queueIndex: -1 });
+      playSequenceCounter++;
+      audioElement.pause();
+      audioElement.currentTime = 0;
+      set({
+        currentTrack: null,
+        streamUrl: null,
+        queue: [],
+        shuffledQueue: [],
+        queueIndex: -1,
+        isPlaying: false,
+        isLoading: false,
+        currentTime: 0,
+        duration: 0,
+      });
+      schedulePlaybackSync();
     },
 
     updateTrackInfo: (track: MusicFileDto) => {
-      const { currentTrack, queue } = get();
+      const { currentTrack, queue, shuffledQueue } = get();
       const updatedQueue = queue.map((t) => (t.id === track.id ? { ...t, ...track } : t));
+      const updatedShuffled = shuffledQueue.map((t) => (t.id === track.id ? { ...t, ...track } : t));
       const updatedCurrent =
         currentTrack?.id === track.id ? { ...currentTrack, ...track } : currentTrack;
-      set({ queue: updatedQueue, currentTrack: updatedCurrent });
+      set({
+        queue: updatedQueue,
+        shuffledQueue: updatedShuffled,
+        currentTrack: updatedCurrent,
+      });
     },
   };
 });

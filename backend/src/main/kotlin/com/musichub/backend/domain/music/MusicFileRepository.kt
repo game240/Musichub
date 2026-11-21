@@ -9,6 +9,12 @@ import java.util.Optional
 interface MusicFileRepository : JpaRepository<MusicFile, Long> {
     fun findByIdAndUserId(id: Long, userId: Long): Optional<MusicFile>
 
+    fun findAllByIdInAndUserIdAndStatus(
+        ids: Collection<Long>,
+        userId: Long,
+        status: MusicFileStatus
+    ): List<MusicFile>
+
     fun findAllByUserIdAndStatus(
         userId: Long,
         status: MusicFileStatus,
