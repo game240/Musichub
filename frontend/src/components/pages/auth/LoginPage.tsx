@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
-import { Disc3, Cloud, ShieldCheck, Sparkles, AlertCircle, Mail, Lock, User as UserIcon } from 'lucide-react';
+import {
+  Disc3,
+  Cloud,
+  ShieldCheck,
+  Sparkles,
+  AlertCircle,
+  Mail,
+  Lock,
+  User as UserIcon,
+} from 'lucide-react';
 import axios from 'axios';
 import { useAuthStore } from '../../../stores/authStore';
 import { authApi } from '../../../api/authApi';
@@ -49,7 +58,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateLegal }) => {
       return;
     }
 
-    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~]).{8,64}$/;
+    const passwordRegex =
+      /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~]).{8,64}$/;
     if (mode === 'register' && !passwordRegex.test(password)) {
       setError('비밀번호는 8자 이상이며 영문, 숫자, 특수문자를 모두 포함해야 합니다.');
       return;
@@ -140,11 +150,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateLegal }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#08090a] flex flex-col items-center justify-center p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-[#08090a] flex flex-col items-center justify-center p-4 sm:p-6 relative overflow-hidden">
       {/* Background Glow */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#5e6ad2]/15 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="w-full max-w-md bg-[#0f1011] border border-white/[0.1] rounded-2xl p-8 shadow-2xl backdrop-blur-2xl relative z-10 flex flex-col items-center text-center">
+      <div className="w-full max-w-md bg-[#0f1011] border border-white/[0.1] rounded-2xl p-5 sm:p-8 shadow-2xl backdrop-blur-2xl relative z-10 flex flex-col items-center text-center">
         {/* Logo */}
         <div className="p-3.5 bg-[#5e6ad2]/15 border border-[#5e6ad2]/30 rounded-2xl shadow-lg shadow-[#5e6ad2]/10 text-[#5e6ad2] mb-5">
           <Disc3 className="w-8 h-8" />
@@ -156,16 +166,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateLegal }) => {
         </p>
 
         {/* Features highlights */}
-        <div className="grid grid-cols-3 gap-2 w-full mb-6 text-xs text-neutral-300">
-          <div className="p-3 bg-white/[0.03] rounded-xl border border-white/[0.06] flex flex-col items-center gap-1.5">
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-2 w-full mb-6 text-[11px] sm:text-xs text-neutral-300">
+          <div className="p-2 sm:p-3 bg-white/[0.03] rounded-xl border border-white/[0.06] flex flex-col items-center gap-1 sm:gap-1.5">
             <Cloud className="w-4 h-4 text-[#5e6ad2]" />
             <span>R2 스토리지</span>
           </div>
-          <div className="p-3 bg-white/[0.03] rounded-xl border border-white/[0.06] flex flex-col items-center gap-1.5">
+          <div className="p-2 sm:p-3 bg-white/[0.03] rounded-xl border border-white/[0.06] flex flex-col items-center gap-1.5">
             <Sparkles className="w-4 h-4 text-[#8590ea]" />
             <span>실시간 재생</span>
           </div>
-          <div className="p-3 bg-white/[0.03] rounded-xl border border-white/[0.06] flex flex-col items-center gap-1.5">
+          <div className="p-2 sm:p-3 bg-white/[0.03] rounded-xl border border-white/[0.06] flex flex-col items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-[#27a672]" />
             <span>보안 인증</span>
           </div>
@@ -246,7 +256,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateLegal }) => {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder={mode === 'register' ? '비밀번호 (8자 이상, 영문/숫자/특수문자)' : '비밀번호'}
+              placeholder={
+                mode === 'register' ? '비밀번호 (8자 이상, 영문/숫자/특수문자)' : '비밀번호'
+              }
               className="pl-9"
               autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
               disabled={isLoading}
@@ -287,7 +299,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateLegal }) => {
             <div className="w-full border-t border-white/[0.08]" />
           </div>
           <div className="relative flex justify-center text-[11px]">
-            <span className="bg-[#0f1011] px-3 text-neutral-500">또는 Google 계정으로 계속하기</span>
+            <span className="bg-[#0f1011] px-3 text-neutral-500">
+              또는 Google 계정으로 계속하기
+            </span>
           </div>
         </div>
 
@@ -308,7 +322,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateLegal }) => {
           계속 진행하면 Music Hub의{' '}
           <button
             type="button"
-            onClick={() => (onNavigateLegal ? onNavigateLegal('terms') : (window.location.href = '/terms'))}
+            onClick={() =>
+              onNavigateLegal ? onNavigateLegal('terms') : (window.location.href = '/terms')
+            }
             className="text-neutral-400 underline underline-offset-2 hover:text-[#5e6ad2] transition-colors cursor-pointer"
           >
             서비스 이용약관
@@ -316,7 +332,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateLegal }) => {
           및{' '}
           <button
             type="button"
-            onClick={() => (onNavigateLegal ? onNavigateLegal('privacy') : (window.location.href = '/privacy'))}
+            onClick={() =>
+              onNavigateLegal ? onNavigateLegal('privacy') : (window.location.href = '/privacy')
+            }
             className="text-neutral-400 underline underline-offset-2 hover:text-[#5e6ad2] transition-colors cursor-pointer"
           >
             개인정보처리방침
@@ -334,12 +352,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateLegal }) => {
       </div>
 
       {/* Footer Legal Links */}
-      <footer className="mt-6 flex items-center justify-center gap-2.5 text-xs text-neutral-500 relative z-10">
+      <footer className="mt-6 flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 text-xs text-neutral-500 relative z-10">
         <span>© 2026 Music Hub</span>
         <span>·</span>
         <button
           type="button"
-          onClick={() => (onNavigateLegal ? onNavigateLegal('terms') : (window.location.href = '/terms'))}
+          onClick={() =>
+            onNavigateLegal ? onNavigateLegal('terms') : (window.location.href = '/terms')
+          }
           className="hover:text-neutral-300 transition-colors cursor-pointer underline-offset-2 hover:underline"
         >
           서비스 이용약관
@@ -347,7 +367,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateLegal }) => {
         <span>·</span>
         <button
           type="button"
-          onClick={() => (onNavigateLegal ? onNavigateLegal('privacy') : (window.location.href = '/privacy'))}
+          onClick={() =>
+            onNavigateLegal ? onNavigateLegal('privacy') : (window.location.href = '/privacy')
+          }
           className="hover:text-neutral-300 transition-colors cursor-pointer underline-offset-2 hover:underline"
         >
           개인정보처리방침

@@ -41,7 +41,10 @@ export const LegalLayout: React.FC<LegalLayoutProps> = ({
             </div>
           </div>
 
-          <span className="text-xs text-neutral-500 font-mono">시행일: {lastUpdated}</span>
+          <span className="text-[11px] sm:text-xs text-neutral-500 font-mono shrink-0">
+            <span className="hidden sm:inline">시행일: </span>
+            {lastUpdated}
+          </span>
         </div>
       </header>
 
@@ -49,9 +52,7 @@ export const LegalLayout: React.FC<LegalLayoutProps> = ({
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
         {/* Document Header */}
         <div className="mb-10 pb-8 border-b border-white/[0.08]">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-2">
-            {title}
-          </h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-2">{title}</h1>
           <p className="text-sm text-neutral-400 leading-relaxed">{subtitle}</p>
         </div>
 

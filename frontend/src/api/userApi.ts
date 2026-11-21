@@ -1,9 +1,5 @@
 import { apiClient, getAccessToken } from './client';
-import type {
-  UserIdentitiesResponse,
-  SetPasswordRequest,
-  AuthProviderType,
-} from '../types/auth';
+import type { UserIdentitiesResponse, SetPasswordRequest, AuthProviderType } from '../types/auth';
 
 export interface VolumeResponse {
   volume: number;

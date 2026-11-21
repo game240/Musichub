@@ -22,8 +22,8 @@ export const PrivacyPolicyPage: React.FC<PrivacyPolicyPageProps> = ({ onBack }) 
         </div>
         <p className="text-xs text-neutral-400 leading-relaxed">
           Music Hub는 이용자의 개인 식별 정보를 광고나 마케팅 목적으로 제3자에게 판매하거나 무단
-          공유하지 않으며, 클라우드 기반 개인 음악 라이브러리 및 스트리밍 서비스 제공을 위한 최소한의
-          정보만을 수집합니다.
+          공유하지 않으며, 클라우드 기반 개인 음악 라이브러리 및 스트리밍 서비스 제공을 위한
+          최소한의 정보만을 수집합니다.
         </p>
       </div>
 
@@ -91,8 +91,8 @@ export const PrivacyPolicyPage: React.FC<PrivacyPolicyPageProps> = ({ onBack }) 
             스트리밍, 음원 파일 저장 및 관리, 태그 메타데이터 동기화
           </li>
           <li>
-            <strong className="text-neutral-200">보안 및 시스템 안정성:</strong> 비정상적인 접근 차단,
-            세션 관리 및 계정 보안 강화
+            <strong className="text-neutral-200">보안 및 시스템 안정성:</strong> 비정상적인 접근
+            차단, 세션 관리 및 계정 보안 강화
           </li>
         </ul>
       </section>
@@ -103,16 +103,18 @@ export const PrivacyPolicyPage: React.FC<PrivacyPolicyPageProps> = ({ onBack }) 
           제3조 (개인정보의 보유 및 이용 기간)
         </h2>
         <p className="text-neutral-300">
-          이용자의 개인정보는 원칙적으로 개인정보의 수집 및 이용 목적이 달성되면 지체 없이 파기합니다.
+          이용자의 개인정보는 원칙적으로 개인정보의 수집 및 이용 목적이 달성되면 지체 없이
+          파기합니다.
         </p>
         <ul className="list-disc list-inside text-xs sm:text-sm text-neutral-400 space-y-1 pl-2">
           <li>
-            <strong className="text-neutral-200">회원 정보 및 라이브러리 데이터:</strong> 회원 탈퇴 시
-            또는 서비스 종료 시까지
+            <strong className="text-neutral-200">회원 정보 및 라이브러리 데이터:</strong> 회원 탈퇴
+            시 또는 서비스 종료 시까지
           </li>
           <li>
-            <strong className="text-neutral-200">관계 법령에 의한 보존:</strong> 전자상거래법, 통신비밀보호법
-            등 관련 법령의 규정에 의하여 보존할 필요가 있는 경우 해당 법령이 정한 기간 동안 보관
+            <strong className="text-neutral-200">관계 법령에 의한 보존:</strong> 전자상거래법,
+            통신비밀보호법 등 관련 법령의 규정에 의하여 보존할 필요가 있는 경우 해당 법령이 정한
+            기간 동안 보관
           </li>
         </ul>
       </section>
@@ -163,8 +165,9 @@ export const PrivacyPolicyPage: React.FC<PrivacyPolicyPageProps> = ({ onBack }) 
             <span>회원 탈퇴 및 데이터 삭제 신청</span>
           </div>
           <p className="leading-relaxed">
-            서비스 내 설정 메뉴의 연동 해제를 이용하시거나, 아래의 고객지원 이메일로 가입된 이메일 계정과 함께
-            탈퇴 및 데이터 파기를 요청하시면 확인 즉시 계정 및 업로드된 음원 데이터를 영구 파기합니다.
+            서비스 내 설정 메뉴의 연동 해제를 이용하시거나, 아래의 고객지원 이메일로 가입된 이메일
+            계정과 함께 탈퇴 및 데이터 파기를 요청하시면 확인 즉시 계정 및 업로드된 음원 데이터를
+            영구 파기합니다.
           </p>
           <p className="text-neutral-300 font-mono">신청 및 문의 이메일: support@musichub.kr</p>
         </div>
@@ -177,16 +180,17 @@ export const PrivacyPolicyPage: React.FC<PrivacyPolicyPageProps> = ({ onBack }) 
         </h2>
         <ul className="list-disc list-inside text-xs sm:text-sm text-neutral-400 space-y-1.5 pl-2">
           <li>
-            <strong className="text-neutral-200">비밀번호 단방향 암호화:</strong> 회원의 비밀번호는 복호화가
-            불가능하도록 BCrypt 알고리즘을 적용하여 암호화 저장됩니다.
+            <strong className="text-neutral-200">비밀번호 단방향 암호화:</strong> 회원의 비밀번호는
+            복호화가 불가능하도록 BCrypt 알고리즘을 적용하여 암호화 저장됩니다.
           </li>
           <li>
-            <strong className="text-neutral-200">네트워크 보안 전송(HTTPS):</strong> 모든 통신 데이터는
-            SSL/TLS 보안 프로토콜을 통해 안전하게 암호화되어 전송됩니다.
+            <strong className="text-neutral-200">네트워크 보안 전송(HTTPS):</strong> 모든 통신
+            데이터는 SSL/TLS 보안 프로토콜을 통해 안전하게 암호화되어 전송됩니다.
           </li>
           <li>
-            <strong className="text-neutral-200">토큰 보안 체계:</strong> 세션 하이재킹을 방지하기 위해
-            액세스 토큰은 메모리에 보관하며, 리프레시 토큰은 XSS 공격에 안전한 HttpOnly 쿠키로 보호됩니다.
+            <strong className="text-neutral-200">토큰 보안 체계:</strong> 세션 하이재킹을 방지하기
+            위해 액세스 토큰은 메모리에 보관하며, 리프레시 토큰은 XSS 공격에 안전한 HttpOnly 쿠키로
+            보호됩니다.
           </li>
         </ul>
       </section>
