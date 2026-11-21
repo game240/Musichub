@@ -137,6 +137,15 @@ class MusicFileController(
         return ResponseEntity.ok(result)
     }
 
+    @GetMapping("/{id}/download")
+    fun getDownloadUrl(
+        @AuthenticationPrincipal user: UserPrincipal,
+        @PathVariable id: Long
+    ): ResponseEntity<DownloadUrlResult> {
+        val result = musicFileService.getDownloadUrl(user.id, id)
+        return ResponseEntity.ok(result)
+    }
+
     @GetMapping("/{id}/artwork")
     fun getArtworkUrl(
         @AuthenticationPrincipal user: UserPrincipal,

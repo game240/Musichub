@@ -12,7 +12,7 @@ MusicHub allows users to upload, manage, and stream their personal audio files (
 
 This design introduces the **Audio File Download** capability:
 1. **Direct-to-Client R2 Edge Download**: Leverages Cloudflare R2's zero-egress pricing model via S3 Presigned GET URLs with customized `response-content-disposition` parameters, bypassing server bandwidth and JVM thread bottlenecks.
-2. **Metadata-Aware Filename Generation**: Automatically formats download filenames as `"{Artist} - {Title}.{ext}"` (with fallback to original filename), fully sanitized against OS-reserved characters.
+2. **Original Filename-First Policy with Safe Fallbacks**: Prioritizes the user's original uploaded `fileName` (preserving the user's custom naming schemes), falling back to clean metadata `"{Artist} - {Title}.{ext}"` only if the original filename is blank or missing, fully sanitized against OS-reserved characters.
 3. **Cross-Browser UTF-8 Handling**: Employs RFC 5987 / RFC 6266 `filename*=UTF-8''...` encoding to ensure Korean, CJK, and accented characters display flawlessly without mojibake across modern and legacy browsers.
 4. **Intuitive & Responsive UI**: Integrates seamless download action triggers in the library track row (`TrackRow`) and the currently playing bar (`GlobalPlayer`), with instant loading feedback to prevent duplicate downloads.
 
@@ -28,12 +28,13 @@ This design introduces the **Audio File Download** capability:
 - **FR-2 (Ownership & Access Control)**:
   - Download is strictly restricted to authenticated users owning the requested track (`user_id == current_user.id`).
   - Requests for non-existent, soft-deleted, or unauthorized tracks return `404 Not Found`.
-- **FR-3 (Smart Filename Generation & Sanitization)**:
+- **FR-3 (Filename Resolution: Original Filename Priority)**:
   - Filename resolution hierarchy:
-    1. If `artist` and `title` are present: `"{artist} - {title}.{extension}"`
-    2. If only `title` is present: `"{title}.{extension}"`
-    3. Fallback: Original `fileName`
-  - Sanitization: Replaces filesystem-reserved characters (`\ / : * ? " < > |`) with `_` and strips leading/trailing whitespace.
+    1. **Primary**: Original uploaded `fileName` (preserving the user's custom file naming convention).
+    2. **Fallback 1** (if `fileName` is empty or missing): If `artist` and `title` are present, format as `"{artist} - {title}.{extension}"`.
+    3. **Fallback 2**: If only `title` is present, format as `"{title}.{extension}"`.
+    4. **Fallback 3**: `"audio.{extension}"`
+  - Sanitization: Replaces filesystem-reserved characters (`\ / : * ? " < > |`) with `_` and strips leading/trailing whitespace. Ensures extension is preserved.
 - **FR-4 (RFC 5987 / RFC 6266 Header Formatting)**:
   - Generates `Content-Disposition: attachment; filename="{asciiSafe}"; filename*=UTF-8''{percentEncodedUtf8}` so that UTF-8 characters (e.g. `아이유 - 밤편지.mp3`) are preserved in Chrome, Safari, Firefox, Edge, and mobile browsers.
 - **FR-5 (Frontend Track Row Action)**:
@@ -75,6 +76,7 @@ This design introduces the **Audio File Download** capability:
         │                                        │ 2. Validate user ownership            │
         │                                        │    & active status                    │
         │                                        │ 3. Resolve & sanitize filename        │
+        │                                        │    (Original fileName first)          │
         │                                        │ 4. Build S3 GetObjectPresignRequest   │
         │                                        │    with responseContentDisposition    │
         │                                        │                                       │
@@ -87,7 +89,7 @@ This design introduces the **Audio File Download** capability:
         │                                                                                │
         │ 7. Stream audio binary directly with Content-Disposition: attachment           │
         │<───────────────────────────────────────────────────────────────────────────────┤
-        │ (Browser downloads "아이유 - 밤편지.mp3")                                      │
+        │ (Browser downloads original filename e.g. "my_song.mp3")                       │
 ```
 
 ---
@@ -158,18 +160,21 @@ data class DownloadUrlResult(
 #### Filename Resolution in `MusicFileService.kt`
 ```kotlin
 fun resolveDownloadFilename(musicFile: MusicFile): String {
-    val extension = musicFile.fileName.substringAfterLast('.', "mp3")
-    val baseName = when {
-        !musicFile.artist.isNullOrBlank() && !musicFile.title.isNullOrBlank() ->
-            "${musicFile.artist!!.trim()} - ${musicFile.title!!.trim()}"
-        !musicFile.title.isNullOrBlank() ->
-            musicFile.title!!.trim()
-        else ->
-            musicFile.fileName.substringBeforeLast('.')
+    val candidate = if (musicFile.fileName.isNotBlank()) {
+        musicFile.fileName.trim()
+    } else {
+        val extension = musicFile.mimeType.substringAfterLast('/', "mp3").replace("mpeg", "mp3")
+        when {
+            !musicFile.artist.isNullOrBlank() && !musicFile.title.isNullOrBlank() ->
+                "${musicFile.artist!!.trim()} - ${musicFile.title!!.trim()}.$extension"
+            !musicFile.title.isNullOrBlank() ->
+                "${musicFile.title!!.trim()}.$extension"
+            else ->
+                "audio.$extension"
+        }
     }
     // Sanitize illegal filesystem characters: \ / : * ? " < > |
-    val sanitizedBase = baseName.replace(Regex("[\\\\/:*?\"<>|]"), "_").trim()
-    return "$sanitizedBase.$extension"
+    return candidate.replace(Regex("[\\\\/:*?\"<>|]"), "_").trim()
 }
 
 @Transactional(readOnly = true)
@@ -216,7 +221,7 @@ fun getDownloadUrl(
 export interface DownloadUrlResult {
   downloadUrl: string;
   fileName: string;
-  fileSize: Long;
+  fileSize: number;
 }
 ```
 
@@ -284,12 +289,12 @@ export function triggerBrowserDownload(url: string, fileName?: string): void {
 
 ## 6. Edge Cases & Handling
 
-1. **Korean / CJK / Accented Filenames**:
+1. **Original Filename Preserved**:
+   - Downloads maintain the user's original file naming convention (e.g. `MyFavoriteSong_v2.mp3`), while still removing OS-forbidden characters (`\ / : * ? " < > |`).
+2. **Korean / CJK / Accented Filenames**:
    - RFC 5987 `filename*=UTF-8''...` guarantees proper character decoding on all modern browsers without UTF-8 corruption.
-2. **Illegal Characters in Metadata**:
-   - Track titles like `AC/DC - Highway to Hell?` or `Song "Remix"` sanitized to `AC_DC - Highway to Hell_` and `Song _Remix_`.
-3. **Empty / Blank Metadata**:
-   - Falls back safely to original uploaded `fileName` (preserving extension).
+3. **Empty / Blank Original Filename Fallback**:
+   - Falls back gracefully to `"{artist} - {title}.{ext}"`, `"{title}.{ext}"`, or `"audio.{ext}"`.
 4. **Deleted / Inaccessible Track**:
    - Attempting to download a deleted track returns `404 Not Found`. Frontend displays an error toast.
 5. **Slow / Interrupted Downloads**:
@@ -300,13 +305,13 @@ export function triggerBrowserDownload(url: string, fileName?: string): void {
 ## 7. Verification & Testing Strategy
 
 1. **Backend Tests**:
-   - Unit test for `resolveDownloadFilename`: test artist+title, title only, blank metadata, forbidden chars (`/ \ : * ? " < > |`), and Korean hangul.
+   - Unit test for `resolveDownloadFilename`: test original `fileName` priority, fallback to artist+title when blank, and forbidden chars (`/ \ : * ? " < > |`) sanitization.
    - Unit test for `generatePresignedDownloadUrl`: verify `responseContentDisposition` header format with RFC 5987 encoding.
    - Unit test for `getDownloadUrl`: verify success response and authorization verification (`NoSuchElementException` when user does not own track).
 2. **Frontend Tests**:
    - Component rendering and click event triggering.
    - Build & lint verification: `npm run build && npm run lint`.
 3. **End-to-End Verification**:
-   - Upload an MP3 with Korean metadata (`아이유 - 밤편지.mp3`).
-   - Click download in Library track row: verify file downloads immediately with the exact name `아이유 - 밤편지.mp3`.
+   - Upload an MP3 with custom original filename (`01_My_Awesome_Song.mp3`).
+   - Click download in Library track row: verify file downloads with the exact original filename `01_My_Awesome_Song.mp3`.
    - Play the track and click download in the Global Player: verify file downloads identically.

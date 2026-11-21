@@ -13,6 +13,13 @@ interface StorageService {
     /** 스트리밍 재생용 임시 GET URL 생성 (기본 1시간 유효) */
     fun generatePresignedGetUrl(key: String, duration: Duration = Duration.ofHours(1)): String
 
+    /** 음원 파일 다운로드용 임시 GET URL 생성 (Content-Disposition: attachment 첨부, 기본 15분 유효) */
+    fun generatePresignedDownloadUrl(
+        key: String,
+        downloadFilename: String,
+        duration: Duration = Duration.ofMinutes(15)
+    ): String
+
     /** 브라우저 직접 업로드용 임시 PUT URL 생성 (기본 15분 유효) */
     fun generatePresignedPutUrl(key: String, mimeType: String, duration: Duration = Duration.ofMinutes(15)): String
 

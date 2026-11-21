@@ -9,6 +9,8 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest
 import java.io.InputStream
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.time.Duration
 
 @Service
@@ -22,6 +24,30 @@ class CloudflareR2StorageService(
         val getRequest = GetObjectRequest.builder()
             .bucket(bucketName)
             .key(key)
+            .build()
+
+        val presignRequest = GetObjectPresignRequest.builder()
+            .signatureDuration(duration)
+            .getObjectRequest(getRequest)
+            .build()
+
+        return s3Presigner.presignGetObject(presignRequest).url().toString()
+    }
+
+    override fun generatePresignedDownloadUrl(
+        key: String,
+        downloadFilename: String,
+        duration: Duration
+    ): String {
+        val asciiFallback = downloadFilename.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+        val encodedUtf8 = URLEncoder.encode(downloadFilename, StandardCharsets.UTF_8.toString())
+            .replace("+", "%20")
+        val contentDisposition = "attachment; filename=\"$asciiFallback\"; filename*=UTF-8''$encodedUtf8"
+
+        val getRequest = GetObjectRequest.builder()
+            .bucket(bucketName)
+            .key(key)
+            .responseContentDisposition(contentDisposition)
             .build()
 
         val presignRequest = GetObjectPresignRequest.builder()
