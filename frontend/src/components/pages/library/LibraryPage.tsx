@@ -14,10 +14,12 @@ import { EditMetadataModal } from './track/EditMetadataModal';
 import { BatchActionBar } from './track/BatchActionBar';
 import { ConfirmDialog } from '../../organisms/ConfirmDialog';
 import { triggerBrowserDownload } from '../../../utils/downloadFile';
+import { downloadTracksBatch } from '../../../utils/downloadBatch';
 
 export const LibraryPage: React.FC = () => {
   const queryClient = useQueryClient();
-  const { currentTrack, isPlaying, playTrack, addToQueue, updateTrackInfo } = usePlayerStore();
+  const { currentTrack, isPlaying, playTrack, addToQueue, addTracksToQueue, updateTrackInfo } =
+    usePlayerStore();
   const { updateStorageUsage } = useAuthStore();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,6 +32,12 @@ export const LibraryPage: React.FC = () => {
   const [selectedTrackIds, setSelectedTrackIds] = useState<Set<number>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const lastSelectedTrackIndexRef = useRef<number | null>(null);
+
+  // Batch action states (Phase 2)
+  const [isBatchDownloading, setIsBatchDownloading] = useState(false);
+  const [batchDownloadProgress, setBatchDownloadProgress] = useState<string | null>(null);
+  const [isBatchDeleteModalOpen, setIsBatchDeleteModalOpen] = useState(false);
+  const [isBatchDeleting, setIsBatchDeleting] = useState(false);
 
   // Fetch track list
   const {
@@ -188,6 +196,51 @@ export const LibraryPage: React.FC = () => {
     }
   };
 
+  // Selected tracks memo for batch operations
+  const selectedTracks = useMemo(() => {
+    return tracks.filter((t) => selectedTrackIds.has(t.id));
+  }, [tracks, selectedTrackIds]);
+
+  // Batch action handlers (Phase 2)
+  const handleBatchDownload = async () => {
+    if (selectedTracks.length === 0 || isBatchDownloading) return;
+    setIsBatchDownloading(true);
+    setBatchDownloadProgress(`1/${selectedTracks.length}`);
+    try {
+      await downloadTracksBatch(selectedTracks, (done, total) => {
+        setBatchDownloadProgress(`${done}/${total}`);
+      });
+    } catch (err) {
+      console.error('Batch download failed:', err);
+    } finally {
+      setIsBatchDownloading(false);
+      setBatchDownloadProgress(null);
+    }
+  };
+
+  const handleBatchAddToQueue = () => {
+    if (selectedTracks.length === 0) return;
+    addTracksToQueue(selectedTracks);
+    clearSelection();
+  };
+
+  const handleBatchDeleteConfirm = async () => {
+    if (selectedTracks.length === 0 || isBatchDeleting) return;
+    setIsBatchDeleting(true);
+    try {
+      await Promise.allSettled(selectedTracks.map((t) => musicApi.deleteMusicFile(t.id)));
+      const deletedBytes = selectedTracks.reduce((sum, t) => sum + t.fileSize, 0);
+      updateStorageUsage(-deletedBytes);
+      queryClient.invalidateQueries({ queryKey: ['music-files'] });
+      clearSelection();
+      setIsBatchDeleteModalOpen(false);
+    } catch (err) {
+      console.error('Batch delete failed:', err);
+    } finally {
+      setIsBatchDeleting(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-5">
       {/* Action Toolbar */}
@@ -281,17 +334,15 @@ export const LibraryPage: React.FC = () => {
       <BatchActionBar
         isOpen={selectedTrackIds.size > 0}
         selectedCount={selectedTrackIds.size}
-        onDownload={() => {
-          // Will be implemented in Phase 2
-        }}
-        onAddToQueue={() => {
-          // Will be implemented in Phase 2
-        }}
+        isDownloading={isBatchDownloading}
+        downloadProgressText={batchDownloadProgress}
+        onDownload={handleBatchDownload}
+        onAddToQueue={handleBatchAddToQueue}
         onEditMetadata={() => {
           // Will be implemented in Phase 3
         }}
         onDelete={() => {
-          // Will be implemented in Phase 2
+          setIsBatchDeleteModalOpen(true);
         }}
         onClearSelection={clearSelection}
       />
@@ -315,7 +366,7 @@ export const LibraryPage: React.FC = () => {
         onSuccess={handleEditSuccess}
       />
 
-      {/* Delete Confirmation Dialog */}
+      {/* Single Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={trackToDelete !== null}
         onClose={() => {
@@ -328,6 +379,19 @@ export const LibraryPage: React.FC = () => {
         }" 음원을 보관함에서 삭제하시겠습니까? 클라우드 스토리지(R2)에서도 즉시 영구 삭제되며 복구할 수 없습니다.`}
         confirmLabel="삭제하기"
         isLoading={deleteMutation.isPending}
+      />
+
+      {/* Batch Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={isBatchDeleteModalOpen}
+        onClose={() => {
+          setIsBatchDeleteModalOpen(false);
+        }}
+        onConfirm={handleBatchDeleteConfirm}
+        title="음원 일괄 삭제"
+        message={`선택한 ${selectedTracks.length}개의 음원을 보관함에서 영구 삭제하시겠습니까? 클라우드 스토리지(R2)에서도 즉시 영구 삭제되며 복구할 수 없습니다.`}
+        confirmLabel="일괄 삭제하기"
+        isLoading={isBatchDeleting}
       />
     </div>
   );

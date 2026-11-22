@@ -46,6 +46,7 @@ interface PlayerState {
   playNext: () => void;
   playPrev: () => void;
   addToQueue: (track: MusicFileDto) => void;
+  addTracksToQueue: (tracks: MusicFileDto[]) => void;
   removeFromQueue: (index: number) => void;
   clearQueue: () => void;
   reorderQueue: (fromIndex: number, toIndex: number) => void;
@@ -681,6 +682,22 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         let nextShuffled = prev.shuffledQueue;
         if (prev.isShuffle) {
           nextShuffled = [...prev.shuffledQueue, track];
+        }
+        return {
+          queue: nextQueue,
+          shuffledQueue: nextShuffled,
+        };
+      });
+      schedulePlaybackSync();
+    },
+
+    addTracksToQueue: (newTracks: MusicFileDto[]) => {
+      if (newTracks.length === 0) return;
+      set((prev) => {
+        const nextQueue = [...prev.queue, ...newTracks];
+        let nextShuffled = prev.shuffledQueue;
+        if (prev.isShuffle) {
+          nextShuffled = [...prev.shuffledQueue, ...newTracks];
         }
         return {
           queue: nextQueue,
