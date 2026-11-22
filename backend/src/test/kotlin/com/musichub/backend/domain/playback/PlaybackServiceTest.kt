@@ -136,4 +136,85 @@ class PlaybackServiceTest {
         assertEquals("ONE", saved.repeatMode)
         assertEquals(45000L, saved.currentPositionMs)
     }
+
+    @Test
+    fun `updatePlaybackState deduplicates duplicate track ids in request`() {
+        val existing = PlaybackState(
+            userId = 1L,
+            currentTrackId = null,
+            queueTrackIds = emptyList(),
+            shuffledTrackIds = emptyList()
+        )
+        given(playbackStateRepository.findById(1L)).willReturn(Optional.of(existing))
+        given(playbackStateRepository.save(any(PlaybackState::class.java))).willAnswer { it.arguments[0] as PlaybackState }
+
+        val request = UpdatePlaybackStateRequest(
+            currentTrackId = 10L,
+            queueTrackIds = listOf(10L, 20L, 10L, 30L, 20L),
+            shuffledTrackIds = listOf(30L, 10L, 30L),
+            queueIndex = 0,
+            isShuffle = true,
+            repeatMode = "ALL",
+            currentPositionMs = 0L
+        )
+
+        playbackService.updatePlaybackState(1L, request)
+
+        val captor = ArgumentCaptor.forClass(PlaybackState::class.java)
+        verify(playbackStateRepository).save(captor.capture())
+
+        val saved = captor.value
+        assertEquals(listOf(10L, 20L, 30L), saved.queueTrackIds)
+        assertEquals(listOf(30L, 10L), saved.shuffledTrackIds)
+    }
+
+    @Test
+    fun `getPlaybackState deduplicates duplicate track ids stored in state`() {
+        val user = User(id = 1L, providerId = "test", email = "test@example.com")
+        val track1 = MusicFile(
+            id = 10L,
+            user = user,
+            storageKey = "k1",
+            fileName = "song1.mp3",
+            fileSize = 1000L,
+            title = "Song 1"
+        )
+        val track2 = MusicFile(
+            id = 20L,
+            user = user,
+            storageKey = "k2",
+            fileName = "song2.mp3",
+            fileSize = 2000L,
+            title = "Song 2"
+        )
+
+        val state = PlaybackState(
+            userId = 1L,
+            currentTrackId = 10L,
+            queueTrackIds = listOf(10L, 20L, 10L),
+            shuffledTrackIds = listOf(20L, 20L, 10L),
+            queueIndex = 0,
+            isShuffle = true,
+            repeatMode = "ALL",
+            currentPositionMs = 5000L
+        )
+
+        given(playbackStateRepository.findById(1L)).willReturn(Optional.of(state))
+        given(
+            musicFileRepository.findAllByIdInAndUserIdAndStatus(
+                ids = setOf(10L, 20L),
+                userId = 1L,
+                status = MusicFileStatus.ACTIVE
+            )
+        ).willReturn(listOf(track1, track2))
+
+        val result = playbackService.getPlaybackState(1L)
+
+        assertEquals(2, result.queue.size)
+        assertEquals(10L, result.queue[0].id)
+        assertEquals(20L, result.queue[1].id)
+        assertEquals(2, result.shuffledQueue.size)
+        assertEquals(20L, result.shuffledQueue[0].id)
+        assertEquals(10L, result.shuffledQueue[1].id)
+    }
 }
