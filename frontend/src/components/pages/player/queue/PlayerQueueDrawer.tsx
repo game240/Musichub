@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
-import { ListMusic, Trash2, X, Music, Shuffle } from 'lucide-react';
+import { ListMusic, Trash2, X, Music, Shuffle, GripVertical } from 'lucide-react';
 import type { MusicFileDto } from '../../../../types/music';
 import { formatDurationMs } from '../../../../utils/formatTime';
 import { Tooltip } from '../../../atoms/Tooltip';
 import { useFlipList } from './useFlipList';
+import { useQueueDragAndDrop } from './useQueueDragAndDrop';
 
 export interface PlayerQueueDrawerProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ export interface PlayerQueueDrawerProps {
   onRemoveTrack: (index: number) => void;
   onClearQueue: () => void;
   onToggleShuffle?: () => void;
+  onReorderTrack?: (fromIndex: number, toIndex: number) => void;
 }
 
 export const PlayerQueueDrawer: React.FC<PlayerQueueDrawerProps> = ({
@@ -27,6 +29,7 @@ export const PlayerQueueDrawer: React.FC<PlayerQueueDrawerProps> = ({
   onRemoveTrack,
   onClearQueue,
   onToggleShuffle,
+  onReorderTrack,
 }) => {
   // Listen for Escape key to dismiss drawer
   useEffect(() => {
@@ -53,6 +56,21 @@ export const PlayerQueueDrawer: React.FC<PlayerQueueDrawerProps> = ({
   });
 
   const { containerRef, registerItemRef } = useFlipList(itemKeys);
+
+  const {
+    draggingIndex,
+    dropTarget,
+    handleDragStart,
+    handleDragOver,
+    handleDrop,
+    handleDragEnd,
+    handleTouchStart,
+    handleTouchMove,
+    handleTouchEnd,
+  } = useQueueDragAndDrop({
+    onReorder: onReorderTrack ?? (() => {}),
+    containerRef,
+  });
 
   return (
     <>
@@ -139,21 +157,57 @@ export const PlayerQueueDrawer: React.FC<PlayerQueueDrawerProps> = ({
             queue.map((track, idx) => {
               const isPlayingThis = track.id === currentTrackId;
               const itemKey = itemKeys[idx];
+              const isBeingDragged = draggingIndex === idx;
+              const isDropBefore = dropTarget?.index === idx && dropTarget?.position === 'before';
+              const isDropAfter = dropTarget?.index === idx && dropTarget?.position === 'after';
+
               return (
                 <div
                   key={itemKey}
                   ref={registerItemRef(itemKey)}
-                  className={`group flex items-center justify-between p-2.5 rounded-xl transition-colors duration-150 cursor-pointer will-change-transform ${
-                    isPlayingThis
-                      ? 'bg-[#5e6ad2]/15 text-[#8590ea] border border-[#5e6ad2]/20'
-                      : 'hover:bg-white/[0.04] text-neutral-200 border border-transparent'
+                  data-track-index={idx}
+                  onDragOver={(e) => handleDragOver(e, idx)}
+                  onDrop={(e) => handleDrop(e, idx)}
+                  onDragEnd={handleDragEnd}
+                  className={`relative group flex items-center justify-between p-2.5 rounded-xl transition-colors duration-150 cursor-pointer will-change-transform ${
+                    isBeingDragged
+                      ? 'opacity-40 scale-[0.99] border border-dashed border-[#5e6ad2]/50 bg-[#5e6ad2]/5'
+                      : isPlayingThis
+                        ? 'bg-[#5e6ad2]/15 text-[#8590ea] border border-[#5e6ad2]/20'
+                        : 'hover:bg-white/[0.04] text-neutral-200 border border-transparent'
                   }`}
                   onClick={() => {
                     onPlayTrack(track, idx);
                   }}
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="text-[11px] text-neutral-500 w-5 text-center">{idx + 1}</span>
+                  {/* Drop indicator lines */}
+                  {isDropBefore && (
+                    <div className="absolute -top-1 left-2 right-2 h-0.5 bg-[#5e6ad2] rounded-full shadow-[0_0_8px_#8590ea] pointer-events-none z-20" />
+                  )}
+                  {isDropAfter && (
+                    <div className="absolute -bottom-1 left-2 right-2 h-0.5 bg-[#5e6ad2] rounded-full shadow-[0_0_8px_#8590ea] pointer-events-none z-20" />
+                  )}
+
+                  <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                    {onReorderTrack && (
+                      <Tooltip content="드래그하여 순서 변경" side="left">
+                        <div
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, idx)}
+                          onTouchStart={(e) => handleTouchStart(e, idx)}
+                          onTouchMove={handleTouchMove}
+                          onTouchEnd={handleTouchEnd}
+                          onClick={(e) => e.stopPropagation()}
+                          className="p-1 -ml-1 text-neutral-600 hover:text-neutral-300 active:text-[#8590ea] cursor-grab active:cursor-grabbing rounded hover:bg-white/[0.06] transition-colors touch-none shrink-0"
+                          aria-label="순서 변경"
+                        >
+                          <GripVertical className="w-3.5 h-3.5" />
+                        </div>
+                      </Tooltip>
+                    )}
+                    <span className="text-[11px] text-neutral-500 w-4 text-center shrink-0">
+                      {idx + 1}
+                    </span>
                     <div className="min-w-0">
                       <p className="text-xs font-medium truncate">
                         {track.title || track.fileName}
