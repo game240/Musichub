@@ -35,6 +35,7 @@ export const GlobalPlayer: React.FC = () => {
     playPrev,
     removeFromQueue,
     clearQueue,
+    reorderQueue,
   } = usePlayerStore();
 
   const [isQueueOpen, setIsQueueOpen] = useState(false);
@@ -97,6 +98,7 @@ export const GlobalPlayer: React.FC = () => {
             <TrackArtwork
               trackId={currentTrack.id}
               hasArtwork={currentTrack.hasArtwork}
+              artworkUrl={currentTrack.artworkUrl}
               title={currentTrack.title}
               size="sm"
             />
@@ -167,6 +169,7 @@ export const GlobalPlayer: React.FC = () => {
           <TrackArtwork
             trackId={currentTrack.id}
             hasArtwork={currentTrack.hasArtwork}
+            artworkUrl={currentTrack.artworkUrl}
             title={currentTrack.title}
             size="md"
           />
@@ -253,6 +256,7 @@ export const GlobalPlayer: React.FC = () => {
         onRemoveTrack={removeFromQueue}
         onClearQueue={clearQueue}
         onToggleShuffle={toggleShuffle}
+        onReorderTrack={reorderQueue}
       />
     </>
   );
