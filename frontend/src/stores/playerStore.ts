@@ -48,6 +48,7 @@ interface PlayerState {
   addToQueue: (track: MusicFileDto) => void;
   removeFromQueue: (index: number) => void;
   clearQueue: () => void;
+  reorderQueue: (fromIndex: number, toIndex: number) => void;
   updateTrackInfo: (track: MusicFileDto) => void;
 }
 
@@ -606,6 +607,47 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         isLoading: false,
         currentTime: 0,
         duration: 0,
+      });
+      schedulePlaybackSync();
+    },
+
+    reorderQueue: (fromIndex: number, toIndex: number) => {
+      set((prev) => {
+        const isShuffleActive = prev.isShuffle && prev.shuffledQueue.length > 0;
+        const activeList = isShuffleActive ? [...prev.shuffledQueue] : [...prev.queue];
+        if (
+          fromIndex < 0 ||
+          fromIndex >= activeList.length ||
+          toIndex < 0 ||
+          toIndex >= activeList.length ||
+          fromIndex === toIndex
+        ) {
+          return prev;
+        }
+
+        const [movedItem] = activeList.splice(fromIndex, 1);
+        activeList.splice(toIndex, 0, movedItem);
+
+        // Keep queueIndex synchronized with currentTrack
+        let nextQueueIndex = prev.queueIndex;
+        if (prev.currentTrack) {
+          const foundIdx = activeList.findIndex((t) => t.id === prev.currentTrack?.id);
+          if (foundIdx !== -1) {
+            nextQueueIndex = foundIdx;
+          }
+        }
+
+        if (isShuffleActive) {
+          return {
+            shuffledQueue: activeList,
+            queueIndex: nextQueueIndex,
+          };
+        } else {
+          return {
+            queue: activeList,
+            queueIndex: nextQueueIndex,
+          };
+        }
       });
       schedulePlaybackSync();
     },

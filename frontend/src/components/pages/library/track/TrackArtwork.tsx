@@ -5,6 +5,7 @@ import { musicApi } from '../../../../api/musicApi';
 export interface TrackArtworkProps {
   trackId: number;
   hasArtwork: boolean;
+  artworkUrl?: string | null;
   title: string | null;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
@@ -13,21 +14,29 @@ export interface TrackArtworkProps {
 export const TrackArtwork: React.FC<TrackArtworkProps> = ({
   trackId,
   hasArtwork,
+  artworkUrl: propArtworkUrl,
   title,
   className = '',
   size = 'md',
 }) => {
-  const [artworkUrl, setArtworkUrl] = useState<string | null>(null);
+  const [fetchedArtworkUrl, setFetchedArtworkUrl] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
 
+  const finalArtworkUrl = propArtworkUrl ?? fetchedArtworkUrl;
+
   useEffect(() => {
+    // If artworkUrl is already provided via props, avoid redundant N+1 API calls
+    if (propArtworkUrl !== undefined) {
+      return;
+    }
+
     let isMounted = true;
     if (hasArtwork) {
       musicApi
         .getArtworkUrl(trackId)
         .then((url) => {
           if (isMounted) {
-            setArtworkUrl(url);
+            setFetchedArtworkUrl(url);
           }
         })
         .catch(() => {
@@ -40,7 +49,7 @@ export const TrackArtwork: React.FC<TrackArtworkProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [trackId, hasArtwork]);
+  }, [trackId, hasArtwork, propArtworkUrl]);
 
   const sizeClasses = {
     sm: 'w-8 h-8 rounded-md',
@@ -54,7 +63,7 @@ export const TrackArtwork: React.FC<TrackArtworkProps> = ({
     lg: 'w-7 h-7',
   };
 
-  if (!hasArtwork || isError || !artworkUrl) {
+  if (!hasArtwork || isError || !finalArtworkUrl) {
     return (
       <div
         className={`bg-white/[0.04] flex items-center justify-center text-neutral-500 shrink-0 border border-white/[0.08] ${sizeClasses[size]} ${className}`}
@@ -66,8 +75,9 @@ export const TrackArtwork: React.FC<TrackArtworkProps> = ({
 
   return (
     <img
-      src={artworkUrl}
+      src={finalArtworkUrl}
       alt={title || '앨범 커버'}
+      loading="lazy"
       onError={() => {
         setIsError(true);
       }}
