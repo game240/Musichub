@@ -6,6 +6,7 @@ import { formatDurationMs } from '../../../../utils/formatTime';
 import { formatBytes } from '../../../../utils/formatBytes';
 import { Tooltip } from '../../../atoms/Tooltip';
 import { Spinner } from '../../../atoms/Spinner';
+import { Checkbox } from '../../../atoms/Checkbox';
 import { cn } from '../../../../utils/cn';
 
 export interface TrackRowProps {
@@ -14,11 +15,14 @@ export interface TrackRowProps {
   isCurrent: boolean;
   isPlaying: boolean;
   isDownloading?: boolean;
+  isSelected?: boolean;
+  isSelectionMode?: boolean;
   onPlay: (track: MusicFileDto) => void;
   onAddToQueue: (track: MusicFileDto) => void;
   onEdit: (track: MusicFileDto) => void;
   onDelete: (track: MusicFileDto) => void;
   onDownload: (track: MusicFileDto) => void;
+  onToggleSelect?: (track: MusicFileDto, event: React.MouseEvent) => void;
 }
 
 export const TrackRow: React.FC<TrackRowProps> = ({
@@ -27,11 +31,14 @@ export const TrackRow: React.FC<TrackRowProps> = ({
   isCurrent,
   isPlaying,
   isDownloading = false,
+  isSelected = false,
+  isSelectionMode = false,
   onPlay,
   onAddToQueue,
   onEdit,
   onDelete,
   onDownload,
+  onToggleSelect,
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -54,64 +61,125 @@ export const TrackRow: React.FC<TrackRowProps> = ({
     };
   }, [isMobileMenuOpen]);
 
+  const handleRowClick = (e: React.MouseEvent) => {
+    if (isSelectionMode && onToggleSelect) {
+      onToggleSelect(track, e);
+    }
+  };
+
+  const showCheckboxAlways = isSelectionMode || isSelected;
+
   return (
     <tr
-      onDoubleClick={() => {
-        onPlay(track);
+      onClick={handleRowClick}
+      onDoubleClick={(e) => {
+        if (!isSelectionMode) {
+          onPlay(track);
+        } else {
+          e.preventDefault();
+        }
       }}
       className={cn(
-        'group border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors duration-150 select-none',
-        isCurrent && 'bg-[#5e6ad2]/10',
+        'group border-b border-white/[0.04] transition-colors duration-150 select-none',
+        isSelectionMode && 'cursor-pointer',
+        isSelected
+          ? 'bg-[#5e6ad2]/15'
+          : isCurrent
+            ? 'bg-[#5e6ad2]/10 hover:bg-[#5e6ad2]/15'
+            : 'hover:bg-white/[0.03]',
       )}
     >
-      {/* Index & Play button */}
+      {/* Index & Play button / Checkbox */}
       <td className="w-10 sm:w-14 py-2.5 px-1 sm:px-3 text-center relative">
-        {isCurrent && (
+        {/* Left active line for current or selected */}
+        {isSelected ? (
+          <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[#8590ea] rounded-r" />
+        ) : isCurrent ? (
           <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[#5e6ad2] rounded-r" />
-        )}
+        ) : null}
+
         <div className="w-7 h-7 mx-auto relative flex items-center justify-center">
-          {/* Desktop track number or equalizer */}
-          <div className="hidden sm:flex group-hover:hidden items-center justify-center">
-            {isCurrent && isPlaying ? (
-              <div className="flex items-end justify-center gap-0.5 h-3.5 w-3.5">
-                <span className="w-0.5 bg-[#8590ea] h-full animate-bounce" />
-                <span className="w-0.5 bg-[#8590ea] h-2/3 animate-bounce [animation-delay:0.2s]" />
-                <span className="w-0.5 bg-[#8590ea] h-4/5 animate-bounce [animation-delay:0.4s]" />
+          {/* Checkbox: Always shown if selected or in selection mode */}
+          {showCheckboxAlways ? (
+            <div
+              className="flex items-center justify-center"
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+            >
+              <Checkbox
+                checked={isSelected}
+                onChange={(_, e) => {
+                  if (onToggleSelect) {
+                    onToggleSelect(track, e as unknown as React.MouseEvent);
+                  }
+                }}
+                aria-label={`${track.title || track.fileName} 선택`}
+              />
+            </div>
+          ) : (
+            <>
+              {/* Checkbox on desktop hover (when not in selection mode) */}
+              <div
+                className="hidden sm:group-hover:flex items-center justify-center z-10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
+                <Checkbox
+                  checked={isSelected}
+                  onChange={(_, e) => {
+                    if (onToggleSelect) {
+                      onToggleSelect(track, e as unknown as React.MouseEvent);
+                    }
+                  }}
+                  aria-label={`${track.title || track.fileName} 선택`}
+                />
               </div>
-            ) : (
-              <span
+
+              {/* Desktop track number or equalizer */}
+              <div className="hidden sm:flex sm:group-hover:hidden items-center justify-center">
+                {isCurrent && isPlaying ? (
+                  <div className="flex items-end justify-center gap-0.5 h-3.5 w-3.5">
+                    <span className="w-0.5 bg-[#8590ea] h-full animate-bounce" />
+                    <span className="w-0.5 bg-[#8590ea] h-2/3 animate-bounce [animation-delay:0.2s]" />
+                    <span className="w-0.5 bg-[#8590ea] h-4/5 animate-bounce [animation-delay:0.4s]" />
+                  </div>
+                ) : (
+                  <span
+                    className={cn(
+                      'text-xs',
+                      isCurrent ? 'text-[#8590ea] font-semibold' : 'text-neutral-500',
+                    )}
+                  >
+                    {index + 1}
+                  </span>
+                )}
+              </div>
+
+              {/* Mobile Play/Pause Button */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPlay(track);
+                }}
+                aria-label={isCurrent && isPlaying ? '일시정지' : '재생'}
                 className={cn(
-                  'text-xs',
-                  isCurrent ? 'text-[#8590ea] font-semibold' : 'text-neutral-500',
+                  'w-7 h-7 flex sm:hidden items-center justify-center rounded-full shadow-md cursor-pointer transition-colors',
+                  isCurrent
+                    ? 'text-white bg-[#5e6ad2] hover:bg-[#6f7cf4]'
+                    : 'text-neutral-300 bg-white/[0.08] hover:bg-white/[0.15]',
                 )}
               >
-                {index + 1}
-              </span>
-            )}
-          </div>
-
-          {/* Play/Pause Button: always visible on mobile, hover-only on desktop */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onPlay(track);
-            }}
-            aria-label={isCurrent && isPlaying ? '일시정지' : '재생'}
-            className={cn(
-              'w-7 h-7 items-center justify-center rounded-full shadow-md cursor-pointer transition-colors',
-              'flex sm:hidden sm:group-hover:flex',
-              isCurrent
-                ? 'text-white bg-[#5e6ad2] hover:bg-[#6f7cf4]'
-                : 'text-neutral-300 bg-white/[0.08] hover:bg-white/[0.15] sm:bg-[#5e6ad2] sm:text-white sm:hover:bg-[#6f7cf4]',
-            )}
-          >
-            {isCurrent && isPlaying ? (
-              <Pause className="w-3.5 h-3.5 fill-current" />
-            ) : (
-              <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
-            )}
-          </button>
+                {isCurrent && isPlaying ? (
+                  <Pause className="w-3.5 h-3.5 fill-current" />
+                ) : (
+                  <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                )}
+              </button>
+            </>
+          )}
         </div>
       </td>
 
@@ -119,8 +187,16 @@ export const TrackRow: React.FC<TrackRowProps> = ({
       <td className="py-2.5 px-2 sm:px-4">
         <div
           className="flex items-center gap-2.5 sm:gap-3 cursor-pointer"
-          onClick={() => {
-            onPlay(track);
+          onClick={(e) => {
+            if (isSelectionMode) {
+              // In selection mode, clicking anywhere in the track area toggles the checkbox only
+              e.stopPropagation();
+              if (onToggleSelect) {
+                onToggleSelect(track, e);
+              }
+            } else {
+              onPlay(track);
+            }
           }}
         >
           <TrackArtwork
@@ -170,7 +246,8 @@ export const TrackRow: React.FC<TrackRowProps> = ({
           <Tooltip content="음원 다운로드" side="top">
             <button
               type="button"
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 onDownload(track);
               }}
               disabled={isDownloading}
@@ -186,7 +263,8 @@ export const TrackRow: React.FC<TrackRowProps> = ({
           <Tooltip content="재생목록에 추가" side="top">
             <button
               type="button"
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 onAddToQueue(track);
               }}
               className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"
@@ -197,7 +275,8 @@ export const TrackRow: React.FC<TrackRowProps> = ({
           <Tooltip content="정보 수정" side="top">
             <button
               type="button"
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 onEdit(track);
               }}
               className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"
@@ -208,7 +287,8 @@ export const TrackRow: React.FC<TrackRowProps> = ({
           <Tooltip content="음원 삭제" side="top">
             <button
               type="button"
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 onDelete(track);
               }}
               className="p-1.5 text-neutral-400 hover:text-red-400 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"

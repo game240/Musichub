@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { UploadCloud, Music, RefreshCw } from 'lucide-react';
+import { UploadCloud, Music, RefreshCw, CheckSquare } from 'lucide-react';
 import { musicApi } from '../../../api/musicApi';
 import type { MusicFileDto } from '../../../types/music';
 import { usePlayerStore } from '../../../stores/playerStore';
@@ -11,12 +11,16 @@ import { Tooltip } from '../../atoms/Tooltip';
 import { TrackTable } from './track/TrackTable';
 import { UploadModal } from './upload/UploadModal';
 import { EditMetadataModal } from './track/EditMetadataModal';
+import { BatchActionBar } from './track/BatchActionBar';
+import { BatchEditMetadataModal } from './track/BatchEditMetadataModal';
 import { ConfirmDialog } from '../../organisms/ConfirmDialog';
 import { triggerBrowserDownload } from '../../../utils/downloadFile';
+import { downloadTracksBatch } from '../../../utils/downloadBatch';
 
 export const LibraryPage: React.FC = () => {
   const queryClient = useQueryClient();
-  const { currentTrack, isPlaying, playTrack, addToQueue, updateTrackInfo } = usePlayerStore();
+  const { currentTrack, isPlaying, playTrack, addToQueue, addTracksToQueue, updateTrackInfo } =
+    usePlayerStore();
   const { updateStorageUsage } = useAuthStore();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -24,6 +28,18 @@ export const LibraryPage: React.FC = () => {
   const [editingTrack, setEditingTrack] = useState<MusicFileDto | null>(null);
   const [trackToDelete, setTrackToDelete] = useState<MusicFileDto | null>(null);
   const [downloadingTrackId, setDownloadingTrackId] = useState<number | null>(null);
+
+  // Batch selection states
+  const [selectedTrackIds, setSelectedTrackIds] = useState<Set<number>>(new Set());
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const lastSelectedTrackIndexRef = useRef<number | null>(null);
+
+  // Batch action states (Phase 2 & Phase 3)
+  const [isBatchDownloading, setIsBatchDownloading] = useState(false);
+  const [batchDownloadProgress, setBatchDownloadProgress] = useState<string | null>(null);
+  const [isBatchDeleteModalOpen, setIsBatchDeleteModalOpen] = useState(false);
+  const [isBatchDeleting, setIsBatchDeleting] = useState(false);
+  const [isBatchEditModalOpen, setIsBatchEditModalOpen] = useState(false);
 
   // Fetch track list
   const {
@@ -54,6 +70,89 @@ export const LibraryPage: React.FC = () => {
       return matchTitle || matchArtist || matchAlbum || matchFile;
     });
   }, [tracks, searchQuery]);
+
+  // Multi-select helpers
+  const clearSelection = useCallback(() => {
+    setSelectedTrackIds(new Set());
+    setIsSelectionMode(false);
+    lastSelectedTrackIndexRef.current = null;
+  }, []);
+
+  const toggleSelectTrack = useCallback(
+    (track: MusicFileDto, event?: React.MouseEvent) => {
+      const currentIndex = filteredTracks.findIndex((t) => t.id === track.id);
+      if (currentIndex === -1) return;
+
+      setSelectedTrackIds((prev) => {
+        const next = new Set(prev);
+
+        // Range selection with Shift key
+        if (
+          event?.shiftKey &&
+          lastSelectedTrackIndexRef.current !== null &&
+          lastSelectedTrackIndexRef.current !== currentIndex
+        ) {
+          const start = Math.min(lastSelectedTrackIndexRef.current, currentIndex);
+          const end = Math.max(lastSelectedTrackIndexRef.current, currentIndex);
+          for (let i = start; i <= end; i++) {
+            next.add(filteredTracks[i].id);
+          }
+        } else {
+          // Toggle individual track
+          if (next.has(track.id)) {
+            next.delete(track.id);
+          } else {
+            next.add(track.id);
+          }
+        }
+
+        lastSelectedTrackIndexRef.current = currentIndex;
+
+        if (next.size > 0) {
+          setIsSelectionMode(true);
+        }
+
+        return next;
+      });
+    },
+    [filteredTracks],
+  );
+
+  const toggleSelectAll = useCallback(() => {
+    if (filteredTracks.length === 0) return;
+
+    const isAllSelected = filteredTracks.every((t) => selectedTrackIds.has(t.id));
+    if (isAllSelected) {
+      setSelectedTrackIds(new Set());
+      setIsSelectionMode(false);
+    } else {
+      setSelectedTrackIds(new Set(filteredTracks.map((t) => t.id)));
+      setIsSelectionMode(true);
+    }
+  }, [filteredTracks, selectedTrackIds]);
+
+  // Keyboard shortcut handlers (Escape to clear, Ctrl/Cmd+A to select all)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if focus is in an input or textarea
+      const target = e.target as HTMLElement | null;
+      const isInput =
+        target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+
+      if (e.key === 'Escape' && isSelectionMode) {
+        clearSelection();
+      } else if (!isInput && (e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
+        if (filteredTracks.length > 0) {
+          e.preventDefault();
+          setSelectedTrackIds(new Set(filteredTracks.map((t) => t.id)));
+          setIsSelectionMode(true);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSelectionMode, clearSelection, filteredTracks]);
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -99,6 +198,51 @@ export const LibraryPage: React.FC = () => {
     }
   };
 
+  // Selected tracks memo for batch operations
+  const selectedTracks = useMemo(() => {
+    return tracks.filter((t) => selectedTrackIds.has(t.id));
+  }, [tracks, selectedTrackIds]);
+
+  // Batch action handlers (Phase 2)
+  const handleBatchDownload = async () => {
+    if (selectedTracks.length === 0 || isBatchDownloading) return;
+    setIsBatchDownloading(true);
+    setBatchDownloadProgress(`1/${selectedTracks.length}`);
+    try {
+      await downloadTracksBatch(selectedTracks, (done, total) => {
+        setBatchDownloadProgress(`${done}/${total}`);
+      });
+    } catch (err) {
+      console.error('Batch download failed:', err);
+    } finally {
+      setIsBatchDownloading(false);
+      setBatchDownloadProgress(null);
+    }
+  };
+
+  const handleBatchAddToQueue = () => {
+    if (selectedTracks.length === 0) return;
+    addTracksToQueue(selectedTracks);
+    clearSelection();
+  };
+
+  const handleBatchDeleteConfirm = async () => {
+    if (selectedTracks.length === 0 || isBatchDeleting) return;
+    setIsBatchDeleting(true);
+    try {
+      await Promise.allSettled(selectedTracks.map((t) => musicApi.deleteMusicFile(t.id)));
+      const deletedBytes = selectedTracks.reduce((sum, t) => sum + t.fileSize, 0);
+      updateStorageUsage(-deletedBytes);
+      queryClient.invalidateQueries({ queryKey: ['music-files'] });
+      clearSelection();
+      setIsBatchDeleteModalOpen(false);
+    } catch (err) {
+      console.error('Batch delete failed:', err);
+    } finally {
+      setIsBatchDeleting(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-5">
       {/* Action Toolbar */}
@@ -131,6 +275,23 @@ export const LibraryPage: React.FC = () => {
             <span>총 {filteredTracks.length}곡</span>
           </span>
 
+          {/* Toggle selection mode button */}
+          <Button
+            variant={isSelectionMode ? 'secondary' : 'ghost'}
+            size="md"
+            onClick={() => {
+              if (isSelectionMode) {
+                clearSelection();
+              } else {
+                setIsSelectionMode(true);
+              }
+            }}
+            className={isSelectionMode ? 'border-[#5e6ad2]/50 text-white bg-[#5e6ad2]/15' : ''}
+          >
+            <CheckSquare className="w-4 h-4 text-[#8590ea]" />
+            <span>{isSelectionMode ? '선택 종료' : '선택'}</span>
+          </Button>
+
           <Button
             variant="primary"
             onClick={() => {
@@ -155,6 +316,8 @@ export const LibraryPage: React.FC = () => {
           currentTrackId={currentTrack?.id}
           isPlaying={isPlaying}
           downloadingTrackId={downloadingTrackId}
+          selectedTrackIds={selectedTrackIds}
+          isSelectionMode={isSelectionMode}
           onPlay={handlePlay}
           onAddToQueue={addToQueue}
           onEdit={setEditingTrack}
@@ -163,9 +326,41 @@ export const LibraryPage: React.FC = () => {
           onUploadClick={() => {
             setIsUploadModalOpen(true);
           }}
+          onToggleSelect={toggleSelectTrack}
+          onToggleSelectAll={toggleSelectAll}
           isFiltered={searchQuery.trim().length > 0}
         />
       )}
+
+      {/* Floating Batch Action Bar */}
+      <BatchActionBar
+        isOpen={selectedTrackIds.size > 0}
+        selectedCount={selectedTrackIds.size}
+        isDownloading={isBatchDownloading}
+        downloadProgressText={batchDownloadProgress}
+        onDownload={handleBatchDownload}
+        onAddToQueue={handleBatchAddToQueue}
+        onEditMetadata={() => {
+          setIsBatchEditModalOpen(true);
+        }}
+        onDelete={() => {
+          setIsBatchDeleteModalOpen(true);
+        }}
+        onClearSelection={clearSelection}
+      />
+
+      {/* Batch Edit Metadata Modal */}
+      <BatchEditMetadataModal
+        isOpen={isBatchEditModalOpen}
+        onClose={() => {
+          setIsBatchEditModalOpen(false);
+        }}
+        tracks={selectedTracks}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['music-files'] });
+          clearSelection();
+        }}
+      />
 
       {/* Upload Modal */}
       <UploadModal
@@ -186,7 +381,7 @@ export const LibraryPage: React.FC = () => {
         onSuccess={handleEditSuccess}
       />
 
-      {/* Delete Confirmation Dialog */}
+      {/* Single Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={trackToDelete !== null}
         onClose={() => {
@@ -199,6 +394,19 @@ export const LibraryPage: React.FC = () => {
         }" 음원을 보관함에서 삭제하시겠습니까? 클라우드 스토리지(R2)에서도 즉시 영구 삭제되며 복구할 수 없습니다.`}
         confirmLabel="삭제하기"
         isLoading={deleteMutation.isPending}
+      />
+
+      {/* Batch Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={isBatchDeleteModalOpen}
+        onClose={() => {
+          setIsBatchDeleteModalOpen(false);
+        }}
+        onConfirm={handleBatchDeleteConfirm}
+        title="음원 일괄 삭제"
+        message={`선택한 ${selectedTracks.length}개의 음원을 보관함에서 영구 삭제하시겠습니까? 클라우드 스토리지(R2)에서도 즉시 영구 삭제되며 복구할 수 없습니다.`}
+        confirmLabel="일괄 삭제하기"
+        isLoading={isBatchDeleting}
       />
     </div>
   );
