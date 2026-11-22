@@ -7,16 +7,18 @@ export interface ToastItem {
   message: string;
   type: ToastType;
   durationMs: number;
+  isExiting?: boolean;
 }
 
 interface ToastState {
   toasts: ToastItem[];
   addToast: (message: string, type?: ToastType, durationMs?: number) => string;
+  dismissToast: (id: string) => void;
   removeToast: (id: string) => void;
   clearToasts: () => void;
 }
 
-export const useToastStore = create<ToastState>((set) => ({
+export const useToastStore = create<ToastState>((set, get) => ({
   toasts: [],
   addToast: (message, type = 'info', durationMs = 3000) => {
     const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -28,13 +30,25 @@ export const useToastStore = create<ToastState>((set) => ({
 
     if (durationMs > 0) {
       setTimeout(() => {
-        set((state) => ({
-          toasts: state.toasts.filter((t) => t.id !== id),
-        }));
+        get().dismissToast(id);
       }, durationMs);
     }
 
     return id;
+  },
+  dismissToast: (id) => {
+    const existing = get().toasts.find((t) => t.id === id);
+    if (!existing || existing.isExiting) return;
+
+    set((state) => ({
+      toasts: state.toasts.map((t) => (t.id === id ? { ...t, isExiting: true } : t)),
+    }));
+
+    setTimeout(() => {
+      set((state) => ({
+        toasts: state.toasts.filter((t) => t.id !== id),
+      }));
+    }, 200);
   },
   removeToast: (id) => {
     set((state) => ({
@@ -55,4 +69,5 @@ export const toast = {
     useToastStore.getState().addToast(message, 'warning', durationMs),
   error: (message: string, durationMs?: number) =>
     useToastStore.getState().addToast(message, 'error', durationMs),
+  dismiss: (id: string) => useToastStore.getState().dismissToast(id),
 };

@@ -23,6 +23,8 @@ const renderIcon = (type: ToastType) => {
 };
 
 export const Toast: React.FC<ToastProps> = ({ toast, onClose }) => {
+  const isExiting = toast.isExiting;
+
   return (
     <div
       role="status"
@@ -30,8 +32,11 @@ export const Toast: React.FC<ToastProps> = ({ toast, onClose }) => {
       className={cn(
         'pointer-events-auto flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl',
         'bg-[#18191b]/95 border border-white/10 text-neutral-100 shadow-[0_8px_32px_rgba(0,0,0,0.5)]',
-        'backdrop-blur-xl transition-all duration-200 animate-in fade-in slide-in-from-top-2',
-        'text-xs sm:text-sm font-medium break-keep select-none max-w-sm sm:max-w-md w-full',
+        'backdrop-blur-xl text-xs sm:text-sm font-medium break-keep select-none max-w-sm sm:max-w-md w-full',
+        'transition-all duration-200 ease-out',
+        isExiting
+          ? 'opacity-0 -translate-y-2.5 scale-95 pointer-events-none'
+          : 'opacity-100 translate-y-0 scale-100 animate-in fade-in slide-in-from-top-2',
       )}
     >
       <div className="flex items-center gap-2.5 min-w-0 flex-1">
