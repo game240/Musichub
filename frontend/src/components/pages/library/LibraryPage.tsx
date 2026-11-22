@@ -12,6 +12,7 @@ import { TrackTable } from './track/TrackTable';
 import { UploadModal } from './upload/UploadModal';
 import { EditMetadataModal } from './track/EditMetadataModal';
 import { BatchActionBar } from './track/BatchActionBar';
+import { BatchEditMetadataModal } from './track/BatchEditMetadataModal';
 import { ConfirmDialog } from '../../organisms/ConfirmDialog';
 import { triggerBrowserDownload } from '../../../utils/downloadFile';
 import { downloadTracksBatch } from '../../../utils/downloadBatch';
@@ -33,11 +34,12 @@ export const LibraryPage: React.FC = () => {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const lastSelectedTrackIndexRef = useRef<number | null>(null);
 
-  // Batch action states (Phase 2)
+  // Batch action states (Phase 2 & Phase 3)
   const [isBatchDownloading, setIsBatchDownloading] = useState(false);
   const [batchDownloadProgress, setBatchDownloadProgress] = useState<string | null>(null);
   const [isBatchDeleteModalOpen, setIsBatchDeleteModalOpen] = useState(false);
   const [isBatchDeleting, setIsBatchDeleting] = useState(false);
+  const [isBatchEditModalOpen, setIsBatchEditModalOpen] = useState(false);
 
   // Fetch track list
   const {
@@ -339,12 +341,25 @@ export const LibraryPage: React.FC = () => {
         onDownload={handleBatchDownload}
         onAddToQueue={handleBatchAddToQueue}
         onEditMetadata={() => {
-          // Will be implemented in Phase 3
+          setIsBatchEditModalOpen(true);
         }}
         onDelete={() => {
           setIsBatchDeleteModalOpen(true);
         }}
         onClearSelection={clearSelection}
+      />
+
+      {/* Batch Edit Metadata Modal */}
+      <BatchEditMetadataModal
+        isOpen={isBatchEditModalOpen}
+        onClose={() => {
+          setIsBatchEditModalOpen(false);
+        }}
+        tracks={selectedTracks}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['music-files'] });
+          clearSelection();
+        }}
       />
 
       {/* Upload Modal */}
