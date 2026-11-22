@@ -126,6 +126,7 @@ export const TrackRow: React.FC<TrackRowProps> = ({
           <TrackArtwork
             trackId={track.id}
             hasArtwork={track.hasArtwork}
+            artworkUrl={track.artworkUrl}
             title={track.title}
             size="md"
           />

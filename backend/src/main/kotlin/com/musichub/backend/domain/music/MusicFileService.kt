@@ -260,6 +260,14 @@ class MusicFileService(
         return musicFile.artworkStorageKey?.let { storageService.generatePresignedGetUrl(it) }
     }
 
+    /**
+     * MusicFile 엔티티를 MusicFileDto로 변환 (앨범 아트워크가 있는 경우 Presigned URL 포함)
+     */
+    fun toDto(musicFile: MusicFile): MusicFileDto {
+        val artworkUrl = musicFile.artworkStorageKey?.let { storageService.generatePresignedGetUrl(it) }
+        return MusicFileDto.from(musicFile, artworkUrl)
+    }
+
     @Transactional(readOnly = true)
     fun listMusicFiles(userId: Long, pageable: Pageable): Page<MusicFile> {
         val titleOrder = pageable.sort.getOrderFor("title")

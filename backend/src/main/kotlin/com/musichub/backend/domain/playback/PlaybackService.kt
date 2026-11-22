@@ -1,8 +1,10 @@
 package com.musichub.backend.domain.playback
 
+import com.musichub.backend.domain.music.MusicFile
 import com.musichub.backend.domain.music.MusicFileDto
 import com.musichub.backend.domain.music.MusicFileRepository
 import com.musichub.backend.domain.music.MusicFileStatus
+import com.musichub.backend.domain.storage.StorageService
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -10,8 +12,14 @@ import java.time.Instant
 @Service
 class PlaybackService(
     private val playbackStateRepository: PlaybackStateRepository,
-    private val musicFileRepository: MusicFileRepository
+    private val musicFileRepository: MusicFileRepository,
+    private val storageService: StorageService
 ) {
+    private fun toDto(file: MusicFile): MusicFileDto {
+        val artworkUrl = file.artworkStorageKey?.let { storageService.generatePresignedGetUrl(it) }
+        return MusicFileDto.from(file, artworkUrl)
+    }
+
     @Transactional(readOnly = true)
     fun getPlaybackState(userId: Long): PlaybackStateResponse {
         val state = playbackStateRepository.findById(userId).orElse(null)
@@ -50,9 +58,9 @@ class PlaybackService(
         )
         val fileMap = musicFiles.associateBy { it.id }
 
-        val queueDtos = state.queueTrackIds.mapNotNull { fileMap[it]?.let { file -> MusicFileDto.from(file) } }
-        val shuffledQueueDtos = state.shuffledTrackIds.mapNotNull { fileMap[it]?.let { file -> MusicFileDto.from(file) } }
-        val currentTrackDto = state.currentTrackId?.let { fileMap[it]?.let { file -> MusicFileDto.from(file) } }
+        val queueDtos = state.queueTrackIds.mapNotNull { fileMap[it]?.let { file -> toDto(file) } }
+        val shuffledQueueDtos = state.shuffledTrackIds.mapNotNull { fileMap[it]?.let { file -> toDto(file) } }
+        val currentTrackDto = state.currentTrackId?.let { fileMap[it]?.let { file -> toDto(file) } }
 
         return PlaybackStateResponse(
             currentTrack = currentTrackDto,
