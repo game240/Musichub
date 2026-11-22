@@ -72,11 +72,16 @@ export const TrackRow: React.FC<TrackRowProps> = ({
   return (
     <tr
       onClick={handleRowClick}
-      onDoubleClick={() => {
-        onPlay(track);
+      onDoubleClick={(e) => {
+        if (!isSelectionMode) {
+          onPlay(track);
+        } else {
+          e.preventDefault();
+        }
       }}
       className={cn(
         'group border-b border-white/[0.04] transition-colors duration-150 select-none',
+        isSelectionMode && 'cursor-pointer',
         isSelected
           ? 'bg-[#5e6ad2]/15'
           : isCurrent
@@ -182,8 +187,16 @@ export const TrackRow: React.FC<TrackRowProps> = ({
       <td className="py-2.5 px-2 sm:px-4">
         <div
           className="flex items-center gap-2.5 sm:gap-3 cursor-pointer"
-          onClick={() => {
-            onPlay(track);
+          onClick={(e) => {
+            if (isSelectionMode) {
+              // In selection mode, clicking anywhere in the track area toggles the checkbox only
+              e.stopPropagation();
+              if (onToggleSelect) {
+                onToggleSelect(track, e);
+              }
+            } else {
+              onPlay(track);
+            }
           }}
         >
           <TrackArtwork
@@ -233,7 +246,8 @@ export const TrackRow: React.FC<TrackRowProps> = ({
           <Tooltip content="음원 다운로드" side="top">
             <button
               type="button"
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 onDownload(track);
               }}
               disabled={isDownloading}
@@ -249,7 +263,8 @@ export const TrackRow: React.FC<TrackRowProps> = ({
           <Tooltip content="재생목록에 추가" side="top">
             <button
               type="button"
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 onAddToQueue(track);
               }}
               className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"
@@ -260,7 +275,8 @@ export const TrackRow: React.FC<TrackRowProps> = ({
           <Tooltip content="정보 수정" side="top">
             <button
               type="button"
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 onEdit(track);
               }}
               className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"
@@ -271,7 +287,8 @@ export const TrackRow: React.FC<TrackRowProps> = ({
           <Tooltip content="음원 삭제" side="top">
             <button
               type="button"
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 onDelete(track);
               }}
               className="p-1.5 text-neutral-400 hover:text-red-400 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"
