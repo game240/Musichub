@@ -58,8 +58,8 @@ class PlaybackService(
         )
         val fileMap = musicFiles.associateBy { it.id }
 
-        val queueDtos = state.queueTrackIds.mapNotNull { fileMap[it]?.let { file -> toDto(file) } }
-        val shuffledQueueDtos = state.shuffledTrackIds.mapNotNull { fileMap[it]?.let { file -> toDto(file) } }
+        val queueDtos = state.queueTrackIds.distinct().mapNotNull { fileMap[it]?.let { file -> toDto(file) } }
+        val shuffledQueueDtos = state.shuffledTrackIds.distinct().mapNotNull { fileMap[it]?.let { file -> toDto(file) } }
         val currentTrackDto = state.currentTrackId?.let { fileMap[it]?.let { file -> toDto(file) } }
 
         return PlaybackStateResponse(
@@ -80,8 +80,8 @@ class PlaybackService(
         }
 
         state.currentTrackId = request.currentTrackId
-        state.queueTrackIds = request.queueTrackIds
-        state.shuffledTrackIds = request.shuffledTrackIds
+        state.queueTrackIds = request.queueTrackIds.distinct()
+        state.shuffledTrackIds = request.shuffledTrackIds.distinct()
         state.queueIndex = request.queueIndex
         state.isShuffle = request.isShuffle
         state.repeatMode = request.repeatMode
