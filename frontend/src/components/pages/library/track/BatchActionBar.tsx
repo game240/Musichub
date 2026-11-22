@@ -44,7 +44,7 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
     >
       {/* Selected Count Indicator */}
       <div className="flex items-center gap-1.5 pr-2 border-r border-white/10 shrink-0">
-        <span className="w-2 h-2 rounded-full bg-[#5e6ad2] animate-pulse" />
+        <span className="w-2 h-2 rounded-full bg-[#5e6ad2]" />
         <span className="text-xs font-semibold text-white whitespace-nowrap">
           {selectedCount}
           <span className="hidden sm:inline font-normal text-neutral-300">개 선택됨</span>
@@ -119,12 +119,12 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
 
       {/* Clear Selection / Close */}
       <div className="pl-1 border-l border-white/10 shrink-0">
-        <Tooltip content="선택 해제 (ESC)" side="top">
+        <Tooltip content="선택 모드 나가기 (ESC)" side="top">
           <button
             type="button"
             onClick={onClearSelection}
             className="p-1.5 text-neutral-400 hover:text-white rounded-full hover:bg-white/10 transition-colors cursor-pointer"
-            aria-label="선택 해제"
+            aria-label="선택 모드 나가기"
           >
             <X className="w-3.5 h-3.5" />
           </button>
