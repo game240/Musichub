@@ -49,6 +49,7 @@ data class MusicFileDto(
     val durationMs: Long?,
     val fileSize: Long,
     val hasArtwork: Boolean,
+    val artworkUrl: String? = null,
     val lyrics: String?,
     val playCount: Int,
     val lastPlayedAt: Instant?,
@@ -56,7 +57,7 @@ data class MusicFileDto(
     val createdAt: Instant
 ) {
     companion object {
-        fun from(entity: MusicFile): MusicFileDto = MusicFileDto(
+        fun from(entity: MusicFile, artworkUrl: String? = null): MusicFileDto = MusicFileDto(
             id = entity.id,
             fileName = entity.fileName,
             title = entity.title,
@@ -68,6 +69,7 @@ data class MusicFileDto(
             durationMs = entity.durationMs,
             fileSize = entity.fileSize,
             hasArtwork = entity.artworkStorageKey != null,
+            artworkUrl = artworkUrl,
             lyrics = entity.lyrics,
             playCount = entity.playCount,
             lastPlayedAt = entity.lastPlayedAt,
@@ -107,7 +109,7 @@ class MusicFileController(
             storageKey = request.storageKey,
             originalFileName = request.fileName
         )
-        return ResponseEntity.ok(MusicFileDto.from(musicFile))
+        return ResponseEntity.ok(musicFileService.toDto(musicFile))
     }
 
     @PostMapping("/upload")
@@ -116,7 +118,7 @@ class MusicFileController(
         @RequestParam("file") file: MultipartFile
     ): ResponseEntity<MusicFileDto> {
         val musicFile = musicFileService.uploadViaProxy(user.id, file)
-        return ResponseEntity.ok(MusicFileDto.from(musicFile))
+        return ResponseEntity.ok(musicFileService.toDto(musicFile))
     }
 
     @GetMapping
@@ -124,7 +126,7 @@ class MusicFileController(
         @AuthenticationPrincipal user: UserPrincipal,
         @PageableDefault(size = 30, sort = ["title"], direction = Sort.Direction.ASC) pageable: Pageable
     ): ResponseEntity<Page<MusicFileDto>> {
-        val page = musicFileService.listMusicFiles(user.id, pageable).map { MusicFileDto.from(it) }
+        val page = musicFileService.listMusicFiles(user.id, pageable).map { musicFileService.toDto(it) }
         return ResponseEntity.ok(page)
     }
 
@@ -171,7 +173,7 @@ class MusicFileController(
         @RequestBody request: UpdateMusicMetadataRequest
     ): ResponseEntity<MusicFileDto> {
         val updated = musicFileService.updateMetadata(user.id, id, request)
-        return ResponseEntity.ok(MusicFileDto.from(updated))
+        return ResponseEntity.ok(musicFileService.toDto(updated))
     }
 
     @GetMapping("/{id}/sync-status")

@@ -3,6 +3,7 @@ package com.musichub.backend.domain.playback
 import com.musichub.backend.domain.music.MusicFile
 import com.musichub.backend.domain.music.MusicFileRepository
 import com.musichub.backend.domain.music.MusicFileStatus
+import com.musichub.backend.domain.storage.StorageService
 import com.musichub.backend.domain.user.User
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -18,13 +19,15 @@ class PlaybackServiceTest {
 
     private lateinit var playbackStateRepository: PlaybackStateRepository
     private lateinit var musicFileRepository: MusicFileRepository
+    private lateinit var storageService: StorageService
     private lateinit var playbackService: PlaybackService
 
     @BeforeEach
     fun setUp() {
         playbackStateRepository = mock(PlaybackStateRepository::class.java)
         musicFileRepository = mock(MusicFileRepository::class.java)
-        playbackService = PlaybackService(playbackStateRepository, musicFileRepository)
+        storageService = mock(StorageService::class.java)
+        playbackService = PlaybackService(playbackStateRepository, musicFileRepository, storageService)
     }
 
     @Test
