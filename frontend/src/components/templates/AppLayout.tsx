@@ -1,5 +1,6 @@
 import React from 'react';
 import { Disc3 } from 'lucide-react';
+import { ToastContainer } from '../organisms/ToastContainer';
 
 export interface AppLayoutProps {
   children: React.ReactNode;
@@ -10,6 +11,7 @@ export interface AppLayoutProps {
 export const AppLayout: React.FC<AppLayoutProps> = ({ children, headerRight, bottomBar }) => {
   return (
     <div className="flex flex-col min-h-screen bg-[#08090a] text-neutral-100 antialiased">
+      <ToastContainer />
       {/* Top Header */}
       <header className="sticky top-0 z-40 w-full h-14 bg-[#08090a]/80 backdrop-blur-xl border-b border-white/[0.08] px-4 sm:px-6 flex items-center justify-between">
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">

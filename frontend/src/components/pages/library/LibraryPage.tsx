@@ -16,6 +16,7 @@ import { BatchEditMetadataModal } from './track/BatchEditMetadataModal';
 import { ConfirmDialog } from '../../organisms/ConfirmDialog';
 import { triggerBrowserDownload } from '../../../utils/downloadFile';
 import { downloadTracksBatch } from '../../../utils/downloadBatch';
+import { toast } from '../../../stores/toastStore';
 
 export const LibraryPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -220,10 +221,29 @@ export const LibraryPage: React.FC = () => {
     }
   };
 
+  const handleAddToQueue = (track: MusicFileDto) => {
+    const { added } = addToQueue(track);
+    if (!added) {
+      toast.info('이미 재생목록에 있는 곡입니다.');
+    } else {
+      toast.success('재생목록에 추가했습니다.');
+    }
+  };
+
   const handleBatchAddToQueue = () => {
     if (selectedTracks.length === 0) return;
-    addTracksToQueue(selectedTracks);
+    const { addedCount, duplicateCount } = addTracksToQueue(selectedTracks);
     clearSelection();
+
+    if (addedCount === 0 && duplicateCount > 0) {
+      toast.info('선택한 곡이 모두 이미 재생목록에 있습니다.');
+    } else if (duplicateCount > 0) {
+      toast.info(
+        `이미 있는 ${duplicateCount}곡을 제외하고 ${addedCount}곡을 재생목록에 추가했습니다.`,
+      );
+    } else if (addedCount > 0) {
+      toast.success(`${addedCount}곡을 재생목록에 추가했습니다.`);
+    }
   };
 
   const handleBatchDeleteConfirm = async () => {
@@ -319,7 +339,7 @@ export const LibraryPage: React.FC = () => {
           selectedTrackIds={selectedTrackIds}
           isSelectionMode={isSelectionMode}
           onPlay={handlePlay}
-          onAddToQueue={addToQueue}
+          onAddToQueue={handleAddToQueue}
           onEdit={setEditingTrack}
           onDelete={setTrackToDelete}
           onDownload={handleDownload}

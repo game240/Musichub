@@ -13,6 +13,15 @@ export interface PlayTrackOptions {
   preserveShuffle?: boolean;
 }
 
+export interface AddToQueueResult {
+  added: boolean;
+}
+
+export interface AddTracksToQueueResult {
+  addedCount: number;
+  duplicateCount: number;
+}
+
 interface PlayerState {
   currentTrack: MusicFileDto | null;
   streamUrl: string | null;
@@ -45,8 +54,8 @@ interface PlayerState {
   toggleShuffle: () => void;
   playNext: () => void;
   playPrev: () => void;
-  addToQueue: (track: MusicFileDto) => void;
-  addTracksToQueue: (tracks: MusicFileDto[]) => void;
+  addToQueue: (track: MusicFileDto) => AddToQueueResult;
+  addTracksToQueue: (tracks: MusicFileDto[]) => AddTracksToQueueResult;
   removeFromQueue: (index: number) => void;
   clearQueue: () => void;
   reorderQueue: (fromIndex: number, toIndex: number) => void;
@@ -359,7 +368,15 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       const isNewPlaylist = Boolean(playlist && playlist.length > 0);
 
       if (isNewPlaylist && playlist) {
-        updatedQueue = [...playlist];
+        const seenIds = new Set<number>();
+        const uniquePlaylist: MusicFileDto[] = [];
+        for (const t of playlist) {
+          if (!seenIds.has(t.id)) {
+            seenIds.add(t.id);
+            uniquePlaylist.push(t);
+          }
+        }
+        updatedQueue = uniquePlaylist;
         if (newIndex === -1) {
           const idx = updatedQueue.findIndex((t) => t.id === track.id);
           newIndex = idx !== -1 ? idx : 0;
@@ -531,11 +548,25 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         return;
       }
 
+      const seenQueueIds = new Set<number>();
+      const dedupedQueue = state.queue.filter((t) => {
+        if (seenQueueIds.has(t.id)) return false;
+        seenQueueIds.add(t.id);
+        return true;
+      });
+
+      const seenShuffledIds = new Set<number>();
+      const dedupedShuffledQueue = state.shuffledQueue.filter((t) => {
+        if (seenShuffledIds.has(t.id)) return false;
+        seenShuffledIds.add(t.id);
+        return true;
+      });
+
       const posSeconds = state.currentPositionMs / 1000;
       set({
         currentTrack: state.currentTrack,
-        queue: state.queue,
-        shuffledQueue: state.shuffledQueue,
+        queue: dedupedQueue,
+        shuffledQueue: dedupedShuffledQueue,
         queueIndex: state.queueIndex,
         isShuffle: state.isShuffle,
         repeatMode: state.repeatMode,
@@ -676,35 +707,56 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       }
     },
 
-    addToQueue: (track: MusicFileDto) => {
+    addToQueue: (track: MusicFileDto): AddToQueueResult => {
+      let added = false;
       set((prev) => {
-        const nextQueue = [...prev.queue, track];
-        let nextShuffled = prev.shuffledQueue;
-        if (prev.isShuffle) {
-          nextShuffled = [...prev.shuffledQueue, track];
+        if (prev.queue.some((t) => t.id === track.id)) {
+          return prev;
         }
+        added = true;
+        const nextQueue = [...prev.queue, track];
+        const nextShuffled = prev.isShuffle ? [...prev.shuffledQueue, track] : prev.shuffledQueue;
         return {
           queue: nextQueue,
           shuffledQueue: nextShuffled,
         };
       });
-      schedulePlaybackSync();
+      if (added) {
+        schedulePlaybackSync();
+      }
+      return { added };
     },
 
-    addTracksToQueue: (newTracks: MusicFileDto[]) => {
-      if (newTracks.length === 0) return;
+    addTracksToQueue: (newTracks: MusicFileDto[]): AddTracksToQueueResult => {
+      if (newTracks.length === 0) return { addedCount: 0, duplicateCount: 0 };
+      let addedCount = 0;
+      let duplicateCount = 0;
       set((prev) => {
-        const nextQueue = [...prev.queue, ...newTracks];
-        let nextShuffled = prev.shuffledQueue;
-        if (prev.isShuffle) {
-          nextShuffled = [...prev.shuffledQueue, ...newTracks];
+        const existingIds = new Set(prev.queue.map((t) => t.id));
+        const uniqueIncoming: MusicFileDto[] = [];
+        for (const t of newTracks) {
+          if (!existingIds.has(t.id)) {
+            existingIds.add(t.id);
+            uniqueIncoming.push(t);
+          } else {
+            duplicateCount++;
+          }
         }
+        if (uniqueIncoming.length === 0) return prev;
+        addedCount = uniqueIncoming.length;
+        const nextQueue = [...prev.queue, ...uniqueIncoming];
+        const nextShuffled = prev.isShuffle
+          ? [...prev.shuffledQueue, ...uniqueIncoming]
+          : prev.shuffledQueue;
         return {
           queue: nextQueue,
           shuffledQueue: nextShuffled,
         };
       });
-      schedulePlaybackSync();
+      if (addedCount > 0) {
+        schedulePlaybackSync();
+      }
+      return { addedCount, duplicateCount };
     },
 
     removeFromQueue: (index: number) => {
