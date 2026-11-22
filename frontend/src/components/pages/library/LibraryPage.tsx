@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { UploadCloud, Music, RefreshCw } from 'lucide-react';
+import { UploadCloud, Music, RefreshCw, CheckSquare } from 'lucide-react';
 import { musicApi } from '../../../api/musicApi';
 import type { MusicFileDto } from '../../../types/music';
 import { usePlayerStore } from '../../../stores/playerStore';
@@ -11,6 +11,7 @@ import { Tooltip } from '../../atoms/Tooltip';
 import { TrackTable } from './track/TrackTable';
 import { UploadModal } from './upload/UploadModal';
 import { EditMetadataModal } from './track/EditMetadataModal';
+import { BatchActionBar } from './track/BatchActionBar';
 import { ConfirmDialog } from '../../organisms/ConfirmDialog';
 import { triggerBrowserDownload } from '../../../utils/downloadFile';
 
@@ -24,6 +25,11 @@ export const LibraryPage: React.FC = () => {
   const [editingTrack, setEditingTrack] = useState<MusicFileDto | null>(null);
   const [trackToDelete, setTrackToDelete] = useState<MusicFileDto | null>(null);
   const [downloadingTrackId, setDownloadingTrackId] = useState<number | null>(null);
+
+  // Batch selection states
+  const [selectedTrackIds, setSelectedTrackIds] = useState<Set<number>>(new Set());
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const lastSelectedTrackIndexRef = useRef<number | null>(null);
 
   // Fetch track list
   const {
@@ -54,6 +60,89 @@ export const LibraryPage: React.FC = () => {
       return matchTitle || matchArtist || matchAlbum || matchFile;
     });
   }, [tracks, searchQuery]);
+
+  // Multi-select helpers
+  const clearSelection = useCallback(() => {
+    setSelectedTrackIds(new Set());
+    setIsSelectionMode(false);
+    lastSelectedTrackIndexRef.current = null;
+  }, []);
+
+  const toggleSelectTrack = useCallback(
+    (track: MusicFileDto, event?: React.MouseEvent) => {
+      const currentIndex = filteredTracks.findIndex((t) => t.id === track.id);
+      if (currentIndex === -1) return;
+
+      setSelectedTrackIds((prev) => {
+        const next = new Set(prev);
+
+        // Range selection with Shift key
+        if (
+          event?.shiftKey &&
+          lastSelectedTrackIndexRef.current !== null &&
+          lastSelectedTrackIndexRef.current !== currentIndex
+        ) {
+          const start = Math.min(lastSelectedTrackIndexRef.current, currentIndex);
+          const end = Math.max(lastSelectedTrackIndexRef.current, currentIndex);
+          for (let i = start; i <= end; i++) {
+            next.add(filteredTracks[i].id);
+          }
+        } else {
+          // Toggle individual track
+          if (next.has(track.id)) {
+            next.delete(track.id);
+          } else {
+            next.add(track.id);
+          }
+        }
+
+        lastSelectedTrackIndexRef.current = currentIndex;
+
+        if (next.size > 0) {
+          setIsSelectionMode(true);
+        }
+
+        return next;
+      });
+    },
+    [filteredTracks],
+  );
+
+  const toggleSelectAll = useCallback(() => {
+    if (filteredTracks.length === 0) return;
+
+    const isAllSelected = filteredTracks.every((t) => selectedTrackIds.has(t.id));
+    if (isAllSelected) {
+      setSelectedTrackIds(new Set());
+      setIsSelectionMode(false);
+    } else {
+      setSelectedTrackIds(new Set(filteredTracks.map((t) => t.id)));
+      setIsSelectionMode(true);
+    }
+  }, [filteredTracks, selectedTrackIds]);
+
+  // Keyboard shortcut handlers (Escape to clear, Ctrl/Cmd+A to select all)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if focus is in an input or textarea
+      const target = e.target as HTMLElement | null;
+      const isInput =
+        target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+
+      if (e.key === 'Escape' && isSelectionMode) {
+        clearSelection();
+      } else if (!isInput && (e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
+        if (filteredTracks.length > 0) {
+          e.preventDefault();
+          setSelectedTrackIds(new Set(filteredTracks.map((t) => t.id)));
+          setIsSelectionMode(true);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSelectionMode, clearSelection, filteredTracks]);
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -131,6 +220,23 @@ export const LibraryPage: React.FC = () => {
             <span>총 {filteredTracks.length}곡</span>
           </span>
 
+          {/* Toggle selection mode button */}
+          <Button
+            variant={isSelectionMode ? 'secondary' : 'ghost'}
+            size="md"
+            onClick={() => {
+              if (isSelectionMode) {
+                clearSelection();
+              } else {
+                setIsSelectionMode(true);
+              }
+            }}
+            className={isSelectionMode ? 'border-[#5e6ad2]/50 text-white bg-[#5e6ad2]/15' : ''}
+          >
+            <CheckSquare className="w-4 h-4 text-[#8590ea]" />
+            <span>{isSelectionMode ? '선택 종료' : '선택'}</span>
+          </Button>
+
           <Button
             variant="primary"
             onClick={() => {
@@ -155,6 +261,8 @@ export const LibraryPage: React.FC = () => {
           currentTrackId={currentTrack?.id}
           isPlaying={isPlaying}
           downloadingTrackId={downloadingTrackId}
+          selectedTrackIds={selectedTrackIds}
+          isSelectionMode={isSelectionMode}
           onPlay={handlePlay}
           onAddToQueue={addToQueue}
           onEdit={setEditingTrack}
@@ -163,9 +271,30 @@ export const LibraryPage: React.FC = () => {
           onUploadClick={() => {
             setIsUploadModalOpen(true);
           }}
+          onToggleSelect={toggleSelectTrack}
+          onToggleSelectAll={toggleSelectAll}
           isFiltered={searchQuery.trim().length > 0}
         />
       )}
+
+      {/* Floating Batch Action Bar */}
+      <BatchActionBar
+        isOpen={selectedTrackIds.size > 0}
+        selectedCount={selectedTrackIds.size}
+        onDownload={() => {
+          // Will be implemented in Phase 2
+        }}
+        onAddToQueue={() => {
+          // Will be implemented in Phase 2
+        }}
+        onEditMetadata={() => {
+          // Will be implemented in Phase 3
+        }}
+        onDelete={() => {
+          // Will be implemented in Phase 2
+        }}
+        onClearSelection={clearSelection}
+      />
 
       {/* Upload Modal */}
       <UploadModal
