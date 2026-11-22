@@ -131,6 +131,91 @@ const schedulePlaybackSync = () => {
   }, 2500);
 };
 
+// Media Session API helpers
+const syncMediaSessionMetadata = (
+  track: MusicFileDto | null,
+  getCurrentTrackId?: () => number | undefined,
+) => {
+  if (typeof window === 'undefined' || !('mediaSession' in navigator)) {
+    return;
+  }
+
+  if (!track) {
+    navigator.mediaSession.metadata = null;
+    navigator.mediaSession.playbackState = 'none';
+    return;
+  }
+
+  const buildArtwork = (url?: string | null): MediaImage[] => {
+    if (url) {
+      return [
+        { src: url, sizes: '96x96' },
+        { src: url, sizes: '128x128' },
+        { src: url, sizes: '192x192' },
+        { src: url, sizes: '256x256' },
+        { src: url, sizes: '384x384' },
+        { src: url, sizes: '512x512' },
+      ];
+    }
+    return [{ src: '/logo.png', sizes: '512x512', type: 'image/png' }];
+  };
+
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: track.title || track.fileName,
+    artist: track.artist || '알 수 없는 아티스트',
+    album: track.album || '',
+    artwork: buildArtwork(track.artworkUrl),
+  });
+
+  if (!track.artworkUrl && track.hasArtwork) {
+    musicApi
+      .getArtworkUrl(track.id)
+      .then((url) => {
+        if (url && (!getCurrentTrackId || getCurrentTrackId() === track.id)) {
+          navigator.mediaSession.metadata = new MediaMetadata({
+            title: track.title || track.fileName,
+            artist: track.artist || '알 수 없는 아티스트',
+            album: track.album || '',
+            artwork: buildArtwork(url),
+          });
+        }
+      })
+      .catch(() => {
+        // Fallback artwork is already in place
+      });
+  }
+};
+
+const syncMediaSessionPlaybackState = (isPlaying: boolean) => {
+  if (typeof window === 'undefined' || !('mediaSession' in navigator)) {
+    return;
+  }
+  navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+};
+
+const syncMediaSessionPosition = () => {
+  if (
+    typeof window === 'undefined' ||
+    !('mediaSession' in navigator) ||
+    !('setPositionState' in navigator.mediaSession)
+  ) {
+    return;
+  }
+
+  const dur = audioElement.duration;
+  if (!isNaN(dur) && dur > 0 && isFinite(dur)) {
+    try {
+      navigator.mediaSession.setPositionState({
+        duration: dur,
+        playbackRate: audioElement.playbackRate || 1,
+        position: Math.min(Math.max(0, audioElement.currentTime), dur),
+      });
+    } catch {
+      // Ignore potential state race conditions during rapid skipping
+    }
+  }
+};
+
 // Native HTML5 Audio singleton
 const initialVolume = loadSavedVolume();
 const audioElement = new Audio();
@@ -139,6 +224,49 @@ audioElement.volume = initialVolume;
 audioElement.muted = initialVolume === 0;
 
 export const usePlayerStore = create<PlayerState>((set, get) => {
+  // Register standard Media Session API action handlers
+  if (typeof window !== 'undefined' && 'mediaSession' in navigator) {
+    const actions: [MediaSessionAction, MediaSessionActionHandler][] = [
+      ['play', () => get().resume()],
+      ['pause', () => get().pause()],
+      ['previoustrack', () => get().playPrev()],
+      ['nexttrack', () => get().playNext()],
+      [
+        'seekto',
+        (details) => {
+          if (details.seekTime !== undefined && !isNaN(details.seekTime)) {
+            get().seekTo(details.seekTime);
+          }
+        },
+      ],
+      [
+        'seekbackward',
+        (details) => {
+          const skip = details.seekOffset || 10;
+          get().seekTo(Math.max(0, audioElement.currentTime - skip));
+        },
+      ],
+      [
+        'seekforward',
+        (details) => {
+          const skip = details.seekOffset || 10;
+          const dur = audioElement.duration;
+          const target = audioElement.currentTime + skip;
+          get().seekTo(dur > 0 && !isNaN(dur) ? Math.min(dur, target) : target);
+        },
+      ],
+      ['stop', () => get().pause()],
+    ];
+
+    for (const [action, handler] of actions) {
+      try {
+        navigator.mediaSession.setActionHandler(action, handler);
+      } catch {
+        // Ignore unsupported optional actions in specific browsers
+      }
+    }
+  }
+
   // Setup audio event listeners
   audioElement.addEventListener('timeupdate', () => {
     set({ currentTime: audioElement.currentTime });
@@ -147,15 +275,24 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
   audioElement.addEventListener('loadedmetadata', () => {
     if (!isNaN(audioElement.duration)) {
       set({ duration: audioElement.duration, isLoading: false });
+      syncMediaSessionPosition();
     }
   });
 
   audioElement.addEventListener('play', () => {
     set({ isPlaying: true });
+    syncMediaSessionPlaybackState(true);
+    syncMediaSessionPosition();
   });
 
   audioElement.addEventListener('pause', () => {
     set({ isPlaying: false });
+    syncMediaSessionPlaybackState(false);
+    syncMediaSessionPosition();
+  });
+
+  audioElement.addEventListener('seeked', () => {
+    syncMediaSessionPosition();
   });
 
   audioElement.addEventListener('ended', () => {
@@ -164,6 +301,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       audioElement.currentTime = 0;
       audioElement.play().catch(() => {
         set({ isPlaying: false });
+        syncMediaSessionPlaybackState(false);
       });
     } else {
       playNext();
@@ -172,6 +310,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 
   audioElement.addEventListener('error', () => {
     set({ isPlaying: false, isLoading: false });
+    syncMediaSessionPlaybackState(false);
   });
 
   return {
@@ -274,6 +413,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         currentTime: 0,
       });
 
+      syncMediaSessionMetadata(track, () => get().currentTrack?.id);
       schedulePlaybackSync();
 
       try {
@@ -347,6 +487,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       }
       audioElement.currentTime = timeInSeconds;
       set({ currentTime: timeInSeconds });
+      syncMediaSessionPosition();
     },
 
     setVolume: (volume: number) => {
@@ -402,6 +543,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       });
 
       if (state.currentTrack) {
+        syncMediaSessionMetadata(state.currentTrack, () => get().currentTrack?.id);
         musicApi
           .getPlayUrl(state.currentTrack.id)
           .then(({ playUrl, durationMs }) => {
@@ -571,6 +713,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
           playSequenceCounter++;
           audioElement.pause();
           audioElement.currentTime = 0;
+          syncMediaSessionMetadata(null);
           return {
             currentTrack: null,
             streamUrl: null,
@@ -597,6 +740,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       playSequenceCounter++;
       audioElement.pause();
       audioElement.currentTime = 0;
+      syncMediaSessionMetadata(null);
       set({
         currentTrack: null,
         streamUrl: null,
@@ -660,6 +804,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       );
       const updatedCurrent =
         currentTrack?.id === track.id ? { ...currentTrack, ...track } : currentTrack;
+      if (currentTrack?.id === track.id) {
+        syncMediaSessionMetadata(updatedCurrent, () => get().currentTrack?.id);
+      }
       set({
         queue: updatedQueue,
         shuffledQueue: updatedShuffled,
