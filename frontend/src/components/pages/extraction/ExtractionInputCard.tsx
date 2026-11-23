@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Clipboard, Sparkles, AlertCircle } from 'lucide-react';
+import { Clipboard, Info, AlertCircle } from 'lucide-react';
 import { YoutubeIcon } from '../../atoms/YoutubeIcon';
-import { Button } from '../../atoms/Button';
 import { Spinner } from '../../atoms/Spinner';
 
 export interface ExtractionInputCardProps {
@@ -57,16 +56,16 @@ export const ExtractionInputCard: React.FC<ExtractionInputCardProps> = ({ onSubm
   const isInvalid = url.length > 0 && !YOUTUBE_REGEX.test(url.trim());
 
   return (
-    <div className="bg-[#0f1011] border border-white/[0.08] rounded-2xl p-5 sm:p-6 shadow-xl backdrop-blur-xl">
+    <div className="bg-[#0f1011] border border-white/[0.08] rounded-xl p-5 shadow-sm">
       <div className="flex items-center gap-3 mb-4">
-        <div className="p-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500">
-          <YoutubeIcon className="w-5 h-5" />
+        <div className="w-7 h-7 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 shrink-0">
+          <YoutubeIcon className="w-4 h-4" />
         </div>
         <div>
-          <h2 className="text-sm sm:text-base font-semibold text-neutral-100 flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-neutral-100 flex items-center gap-2 tracking-tight">
             새 YouTube 음원 추출
-            <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-[#5e6ad2]/15 text-[#8590ea] border border-[#5e6ad2]/25">
-              MP3 최고 음질
+            <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded-md bg-white/[0.04] text-neutral-400 border border-white/[0.08]">
+              MP3
             </span>
           </h2>
           <p className="text-xs text-neutral-400 mt-0.5">
@@ -77,8 +76,8 @@ export const ExtractionInputCard: React.FC<ExtractionInputCardProps> = ({ onSubm
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <div className="relative flex items-center">
-          <div className="absolute left-3.5 text-neutral-400 pointer-events-none">
-            <YoutubeIcon className="w-4 h-4 text-neutral-500" />
+          <div className="absolute left-3.5 text-neutral-500 pointer-events-none">
+            <YoutubeIcon className="w-4 h-4" />
           </div>
 
           <input
@@ -90,10 +89,10 @@ export const ExtractionInputCard: React.FC<ExtractionInputCardProps> = ({ onSubm
             }}
             placeholder="https://www.youtube.com/watch?v=... 또는 https://youtu.be/..."
             disabled={isLoading}
-            className={`w-full bg-white/[0.03] border rounded-xl pl-10 pr-24 py-2.5 text-xs text-neutral-100 placeholder-neutral-500 transition-colors outline-none focus:ring-1 ${
+            className={`w-full bg-white/[0.03] border rounded-lg pl-10 pr-24 py-2.5 text-xs text-neutral-100 placeholder-neutral-500 transition-colors outline-none ${
               isInvalid
-                ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20'
-                : 'border-white/[0.1] focus:border-[#5e6ad2] focus:ring-[#5e6ad2]/20'
+                ? 'border-red-500/50 focus:border-red-500'
+                : 'border-white/[0.08] focus:border-[#5e6ad2]'
             }`}
           />
 
@@ -103,7 +102,7 @@ export const ExtractionInputCard: React.FC<ExtractionInputCardProps> = ({ onSubm
               onClick={handlePaste}
               disabled={isLoading}
               title="클립보드에서 붙여넣기"
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-neutral-400 hover:text-white bg-white/[0.05] hover:bg-white/[0.1] transition-colors cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-neutral-400 hover:text-neutral-200 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition-colors cursor-pointer disabled:opacity-50"
             >
               <Clipboard className="w-3 h-3" />
               <span>붙여넣기</span>
@@ -112,7 +111,7 @@ export const ExtractionInputCard: React.FC<ExtractionInputCardProps> = ({ onSubm
         </div>
 
         {errorMessage ? (
-          <div className="flex items-center gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-xl animate-fade-in">
+          <div className="flex items-center gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg animate-fade-in">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{errorMessage}</span>
           </div>
@@ -120,27 +119,27 @@ export const ExtractionInputCard: React.FC<ExtractionInputCardProps> = ({ onSubm
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-1">
           <div className="text-[11px] text-neutral-400 flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#8590ea] shrink-0" />
+            <Info className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
             <span>재생시간 최대 30분 이내 단일 영상 지원 &bull; 썸네일 및 태그 자동 파싱</span>
           </div>
 
-          <Button
+          <button
             type="submit"
             disabled={isLoading || !url.trim() || isInvalid}
-            className="w-full sm:w-auto px-5 py-2 text-xs font-semibold shrink-0 cursor-pointer"
+            className="w-full sm:w-auto px-4 py-2 text-xs font-medium rounded-lg text-white bg-[#5e6ad2] hover:bg-[#4f5bbf] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm shrink-0"
           >
             {isLoading ? (
-              <span className="flex items-center gap-2">
+              <>
                 <Spinner size="sm" />
                 <span>추출 요청 중...</span>
-              </span>
+              </>
             ) : (
-              <span className="flex items-center gap-2">
-                <YoutubeIcon className="w-4 h-4 text-red-500" />
-                <span>음원 추출 시작</span>
-              </span>
+              <>
+                <YoutubeIcon className="w-3.5 h-3.5" />
+                <span>음원 추출</span>
+              </>
             )}
-          </Button>
+          </button>
         </div>
       </form>
     </div>

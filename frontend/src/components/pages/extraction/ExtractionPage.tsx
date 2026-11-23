@@ -203,12 +203,12 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
   return (
     <div className="min-h-screen bg-[#08090a] text-neutral-100 flex flex-col">
       {/* Top Header */}
-      <header className="sticky top-0 z-30 bg-[#08090a]/80 backdrop-blur-md border-b border-white/[0.08] px-4 sm:px-6 py-4 flex items-center justify-between">
+      <header className="sticky top-0 z-30 bg-[#08090a]/90 backdrop-blur-md border-b border-white/[0.08] px-4 sm:px-6 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-3 sm:gap-4">
           <button
             type="button"
             onClick={onBack}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-neutral-400 hover:text-white bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.06] transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-neutral-400 hover:text-white bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.06] transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
             <span className="hidden sm:inline">라이브러리로 돌아가기</span>
@@ -217,17 +217,17 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
           <div className="h-4 w-[1px] bg-white/[0.08] hidden sm:block" />
 
           <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500">
+            <div className="w-7 h-7 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
               <YoutubeIcon className="w-4 h-4" />
             </div>
-            <h1 className="text-sm font-semibold text-neutral-100">YouTube 음원 추출</h1>
+            <h1 className="text-sm font-semibold text-neutral-100 tracking-tight">YouTube 음원 추출</h1>
             {user?.role === 'ADMIN' ? (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-red-500/10 text-red-400 border border-red-500/20">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-red-500/10 text-red-400 border border-red-500/20">
                 <Shield className="w-3 h-3" />
                 ADMIN
               </span>
             ) : user?.role === 'DOWNLOADER' ? (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
                 <DownloadCloud className="w-3 h-3" />
                 DOWNLOADER
               </span>
@@ -239,9 +239,9 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
           type="button"
           onClick={() => refetch()}
           title="새로고침"
-          className="p-2 rounded-lg text-neutral-400 hover:text-white bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.06] transition-colors cursor-pointer"
+          className="p-1.5 rounded-lg text-neutral-400 hover:text-white bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.06] transition-colors cursor-pointer"
         >
-          <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin text-[#5e6ad2]' : ''}`} />
         </button>
       </header>
 
