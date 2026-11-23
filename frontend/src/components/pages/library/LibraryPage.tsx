@@ -11,7 +11,7 @@ import { Button } from '../../atoms/Button';
 import { Tooltip } from '../../atoms/Tooltip';
 import { TrackTable } from './track/TrackTable';
 import { UploadModal } from './upload/UploadModal';
-import { EditMetadataModal } from './track/EditMetadataModal';
+import { EditMetadataModal } from '../../organisms/EditMetadataModal';
 import { BatchActionBar } from './track/BatchActionBar';
 import { BatchEditMetadataModal } from './track/BatchEditMetadataModal';
 import { ConfirmDialog } from '../../organisms/ConfirmDialog';

@@ -227,6 +227,16 @@ class MusicFileService(
     }
 
     /**
+     * 4-0. 단건 음원 파일 엔티티 조회 (본인 소유 및 ACTIVE 상태 확인)
+     */
+    @Transactional(readOnly = true)
+    fun getMusicFile(userId: Long, musicFileId: Long): MusicFile {
+        return musicFileRepository.findByIdAndUserId(musicFileId, userId)
+            .filter { it.status == MusicFileStatus.ACTIVE }
+            .orElseThrow { NoSuchElementException("음악 파일을 찾을 수 없습니다.") }
+    }
+
+    /**
      * 4-1. 음원 파일 다운로드용 Presigned GET URL 발급 (Content-Disposition: attachment)
      */
     @Transactional(readOnly = true)

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink, Music, AlertCircle, Clock, Calendar } from 'lucide-react';
+import { ExternalLink, Music, AlertCircle, Clock, Calendar, Pencil } from 'lucide-react';
 import type { ExtractionJobDto } from '../../../types/extraction';
 import { ExtractionStatusBadge } from './ExtractionStatusBadge';
 import { Tooltip } from '../../atoms/Tooltip';
@@ -7,11 +7,13 @@ import { Tooltip } from '../../atoms/Tooltip';
 export interface ExtractionHistoryTableProps {
   jobs: ExtractionJobDto[];
   onGoToLibrary: () => void;
+  onEditMetadata: (musicFileId: number) => void;
 }
 
 export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
   jobs,
   onGoToLibrary,
+  onEditMetadata,
 }) => {
   if (jobs.length === 0) {
     return (
@@ -61,7 +63,7 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
               <th className="py-3 px-4">추출 음원 정보</th>
               <th className="py-3 px-4 w-36">상태</th>
               <th className="py-3 px-4 w-40">요청 일시</th>
-              <th className="py-3 px-4 w-28 text-right">보관함</th>
+              <th className="py-3 px-4 w-36 text-right">관리</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/[0.04]">
@@ -126,13 +128,26 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                   </td>
                   <td className="py-3 px-4 text-right">
                     {hasMusicFile ? (
-                      <button
-                        type="button"
-                        onClick={onGoToLibrary}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-[#8590ea] hover:text-white bg-[#5e6ad2]/10 hover:bg-[#5e6ad2]/25 border border-[#5e6ad2]/20 transition-colors cursor-pointer"
-                      >
-                        <span>듣기</span>
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Tooltip content="메타데이터 수정">
+                          <button
+                            type="button"
+                            onClick={() => onEditMetadata(job.musicFileId!)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-neutral-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/[0.06] transition-colors cursor-pointer"
+                          >
+                            <Pencil className="w-3 h-3 text-[#8590ea]" />
+                            <span className="hidden sm:inline">수정</span>
+                          </button>
+                        </Tooltip>
+
+                        <button
+                          type="button"
+                          onClick={onGoToLibrary}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-[#8590ea] hover:text-white bg-[#5e6ad2]/10 hover:bg-[#5e6ad2]/25 border border-[#5e6ad2]/20 transition-colors cursor-pointer"
+                        >
+                          <span>듣기</span>
+                        </button>
+                      </div>
                     ) : (
                       <span className="text-[11px] text-neutral-600">-</span>
                     )}

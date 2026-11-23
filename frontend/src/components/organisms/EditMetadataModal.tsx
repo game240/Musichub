@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Modal } from '../../../organisms/Modal';
-import { Button } from '../../../atoms/Button';
-import { Input } from '../../../atoms/Input';
-import { Spinner } from '../../../atoms/Spinner';
-import { musicApi, type UpdateMusicMetadataDto } from '../../../../api/musicApi';
-import { useTagSyncStore } from '../../../../stores/tagSyncStore';
-import type { MusicFileDto } from '../../../../types/music';
+import { Modal } from './Modal';
+import { Button } from '../atoms/Button';
+import { Input } from '../atoms/Input';
+import { Spinner } from '../atoms/Spinner';
+import { musicApi, type UpdateMusicMetadataDto } from '../../api/musicApi';
+import { useTagSyncStore } from '../../stores/tagSyncStore';
+import type { MusicFileDto } from '../../types/music';
 
 export interface EditMetadataModalProps {
   isOpen: boolean;

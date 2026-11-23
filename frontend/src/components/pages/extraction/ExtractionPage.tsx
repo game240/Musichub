@@ -1,14 +1,18 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, RefreshCw, Shield, DownloadCloud } from 'lucide-react';
 import { YoutubeIcon } from '../../atoms/YoutubeIcon';
 import { extractionApi } from '../../../api/extractionApi';
+import { musicApi } from '../../../api/musicApi';
 import type { ExtractionJobDto } from '../../../types/extraction';
+import type { MusicFileDto } from '../../../types/music';
 import { useAuthStore } from '../../../stores/authStore';
 import { useToastStore } from '../../../stores/toastStore';
+import { usePlayerStore } from '../../../stores/playerStore';
 import { ExtractionInputCard } from './ExtractionInputCard';
 import { ExtractionActiveJobCard } from './ExtractionActiveJobCard';
 import { ExtractionHistoryTable } from './ExtractionHistoryTable';
+import { EditMetadataModal } from '../../organisms/EditMetadataModal';
 
 export interface ExtractionPageProps {
   onBack: () => void;
@@ -17,8 +21,10 @@ export interface ExtractionPageProps {
 export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
   const user = useAuthStore((state) => state.user);
   const addToast = useToastStore((state) => state.addToast);
+  const updateTrackInfo = usePlayerStore((state) => state.updateTrackInfo);
   const queryClient = useQueryClient();
 
+  const [editingTrack, setEditingTrack] = useState<MusicFileDto | null>(null);
   const prevActiveJobIdsRef = useRef<Set<number>>(new Set());
 
   // 1. 추출 작업 목록 조회 (스마트 조건부 2초 폴링)
@@ -59,7 +65,7 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
         const finishedJob = jobs.find((j) => j.id === prevId);
         if (finishedJob?.status === 'COMPLETED') {
           addToast(
-            `"${finishedJob.musicFileTitle || '음원'}" 추출이 완료되어 보관함에 추가되었습니다.`,
+            `"${finishedJob.musicFileTitle || '음원'}" 추출이 완료되었습니다. 하단 히스토리에서 [수정]을 눌러 곡 정보를 다듬을 수 있습니다.`,
             'success'
           );
           queryClient.invalidateQueries({ queryKey: ['music-files'] });
@@ -97,6 +103,24 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
 
   const handleCreateExtraction = async (url: string) => {
     await createJobMutation.mutateAsync(url);
+  };
+
+  // 5. 메타데이터 수정 열기 및 완료 핸들러
+  const handleOpenEditMetadata = async (musicFileId: number) => {
+    try {
+      const track = await musicApi.getMusicFile(musicFileId);
+      setEditingTrack(track);
+    } catch {
+      addToast('음원 정보를 불러오지 못했습니다.', 'error');
+    }
+  };
+
+  const handleEditSuccess = (updatedTrack: MusicFileDto) => {
+    queryClient.invalidateQueries({ queryKey: ['music-files'] });
+    queryClient.invalidateQueries({ queryKey: ['extractions'] });
+    updateTrackInfo(updatedTrack);
+    setEditingTrack(null);
+    addToast(`"${updatedTrack.title}" 메타데이터가 성공적으로 저장되었습니다.`, 'success');
   };
 
   return (
@@ -156,8 +180,20 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
         {activeJob ? <ExtractionActiveJobCard job={activeJob} /> : null}
 
         {/* 3. Extraction History Table */}
-        <ExtractionHistoryTable jobs={jobs} onGoToLibrary={onBack} />
+        <ExtractionHistoryTable
+          jobs={jobs}
+          onGoToLibrary={onBack}
+          onEditMetadata={handleOpenEditMetadata}
+        />
       </main>
+
+      {/* 4. Edit Metadata Modal */}
+      <EditMetadataModal
+        isOpen={editingTrack !== null}
+        onClose={() => setEditingTrack(null)}
+        track={editingTrack}
+        onSuccess={handleEditSuccess}
+      />
     </div>
   );
 };

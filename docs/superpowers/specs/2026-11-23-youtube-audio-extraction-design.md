@@ -1,10 +1,10 @@
-# Design: YouTube Audio Extraction Dedicated Page & Pipeline
+# Design: YouTube Audio Extraction Dedicated Page, Metadata Edit & Pipeline
 
 - **Date:** 2026-11-23
-- **Status:** Proposed (Approved for Dedicated Page & Stealth 404 Approach)
+- **Status:** Approved
 - **Target Components:** 
-  - Backend: `SecurityConfig`, `ExtractionController`, `ExtractionService`, `MediaExtractor`, `backend/Dockerfile`
-  - Frontend: `types/extraction.ts`, `api/extractionApi.ts`, `pages/extraction/ExtractionPage.tsx`, `App.tsx`, `LibraryPage.tsx`, `AccountDropdown.tsx`
+  - Backend: `SecurityConfig`, `ExtractionController`, `ExtractionService`, `MediaExtractor`, `MusicFileController`, `MusicFileService`, `backend/Dockerfile`
+  - Frontend: `types/extraction.ts`, `api/extractionApi.ts`, `api/musicApi.ts`, `organisms/EditMetadataModal.tsx`, `pages/extraction/ExtractionPage.tsx`, `pages/extraction/ExtractionHistoryTable.tsx`, `pages/extraction/ExtractionActiveJobCard.tsx`, `App.tsx`, `LibraryPage.tsx`, `AccountDropdown.tsx`
 
 ---
 
@@ -12,9 +12,9 @@
 
 유튜브 음원을 고음질(MP3)로 추출하여 개인 보관함(`music_file`)에 자동으로 등록하는 **전용 페이지(`/extractions`) 및 비동기 처리 파이프라인**을 구축합니다.
 
-사용자는 전용 페이지에서 YouTube URL을 입력해 추출을 요청하고, 현재 진행 중인 작업의 진행률(다운로드 -> 변환 -> R2 업로드)과 과거 추출 히스토리를 대시보드 형태로 한눈에 확인할 수 있습니다.
+YouTube 영상 특성상 제목에 불필요한 태그(`[MV]`, `(Official Audio)`, `[4K]` 등)가 포함되거나 아티스트/앨범 정보가 누락되는 경우가 많으므로, 사용자가 라이브러리로 이동할 필요 없이 **추출 완료 직후 해당 화면에서 즉시 메타데이터(곡명, 아티스트, 앨범 등)를 수정**할 수 있는 인라인 워크플로우를 제공합니다.
 
-본 기능은 서버 리소스를 집중적으로 소모하므로, **`ADMIN`** 및 **`DOWNLOADER`** 역할을 가진 사용자에게만 권한을 부여하며, 비인가 사용자의 접근은 엔드포인트 존재 자체를 숨기기 위해 **`404 Not Found`**로 응답하여 철저히 보안을 유지합니다.
+본 기능은 **`ADMIN`** 및 **`DOWNLOADER`** 역할을 가진 사용자에게만 권한을 부여하며, 비인가 사용자의 접근은 엔드포인트 존재 자체를 숨기기 위해 **`404 Not Found`**로 응답하여 철저히 보안을 유지합니다.
 
 ---
 
@@ -33,7 +33,9 @@
   - `yt-dlp` 및 `ffmpeg`를 통한 MP3 최고 품질(320k / VBR 최고) 추출.
   - `--embed-thumbnail` 및 `--add-metadata`를 통해 곡 제목, 아티스트 태그와 썸네일(앨범 아트워크) 자동 추출 및 R2 업로드.
   - 최대 30분 영상 길이 제한 및 타임아웃 방지.
-- **BR-5 (도커 및 런타임 환경)**:
+- **BR-5 (단건 음원 파일 조회 API - `GET /api/music-files/{id}`)**:
+  - 추출 완료 후 즉각적인 메타데이터 편집을 위해 사용자 소유의 단건 `MusicFile` 상세 정보를 조회하는 API 제공.
+- **BR-6 (도커 및 런타임 환경)**:
   - `backend/Dockerfile` 런타임(Alpine)에 `ffmpeg`, `python3`, `yt-dlp` 최신 바이너리 설치.
 
 ### 2.2 Frontend Requirements
@@ -53,12 +55,14 @@
     - 이용 유의사항 (단일 영상 지원, 최대 30분 길이, 개인 소장 목적 등).
   - **활성 작업 진행률 섹션 (Active Job Progress - 스마트 조건부 폴링)**:
     - 진행 중인 작업(`PENDING`, `DOWNLOADING`, `CONVERTING`, `UPLOADING`)이 **존재할 때만 2초 주기로 폴링**, 완료(`COMPLETED`) 또는 실패(`FAILED`) 시 **폴링 즉시 완전 정지**.
-    - 브라우저 탭 비활성화 시 불필요한 백그라운드 호출 억제(`refetchOnWindowFocus: false`).
-    - 3분 이상 지연 시 자동 타임아웃 처리.
+    - 완료 시 `[지금 메타데이터 수정]` 바로가기 액션 버튼 제공.
   - **추출 내역 테이블 (`ExtractionHistoryTable`)**:
     - 과거 및 현재 추출 작업 목록 표시.
     - 항목: 썸네일/곡명(또는 원본 URL), 상태 뱃지(완료, 진행 중, 실패), 소요시간/일시, 보관함 바로가기.
-    - 실패 항목: 구체적인 에러 사유 툴팁 표시.
+    - 완료된 음원 행에 **`[수정(연필 아이콘)]`** 버튼 제공 -> 클릭 시 즉시 `EditMetadataModal` 실행.
+- **FR-4 (공유 컴포넌트 승격 - `EditMetadataModal`)**:
+  - `pages/library/track/EditMetadataModal.tsx`를 두 도메인(`library`, `extraction`)에서 공유하기 위해 `components/organisms/EditMetadataModal.tsx`로 승격.
+  - 수정 완료 시 R2 ID3 비동기 동기화(`tagSyncStore`) 및 추출/라이브러리 쿼리 캐시 동시 무효화.
 
 ---
 
@@ -67,68 +71,51 @@
 ### 3.1 Security Layer (Stealth 404)
 ```kotlin
 // SecurityConfig.kt
-// 비인가 사용자가 /api/extractions/**에 접근할 경우 403 Forbidden 대신 404 Not Found 반환
 .authorizeHttpRequests { auth ->
     auth
         .requestMatchers("/api/auth/**").permitAll()
-        .requestMatchers("/error").permitAll()
+        .requestMatchers("/api/admin/**").hasRole("ADMIN")
         .requestMatchers("/api/extractions/**").hasAnyRole("ADMIN", "DOWNLOADER")
+        .requestMatchers("/error").permitAll()
         .anyRequest().authenticated()
 }
 .exceptionHandling { handling ->
-    // /api/extractions에 대한 AccessDenied 발생 시 404로 응답하는 커스텀 AccessDeniedHandler 등록
+    handling.accessDeniedHandler { request, response, _ ->
+        if (request.requestURI.startsWith("/api/extractions")) {
+            response.status = HttpStatus.NOT_FOUND.value()
+            response.contentType = "application/json;charset=UTF-8"
+            response.writer.write("""{"status":404,"error":"Not Found","message":"요청하신 리소스를 찾을 수 없습니다."}""")
+        } else {
+            response.status = HttpStatus.FORBIDDEN.value()
+            response.contentType = "application/json;charset=UTF-8"
+            response.writer.write("""{"status":403,"error":"Forbidden","message":"접근 권한이 없습니다."}""")
+        }
+    }
 }
 ```
 
-### 3.2 Backend Service & Docker
-- `backend/Dockerfile`:
-  ```dockerfile
-  FROM eclipse-temurin:21-jre-alpine
-  RUN apk add --no-cache ffmpeg python3 py3-pip curl && \
-      curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && \
-      chmod a+rx /usr/local/bin/yt-dlp
-  ```
-- `MediaExtractor.kt`:
-  - ProcessBuilder 옵션 고도화: `--extract-audio`, `--audio-format mp3`, `--audio-quality 0`, `--no-playlist`, `--embed-thumbnail`, `--add-metadata`
-  - URL 정규식 사전 검증
-
-### 3.3 Frontend Architecture
-- `types/extraction.ts`:
-  ```typescript
-  export type ExtractionJobStatus = 'PENDING' | 'DOWNLOADING' | 'CONVERTING' | 'UPLOADING' | 'COMPLETED' | 'FAILED';
-
-  export interface ExtractionJobDto {
-    id: number;
-    sourceUrl: string;
-    status: ExtractionJobStatus;
-    attempts: number;
-    errorMessage: string | null;
-    musicFileId: number | null;
-    startedAt: string | null;
-    completedAt: string | null;
-    createdAt: string;
-  }
-  ```
-- `api/extractionApi.ts`:
-  - `requestExtraction(sourceUrl: string): Promise<ExtractionJobDto>`
-  - `getExtractionStatus(id: number): Promise<ExtractionJobDto>`
-  - `listMyExtractions(): Promise<ExtractionJobDto[]>`
-- `components/pages/extraction/`:
-  - `ExtractionPage.tsx`: 전용 페이지 메인 컴포넌트
-  - `ExtractionInputCard.tsx`: URL 입력 및 추출 시작 폼
-  - `ExtractionActiveJobCard.tsx`: 진행 중인 작업 프로그레스 바 카드 (조건부 2초 폴링)
-  - `ExtractionHistoryTable.tsx`: 이전 추출 작업 목록 테이블
+### 3.2 Music File Detail Endpoint
+```kotlin
+// MusicFileController.kt
+@GetMapping("/{id}")
+fun getMusicFile(
+    @AuthenticationPrincipal user: UserPrincipal,
+    @PathVariable id: Long
+): ResponseEntity<MusicFileDto> {
+    val musicFile = musicFileService.getMusicFile(user.id, id)
+    return ResponseEntity.ok(musicFileService.toDto(musicFile))
+}
+```
 
 ---
 
 ## 4. Verification Plan
 
-1. **Stealth 404 보안 검증**:
-   - `role == null` 일반 사용자로 `/api/extractions/**` 호출 시 `404 Not Found` 반환 확인 (존재 은폐).
+1. **단건 음원 조회 및 메타데이터 수정 검증**:
+   - `GET /api/music-files/{id}` 정상 반환 및 본인 소유 파일 검증.
+   - 추출 페이지 내 `[수정]` 클릭 시 모달 오픈 -> 제목/가수 수정 -> R2 동기화 및 즉시 반영 확인.
+2. **Stealth 404 보안 검증**:
+   - `role == null` 일반 사용자로 `/api/extractions/**` 호출 시 `404 Not Found` 반환 확인.
    - `ADMIN` 및 `DOWNLOADER` 계정으로 정상 호출 확인.
-   - 프론트엔드 비인가 사용자의 `/extractions` 직접 접근 시 404 또는 메인 화면 리다이렉트 확인.
-2. **도커 및 런타임 환경 검증**:
-   - 컨테이너 내 `yt-dlp` 및 `ffmpeg` 실행 확인.
-3. **E2E 추출 파이프라인 및 조건부 폴링 검증**:
-   - URL 입력 -> 작업 생성 -> 실시간 상태 변화(`DOWNLOADING` -> `CONVERTING` -> `UPLOADING` -> `COMPLETED`) 동안만 2초 폴링되고, 완료 후 즉시 폴링 정지 확인.
-   - Cloudflare R2에 오디오 및 썸네일 업로드 확인 -> `music_file` 등록 -> 라이브러리에서 스트리밍 재생 확인.
+3. **E2E 추출 및 인라인 수정 검증**:
+   - URL 입력 -> 추출 완료 -> 해당 화면에서 즉시 메타데이터 수정 -> 라이브러리 목록 확인.
