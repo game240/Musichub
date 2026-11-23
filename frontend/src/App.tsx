@@ -13,13 +13,15 @@ import { AccountSecurityModal } from './components/organisms/AccountSecurityModa
 import { TooltipProvider } from './components/atoms/Tooltip';
 import { PrivacyPolicyPage } from './components/pages/legal/PrivacyPolicyPage';
 import { TermsOfServicePage } from './components/pages/legal/TermsOfServicePage';
+import { AdminUsersPage } from './components/pages/admin/users/AdminUsersPage';
 
-type LegalRoute = 'privacy' | 'terms' | null;
+type AppRoute = 'privacy' | 'terms' | 'admin-users' | null;
 
-const getLegalRouteFromPath = (): LegalRoute => {
+const getRouteFromPath = (): AppRoute => {
   const path = window.location.pathname.toLowerCase();
   if (path === '/privacy' || path === '/privacy-policy') return 'privacy';
   if (path === '/terms' || path === '/terms-of-service') return 'terms';
+  if (path === '/admin' || path === '/admin/users') return 'admin-users';
   return null;
 };
 
@@ -39,7 +41,7 @@ const GOOGLE_CLIENT_ID =
 const AppContent: React.FC = () => {
   const { user, isAuthenticated, isLoading, checkAuthSession, logout } = useAuthStore();
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
-  const [legalRoute, setLegalRoute] = useState<LegalRoute>(getLegalRouteFromPath);
+  const [currentRoute, setCurrentRoute] = useState<AppRoute>(getRouteFromPath);
 
   useEffect(() => {
     checkAuthSession();
@@ -47,7 +49,7 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     const handlePopState = () => {
-      setLegalRoute(getLegalRouteFromPath());
+      setCurrentRoute(getRouteFromPath());
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -58,21 +60,28 @@ const AppContent: React.FC = () => {
     if (window.location.pathname !== targetUrl) {
       window.history.pushState({}, '', targetUrl);
     }
-    setLegalRoute(route);
+    setCurrentRoute(route);
+  };
+
+  const navigateToAdmin = () => {
+    if (window.location.pathname !== '/admin/users') {
+      window.history.pushState({}, '', '/admin/users');
+    }
+    setCurrentRoute('admin-users');
   };
 
   const navigateBack = () => {
     if (window.location.pathname !== '/') {
       window.history.pushState({}, '', '/');
     }
-    setLegalRoute(null);
+    setCurrentRoute(null);
   };
 
-  if (legalRoute === 'privacy') {
+  if (currentRoute === 'privacy') {
     return <PrivacyPolicyPage onBack={navigateBack} />;
   }
 
-  if (legalRoute === 'terms') {
+  if (currentRoute === 'terms') {
     return <TermsOfServicePage onBack={navigateBack} />;
   }
 
@@ -89,6 +98,10 @@ const AppContent: React.FC = () => {
     return <LoginPage onNavigateLegal={navigateToLegal} />;
   }
 
+  if (currentRoute === 'admin-users' && user?.role === 'ADMIN') {
+    return <AdminUsersPage onBack={navigateBack} />;
+  }
+
   const headerRight = (
     <>
       {user ? (
@@ -102,6 +115,7 @@ const AppContent: React.FC = () => {
           <AccountDropdown
             user={user}
             onOpenSecurityModal={() => setIsSecurityModalOpen(true)}
+            onNavigateAdmin={navigateToAdmin}
             onLogout={logout}
           />
         </div>

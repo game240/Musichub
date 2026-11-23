@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, LogOut, ShieldCheck, ChevronDown } from 'lucide-react';
+import { User, LogOut, ShieldCheck, ChevronDown, Users } from 'lucide-react';
 import { formatBytes } from '../../utils/formatBytes';
+import type { UserRole } from '../../types/auth';
 
 export interface AccountDropdownProps {
   user: {
@@ -8,14 +9,17 @@ export interface AccountDropdownProps {
     email: string;
     profileImageUrl: string | null;
     storageUsedBytes: number;
+    role?: UserRole;
   };
   onOpenSecurityModal: () => void;
+  onNavigateAdmin?: () => void;
   onLogout: () => void;
 }
 
 export const AccountDropdown: React.FC<AccountDropdownProps> = ({
   user,
   onOpenSecurityModal,
+  onNavigateAdmin,
   onLogout,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -114,6 +118,20 @@ export const AccountDropdown: React.FC<AccountDropdownProps> = ({
           </div>
 
           {/* Action Buttons */}
+          {user.role === 'ADMIN' && onNavigateAdmin ? (
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(false);
+                onNavigateAdmin();
+              }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-[#8590ea] hover:text-white rounded-lg hover:bg-[#5e6ad2]/20 transition-colors cursor-pointer text-left mb-0.5 border border-[#5e6ad2]/25"
+            >
+              <Users className="w-4 h-4 text-[#8590ea]" />
+              <span>사용자 관리 (ADMIN)</span>
+            </button>
+          ) : null}
+
           <button
             type="button"
             onClick={() => {
