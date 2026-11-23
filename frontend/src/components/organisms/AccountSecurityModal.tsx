@@ -60,10 +60,12 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
     onSuccess: () => {
       setPasswordSuccess('비밀번호가 성공적으로 변경되었습니다.');
       setPasswordError(null);
+      setVerificationCode('');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       setIsPasswordFormOpen(false);
+      setSetupStep('initial');
       queryClient.invalidateQueries({ queryKey: ['user-identities'] });
     },
     onError: (err: unknown) => {
@@ -78,9 +80,9 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
     },
   });
 
-  // 인증코드 발송 요청 (hasPassword === false)
+  // 인증코드 발송 요청 (비밀번호 설정 및 변경 공용)
   const requestCodeMutation = useMutation({
-    mutationFn: () => userApi.requestPasswordSetupCode(),
+    mutationFn: () => userApi.requestPasswordCode(),
     onSuccess: () => {
       setSetupStep('code_sent');
       setPasswordSuccess('인증번호 6자리가 이메일로 발송되었습니다.');
@@ -184,20 +186,22 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
       return;
     }
 
+    if (!verificationCode || verificationCode.trim().length !== 6) {
+      setPasswordError('이메일로 전송된 6자리 인증번호를 정확히 입력해 주세요.');
+      return;
+    }
+
     if (hasPassword) {
       if (!currentPassword) {
         setPasswordError('현재 비밀번호를 입력해 주세요.');
         return;
       }
       setPasswordMutation.mutate({
+        code: verificationCode.trim(),
         currentPassword,
         newPassword,
       });
     } else {
-      if (!verificationCode || verificationCode.trim().length !== 6) {
-        setPasswordError('이메일로 전송된 6자리 인증번호를 정확히 입력해 주세요.');
-        return;
-      }
       confirmSetupMutation.mutate({
         code: verificationCode.trim(),
         newPassword,
@@ -360,8 +364,8 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
               {/* Password Setting / Changing Area */}
               {isPasswordFormOpen ? (
                 <div className="mt-2 pt-3 border-t border-white/[0.06] flex flex-col gap-3">
-                  {/* Case 1: 최초 비밀번호 설정 (hasPassword === false) && 아직 코드 발송 전 */}
-                  {!hasPassword && setupStep === 'initial' ? (
+                  {/* Case 1: 비밀번호 설정 또는 변경 전 이메일 인증번호 발송 단계 */}
+                  {setupStep === 'initial' ? (
                     <div className="p-3.5 bg-white/[0.02] border border-white/[0.05] rounded-xl flex flex-col gap-3">
                       <div className="flex items-start gap-2.5 text-xs text-neutral-300">
                         <Mail className="w-4 h-4 text-[#5e6ad2] shrink-0 mt-0.5" />
@@ -370,7 +374,9 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                             이메일 본인 확인 필요
                           </p>
                           <p className="text-neutral-400 leading-relaxed">
-                            계정 보안을 위해 Google 계정 이메일 (
+                            {hasPassword
+                              ? '비밀번호를 안전하게 변경하기 위해 등록된 계정 이메일 ('
+                              : '계정 보안을 위해 Google 계정 이메일 ('}
                             <span className="text-neutral-200 font-medium">{userEmail}</span>)로
                             6자리 일회용 인증번호를 발송합니다.
                           </p>
@@ -407,39 +413,41 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                     </div>
                   ) : null}
 
-                  {/* Case 2: (최초 설정 시 코드 발송 완료 후) OR (기존 비밀번호 변경 시) */}
-                  {hasPassword || setupStep === 'code_sent' ? (
+                  {/* Case 2: 인증번호 발송 완료 후 입력 폼 */}
+                  {setupStep === 'code_sent' ? (
                     <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-3">
-                      {/* 최초 설정 시 인증코드 입력란 */}
-                      {!hasPassword ? (
-                        <div className="p-3 bg-[#5e6ad2]/10 border border-[#5e6ad2]/20 rounded-xl mb-1">
-                          <div className="flex items-center justify-between mb-2">
-                            <label className="block text-xs font-medium text-[#8590ea]">
-                              이메일 인증번호 6자리
-                            </label>
-                            <button
-                              type="button"
-                              onClick={() => requestCodeMutation.mutate()}
-                              disabled={requestCodeMutation.isPending}
-                              className="text-[11px] text-neutral-400 hover:text-white underline cursor-pointer"
-                            >
-                              인증번호 재전송
-                            </button>
-                          </div>
-                          <Input
-                            type="text"
-                            maxLength={6}
-                            value={verificationCode}
-                            onChange={(e) => setVerificationCode(e.target.value)}
-                            placeholder="6자리 숫자 입력 (예: 123456)"
-                            disabled={confirmSetupMutation.isPending}
-                            className="tracking-widest font-mono text-center text-base"
-                          />
-                          <p className="text-[10px] text-neutral-400 mt-1">
-                            {userEmail}로 전송된 6자리 번호를 5분 내에 입력해 주세요.
-                          </p>
+                      {/* 인증코드 입력란 (설정 및 변경 모두 사용) */}
+                      <div className="p-3 bg-[#5e6ad2]/10 border border-[#5e6ad2]/20 rounded-xl mb-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-xs font-medium text-[#8590ea]">
+                            이메일 인증번호 6자리
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => requestCodeMutation.mutate()}
+                            disabled={requestCodeMutation.isPending}
+                            className="text-[11px] text-neutral-400 hover:text-white underline cursor-pointer"
+                          >
+                            인증번호 재전송
+                          </button>
                         </div>
-                      ) : null}
+                        <Input
+                          type="text"
+                          maxLength={6}
+                          value={verificationCode}
+                          onChange={(e) => setVerificationCode(e.target.value)}
+                          placeholder="6자리 숫자 입력 (예: 123456)"
+                          disabled={
+                            hasPassword
+                              ? setPasswordMutation.isPending
+                              : confirmSetupMutation.isPending
+                          }
+                          className="tracking-widest font-mono text-center text-base"
+                        />
+                        <p className="text-[10px] text-neutral-400 mt-1">
+                          {userEmail}로 전송된 6자리 번호를 5분 내에 입력해 주세요.
+                        </p>
+                      </div>
 
                       {/* 기존 비밀번호 변경 시 현재 비밀번호 입력란 */}
                       {hasPassword ? (

@@ -10,6 +10,10 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
 
 data class SetPasswordRequest(
+    @field:NotBlank(message = "인증번호는 필수 입력값입니다.")
+    @field:Size(min = 6, max = 6, message = "인증번호는 6자리 숫자여야 합니다.")
+    val code: String,
+
     val currentPassword: String? = null,
 
     @field:NotBlank(message = "새 비밀번호는 필수 입력값입니다.")
@@ -52,12 +56,20 @@ class UserIdentityController(
         return ResponseEntity.ok(result)
     }
 
+    @PostMapping("/password/request-code")
+    fun requestPasswordCode(
+        @AuthenticationPrincipal principal: UserPrincipal
+    ): ResponseEntity<Void> {
+        userIdentityService.requestPasswordVerification(principal.id)
+        return ResponseEntity.ok().build()
+    }
+
     @PostMapping("/password")
     fun setPassword(
         @AuthenticationPrincipal principal: UserPrincipal,
         @Valid @RequestBody request: SetPasswordRequest
     ): ResponseEntity<Void> {
-        userIdentityService.setPassword(principal.id, request.currentPassword, request.newPassword)
+        userIdentityService.setPassword(principal.id, request.code, request.currentPassword, request.newPassword)
         return ResponseEntity.ok().build()
     }
 
