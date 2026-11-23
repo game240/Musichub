@@ -14,6 +14,7 @@ import org.junit.jupiter.api.assertThrows
 import org.mockito.ArgumentMatchers.any
 import org.mockito.BDDMockito.given
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.verify
 import java.util.*
 
 class ExtractionServiceTest {
@@ -109,5 +110,44 @@ class ExtractionServiceTest {
         assertThrows<IllegalStateException> {
             extractionService.cancelJob(1L, 10L)
         }
+    }
+
+    @Test
+    @DisplayName("종료된 작업(COMPLETED) 삭제 요청 시 정상 삭제")
+    fun `deleteJob deletes completed job successfully`() {
+        val job = ExtractionJob(id = 20L, user = testUser, sourceUrl = "https://youtube.com/watch?v=123", status = ExtractionJobStatus.COMPLETED)
+        given(extractionJobRepository.findByIdAndUserId(20L, 1L)).willReturn(Optional.of(job))
+
+        extractionService.deleteJob(1L, 20L)
+
+        verify(extractionJobRepository).delete(job)
+    }
+
+    @Test
+    @DisplayName("진행 중인 작업(DOWNLOADING)은 삭제할 수 없다")
+    fun `deleteJob throws IllegalStateException when job is in progress`() {
+        val job = ExtractionJob(id = 20L, user = testUser, sourceUrl = "https://youtube.com/watch?v=123", status = ExtractionJobStatus.DOWNLOADING)
+        given(extractionJobRepository.findByIdAndUserId(20L, 1L)).willReturn(Optional.of(job))
+
+        val ex = assertThrows<IllegalStateException> {
+            extractionService.deleteJob(1L, 20L)
+        }
+        assertTrue(ex.message!!.contains("진행 중인 작업은 삭제할 수 없습니다"))
+    }
+
+    @Test
+    @DisplayName("종료된 모든 작업 일괄 삭제 시 repository 호출 및 삭제 건수 반환")
+    fun `clearFinishedJobs calls repository and returns deleted count`() {
+        val finishedStatuses = listOf(
+            ExtractionJobStatus.COMPLETED,
+            ExtractionJobStatus.FAILED,
+            ExtractionJobStatus.CANCELLED
+        )
+        given(extractionJobRepository.deleteByUserIdAndStatusIn(1L, finishedStatuses)).willReturn(5)
+
+        val deletedCount = extractionService.clearFinishedJobs(1L)
+
+        assertEquals(5, deletedCount)
+        verify(extractionJobRepository).deleteByUserIdAndStatusIn(1L, finishedStatuses)
     }
 }

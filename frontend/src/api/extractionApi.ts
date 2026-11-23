@@ -34,4 +34,19 @@ export const extractionApi = {
     const response = await apiClient.post<ExtractionJobDto>(`/extractions/${id}/cancel`);
     return response.data;
   },
+
+  /**
+   * 단건 추출 히스토리 삭제
+   */
+  async deleteExtraction(id: number): Promise<void> {
+    await apiClient.delete(`/extractions/${id}`);
+  },
+
+  /**
+   * 종료(완료/실패/취소)된 추출 히스토리 전체 일괄 삭제
+   */
+  async clearExtractionHistory(): Promise<{ deletedCount: number }> {
+    const response = await apiClient.delete<{ deletedCount: number }>('/extractions');
+    return response.data;
+  },
 };

@@ -72,6 +72,36 @@ class ExtractionService(
         return extractionJobRepository.save(job)
     }
 
+    @Transactional
+    fun deleteJob(userId: Long, jobId: Long) {
+        val job = extractionJobRepository.findByIdAndUserId(jobId, userId)
+            .orElseThrow { NoSuchElementException("추출 작업을 찾을 수 없습니다.") }
+
+        if (job.status in listOf(
+            ExtractionJobStatus.PENDING,
+            ExtractionJobStatus.DOWNLOADING,
+            ExtractionJobStatus.CONVERTING,
+            ExtractionJobStatus.UPLOADING
+        )) {
+            throw IllegalStateException("진행 중인 작업은 삭제할 수 없습니다. 먼저 추출을 중단해주세요.")
+        }
+
+        extractionJobRepository.delete(job)
+        logger.info("추출 작업 기록 삭제 완료: jobId={}, userId={}", jobId, userId)
+    }
+
+    @Transactional
+    fun clearFinishedJobs(userId: Long): Int {
+        val finishedStatuses = listOf(
+            ExtractionJobStatus.COMPLETED,
+            ExtractionJobStatus.FAILED,
+            ExtractionJobStatus.CANCELLED
+        )
+        val deletedCount = extractionJobRepository.deleteByUserIdAndStatusIn(userId, finishedStatuses)
+        logger.info("종료된 추출 작업 기록 일괄 삭제 완료: userId={}, count={}", userId, deletedCount)
+        return deletedCount
+    }
+
     @Async
     fun processJobAsync(jobId: Long) {
         val jobOptional = extractionJobRepository.findById(jobId)

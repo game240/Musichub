@@ -76,4 +76,23 @@ class ExtractionControllerTest {
         assertEquals(200, response.statusCode.value())
         assertEquals(ExtractionJobStatus.CANCELLED, response.body?.status)
     }
+
+    @Test
+    @DisplayName("추출 작업 단건 삭제 시 204 No Content 반환")
+    fun `deleteExtraction returns 204 no content`() {
+        val response = extractionController.deleteExtraction(downloaderPrincipal, 10L)
+
+        assertEquals(204, response.statusCode.value())
+    }
+
+    @Test
+    @DisplayName("완료 및 종료된 작업 일괄 삭제 시 200 OK와 삭제 개수 반환")
+    fun `clearFinishedExtractions returns 200 ok with deleted count`() {
+        given(extractionService.clearFinishedJobs(1L)).willReturn(3)
+
+        val response = extractionController.clearFinishedExtractions(downloaderPrincipal)
+
+        assertEquals(200, response.statusCode.value())
+        assertEquals(3, response.body?.get("deletedCount"))
+    }
 }

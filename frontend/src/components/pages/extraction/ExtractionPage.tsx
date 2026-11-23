@@ -127,7 +127,62 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
     cancelJobMutation.mutate(jobId);
   };
 
-  // 6. 메타데이터 수정 열기 및 완료 핸들러
+  // 6. 단건 히스토리 삭제 뮤테이션
+  const deleteJobMutation = useMutation({
+    mutationFn: (jobId: number) => extractionApi.deleteExtraction(jobId),
+    onSuccess: (_, jobId) => {
+      addToast('추출 작업 기록이 삭제되었습니다.', 'info');
+      queryClient.setQueryData<ExtractionJobDto[]>(['extractions'], (old = []) =>
+        old.filter((j) => j.id !== jobId)
+      );
+    },
+    onError: (err: unknown) => {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        '기록 삭제에 실패했습니다.';
+      addToast(message, 'error');
+    },
+  });
+
+  const handleDeleteJob = (jobId: number) => {
+    deleteJobMutation.mutate(jobId);
+  };
+
+  // 7. 종료된 히스토리 전체 일괄 삭제 뮤테이션
+  const clearHistoryMutation = useMutation({
+    mutationFn: () => extractionApi.clearExtractionHistory(),
+    onSuccess: (data) => {
+      addToast(
+        data.deletedCount > 0
+          ? `${data.deletedCount}건의 추출 히스토리가 삭제되었습니다.`
+          : '삭제할 추출 내역이 없습니다.',
+        'info'
+      );
+      queryClient.setQueryData<ExtractionJobDto[]>(['extractions'], (old = []) =>
+        old.filter((j) =>
+          ['PENDING', 'DOWNLOADING', 'CONVERTING', 'UPLOADING'].includes(j.status)
+        )
+      );
+    },
+    onError: (err: unknown) => {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        '기록 전체 삭제에 실패했습니다.';
+      addToast(message, 'error');
+    },
+  });
+
+  const handleClearHistory = () => {
+    if (
+      window.confirm(
+        '완료 및 종료된 추출 히스토리를 모두 삭제하시겠습니까?\n(보관함에 이미 저장된 음원 파일은 안전하게 유지됩니다.)'
+      )
+    ) {
+      clearHistoryMutation.mutate();
+    }
+  };
+
+  // 8. 메타데이터 수정 열기 및 완료 핸들러
   const handleOpenEditMetadata = async (musicFileId: number) => {
     try {
       const track = await musicApi.getMusicFile(musicFileId);
@@ -212,6 +267,10 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
           jobs={jobs}
           onGoToLibrary={onBack}
           onEditMetadata={handleOpenEditMetadata}
+          onDeleteJob={handleDeleteJob}
+          onClearHistory={handleClearHistory}
+          isClearing={clearHistoryMutation.isPending}
+          deletingJobId={deleteJobMutation.variables ?? null}
         />
       </main>
 

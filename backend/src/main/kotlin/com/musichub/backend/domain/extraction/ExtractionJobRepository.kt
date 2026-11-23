@@ -1,7 +1,9 @@
 package com.musichub.backend.domain.extraction
 
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.query.Param
 import java.util.Optional
 
 interface ExtractionJobRepository : JpaRepository<ExtractionJob, Long> {
@@ -22,4 +24,11 @@ interface ExtractionJobRepository : JpaRepository<ExtractionJob, Long> {
     fun findNextPendingJobForUpdate(): Optional<ExtractionJob>
 
     fun findAllByUserIdOrderByCreatedAtDesc(userId: Long): List<ExtractionJob>
+
+    @Modifying
+    @Query("DELETE FROM ExtractionJob j WHERE j.user.id = :userId AND j.status IN :statuses")
+    fun deleteByUserIdAndStatusIn(
+        @Param("userId") userId: Long,
+        @Param("statuses") statuses: Collection<ExtractionJobStatus>
+    ): Int
 }

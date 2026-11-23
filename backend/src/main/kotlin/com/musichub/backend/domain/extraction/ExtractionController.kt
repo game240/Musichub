@@ -103,4 +103,21 @@ class ExtractionController(
             .map { ExtractionJobDto.from(it) }
         return ResponseEntity.ok(jobs)
     }
+
+    @DeleteMapping("/{id}")
+    fun deleteExtraction(
+        @AuthenticationPrincipal user: UserPrincipal,
+        @PathVariable id: Long
+    ): ResponseEntity<Void> {
+        extractionService.deleteJob(user.id, id)
+        return ResponseEntity.noContent().build()
+    }
+
+    @DeleteMapping
+    fun clearFinishedExtractions(
+        @AuthenticationPrincipal user: UserPrincipal
+    ): ResponseEntity<Map<String, Any>> {
+        val deletedCount = extractionService.clearFinishedJobs(user.id)
+        return ResponseEntity.ok(mapOf("deletedCount" to deletedCount))
+    }
 }

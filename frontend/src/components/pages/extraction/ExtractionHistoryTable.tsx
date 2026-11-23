@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink, Music, AlertCircle, Clock, Calendar, Pencil } from 'lucide-react';
+import { ExternalLink, Music, AlertCircle, Clock, Calendar, Pencil, Trash2 } from 'lucide-react';
 import type { ExtractionJobDto } from '../../../types/extraction';
 import { ExtractionStatusBadge } from './ExtractionStatusBadge';
 import { Tooltip } from '../../atoms/Tooltip';
@@ -8,12 +8,20 @@ export interface ExtractionHistoryTableProps {
   jobs: ExtractionJobDto[];
   onGoToLibrary: () => void;
   onEditMetadata: (musicFileId: number) => void;
+  onDeleteJob: (jobId: number) => void;
+  onClearHistory: () => void;
+  isClearing?: boolean;
+  deletingJobId?: number | null;
 }
 
 export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
   jobs,
   onGoToLibrary,
   onEditMetadata,
+  onDeleteJob,
+  onClearHistory,
+  isClearing = false,
+  deletingJobId = null,
 }) => {
   if (jobs.length === 0) {
     return (
@@ -28,6 +36,10 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
       </div>
     );
   }
+
+  const hasFinishedJobs = jobs.some((j) =>
+    ['COMPLETED', 'FAILED', 'CANCELLED'].includes(j.status)
+  );
 
   const formatDate = (isoString: string) => {
     try {
@@ -53,6 +65,19 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
             {jobs.length}건
           </span>
         </div>
+
+        {hasFinishedJobs ? (
+          <button
+            type="button"
+            onClick={onClearHistory}
+            disabled={isClearing}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-neutral-400 hover:text-red-300 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-colors cursor-pointer disabled:opacity-50"
+            title="완료 및 종료된 추출 내역 모두 삭제 (보관함의 음원은 유지됩니다)"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>기록 전체 삭제</span>
+          </button>
+        ) : null}
       </div>
 
       <div className="overflow-x-auto">
@@ -63,13 +88,15 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
               <th className="py-3 px-4">추출 음원 정보</th>
               <th className="py-3 px-4 w-36">상태</th>
               <th className="py-3 px-4 w-40">요청 일시</th>
-              <th className="py-3 px-4 w-36 text-right">관리</th>
+              <th className="py-3 px-4 w-44 text-right">관리</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/[0.04]">
             {jobs.map((job) => {
               const displayTitle = job.musicFileTitle || job.sourceUrl;
               const hasMusicFile = job.musicFileId !== null && job.status === 'COMPLETED';
+              const isFinished = ['COMPLETED', 'FAILED', 'CANCELLED'].includes(job.status);
+              const isDeletingThis = deletingJobId === job.id;
 
               return (
                 <tr
@@ -147,9 +174,35 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                         >
                           <span>듣기</span>
                         </button>
+
+                        <Tooltip content="기록 삭제 (음원은 보관함에 안전하게 유지됩니다)">
+                          <button
+                            type="button"
+                            onClick={() => onDeleteJob(job.id)}
+                            disabled={isDeletingThis}
+                            className="p-1 rounded-lg text-neutral-500 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-colors cursor-pointer disabled:opacity-50"
+                            title="기록 삭제"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </Tooltip>
+                      </div>
+                    ) : isFinished ? (
+                      <div className="flex items-center justify-end">
+                        <Tooltip content="기록 삭제">
+                          <button
+                            type="button"
+                            onClick={() => onDeleteJob(job.id)}
+                            disabled={isDeletingThis}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium text-neutral-400 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-colors cursor-pointer disabled:opacity-50"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>삭제</span>
+                          </button>
+                        </Tooltip>
                       </div>
                     ) : (
-                      <span className="text-[11px] text-neutral-600">-</span>
+                      <span className="text-[11px] text-neutral-500 font-mono">진행 중</span>
                     )}
                   </td>
                 </tr>
