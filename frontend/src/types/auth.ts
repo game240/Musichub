@@ -42,6 +42,7 @@ export interface UserIdentitiesResponse {
 }
 
 export interface SetPasswordRequest {
+  code: string;
   currentPassword?: string;
   newPassword: string;
 }

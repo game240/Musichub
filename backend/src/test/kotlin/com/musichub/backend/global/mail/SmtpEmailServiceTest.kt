@@ -53,4 +53,17 @@ class SmtpEmailServiceTest {
             service.sendPasswordSetupCode("recipient@example.com", "654321")
         }
     }
+
+    @Test
+    fun `sendPasswordChangeCode creates and sends MimeMessage with change purpose`() {
+        val service = SmtpEmailService(mailSender, "sender@example.com")
+        val mimeMessage = MimeMessage(Session.getInstance(Properties()))
+        given(mailSender.createMimeMessage()).willReturn(mimeMessage)
+
+        assertDoesNotThrow {
+            service.sendPasswordChangeCode("recipient@example.com", "789012")
+        }
+
+        then(mailSender).should().send(mimeMessage)
+    }
 }
