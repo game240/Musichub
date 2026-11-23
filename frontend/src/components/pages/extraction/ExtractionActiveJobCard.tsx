@@ -123,13 +123,9 @@ export const ExtractionActiveJobCard: React.FC<ExtractionActiveJobCardProps> = (
 
   return (
     <div className="bg-[#0f1011] border border-[#5e6ad2]/30 rounded-2xl p-5 shadow-2xl relative overflow-hidden backdrop-blur-xl animate-fade-in">
-      {/* Background glowing gradient */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-[#5e6ad2]/10 rounded-full blur-3xl pointer-events-none" />
-
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 relative z-10">
         <div>
           <div className="flex items-center gap-2">
-            <span className="flex h-2 w-2 rounded-full bg-[#5e6ad2] animate-ping" />
             <span className="text-xs font-semibold text-neutral-100">
               현재 음원 추출 진행 중 (#{job.id})
             </span>
