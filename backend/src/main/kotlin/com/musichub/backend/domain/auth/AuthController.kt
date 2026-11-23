@@ -52,7 +52,8 @@ data class UserDto(
     val displayName: String?,
     val profileImageUrl: String?,
     val storageUsedBytes: Long,
-    val volume: Int
+    val volume: Int,
+    val role: String? = null
 )
 
 @RestController
@@ -126,7 +127,8 @@ class AuthController(
                 displayName = result.user.displayName,
                 profileImageUrl = result.user.profileImageUrl,
                 storageUsedBytes = result.user.storageUsedBytes,
-                volume = result.user.volume
+                volume = result.user.volume,
+                role = result.user.role?.name
             )
         )
     }

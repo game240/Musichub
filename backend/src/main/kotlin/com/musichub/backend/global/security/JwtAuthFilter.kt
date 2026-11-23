@@ -1,5 +1,6 @@
 package com.musichub.backend.global.security
 
+import com.musichub.backend.domain.user.UserRole
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -25,7 +26,9 @@ class JwtAuthFilter(
             if (claims != null) {
                 val userId = claims.subject.toLong()
                 val email = claims.get("email", String::class.java)
-                val principal = UserPrincipal(userId, email)
+                val roleStr = claims.get("role", String::class.java)
+                val role = roleStr?.let { runCatching { UserRole.valueOf(it) }.getOrNull() }
+                val principal = UserPrincipal(userId, email, role)
 
                 val authentication = UsernamePasswordAuthenticationToken(
                     principal,
