@@ -17,7 +17,11 @@ class MediaExtractor {
 
     private val logger = LoggerFactory.getLogger(javaClass)
 
-    fun extractAudio(url: String, workDir: File): ExtractedMediaResult {
+    fun extractAudio(
+        url: String,
+        workDir: File,
+        onProcessStarted: ((Process) -> Unit)? = null
+    ): ExtractedMediaResult {
         val outputTemplate = File(workDir, "audio.%(ext)s").absolutePath
 
         // yt-dlp 실행: 오디오만 추출, MP3 변환, 최고 품질, 썸네일/메타데이터 임베딩, 최대 30분 제한
@@ -43,6 +47,7 @@ class MediaExtractor {
         val process: Process
         try {
             process = processBuilder.start()
+            onProcessStarted?.invoke(process)
         } catch (e: IOException) {
             logger.error("yt-dlp 프로세스 실행 실패: {}", e.message)
             throw RuntimeException("추출 엔진(yt-dlp)을 실행할 수 없습니다. 시스템 설정을 확인해주세요: ${e.message}", e)

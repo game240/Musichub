@@ -64,4 +64,16 @@ class ExtractionControllerTest {
             }
         }
     }
+
+    @Test
+    @DisplayName("작업 취소 요청 시 200 OK와 함께 취소된 DTO 반환")
+    fun `cancelExtraction returns ok with cancelled job dto`() {
+        val cancelledJob = ExtractionJob(id = 10L, user = testUser, sourceUrl = "https://youtube.com/watch?v=123", status = ExtractionJobStatus.CANCELLED)
+        given(extractionService.cancelJob(1L, 10L)).willReturn(cancelledJob)
+
+        val response = extractionController.cancelExtraction(downloaderPrincipal, 10L)
+
+        assertEquals(200, response.statusCode.value())
+        assertEquals(ExtractionJobStatus.CANCELLED, response.body?.status)
+    }
 }

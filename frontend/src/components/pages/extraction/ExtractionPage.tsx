@@ -105,7 +105,29 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
     await createJobMutation.mutateAsync(url);
   };
 
-  // 5. 메타데이터 수정 열기 및 완료 핸들러
+  // 5. 추출 중단(취소) 뮤테이션
+  const cancelJobMutation = useMutation({
+    mutationFn: (jobId: number) => extractionApi.cancelExtraction(jobId),
+    onSuccess: (cancelledJob) => {
+      addToast('음원 추출 작업이 중단(취소)되었습니다.', 'info');
+      queryClient.setQueryData<ExtractionJobDto[]>(['extractions'], (old = []) =>
+        old.map((j) => (j.id === cancelledJob.id ? cancelledJob : j))
+      );
+      refetch();
+    },
+    onError: (err: unknown) => {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        '작업 취소에 실패했습니다.';
+      addToast(message, 'error');
+    },
+  });
+
+  const handleCancelExtraction = (jobId: number) => {
+    cancelJobMutation.mutate(jobId);
+  };
+
+  // 6. 메타데이터 수정 열기 및 완료 핸들러
   const handleOpenEditMetadata = async (musicFileId: number) => {
     try {
       const track = await musicApi.getMusicFile(musicFileId);
@@ -177,7 +199,13 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
         />
 
         {/* 2. Active Job Realtime Progress Indicator */}
-        {activeJob ? <ExtractionActiveJobCard job={activeJob} /> : null}
+        {activeJob ? (
+          <ExtractionActiveJobCard
+            job={activeJob}
+            onCancel={handleCancelExtraction}
+            isCancelling={cancelJobMutation.isPending}
+          />
+        ) : null}
 
         {/* 3. Extraction History Table */}
         <ExtractionHistoryTable

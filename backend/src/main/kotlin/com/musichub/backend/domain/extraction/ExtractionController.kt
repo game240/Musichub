@@ -86,6 +86,15 @@ class ExtractionController(
         return ResponseEntity.ok(ExtractionJobDto.from(job))
     }
 
+    @PostMapping("/{id}/cancel")
+    fun cancelExtraction(
+        @AuthenticationPrincipal user: UserPrincipal,
+        @PathVariable id: Long
+    ): ResponseEntity<ExtractionJobDto> {
+        val job = extractionService.cancelJob(user.id, id)
+        return ResponseEntity.ok(ExtractionJobDto.from(job))
+    }
+
     @GetMapping
     fun listMyExtractions(
         @AuthenticationPrincipal user: UserPrincipal

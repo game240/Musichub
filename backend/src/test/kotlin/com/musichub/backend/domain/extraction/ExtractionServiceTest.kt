@@ -86,4 +86,28 @@ class ExtractionServiceTest {
         }
         assertTrue(ex.message!!.contains("용량이 부족합니다"))
     }
+
+    @Test
+    @DisplayName("진행 중인 작업 취소 요청 시 CANCELLED 상태로 정상 변경")
+    fun `cancelJob cancels running or pending job successfully`() {
+        val job = ExtractionJob(id = 10L, user = testUser, sourceUrl = "https://youtube.com/watch?v=123", status = ExtractionJobStatus.DOWNLOADING)
+        given(extractionJobRepository.findByIdAndUserId(10L, 1L)).willReturn(Optional.of(job))
+        given(extractionJobRepository.save(any(ExtractionJob::class.java))).willAnswer { invocation -> invocation.getArgument(0) }
+
+        val cancelledJob = extractionService.cancelJob(1L, 10L)
+
+        assertEquals(ExtractionJobStatus.CANCELLED, cancelledJob.status)
+        assertTrue(cancelledJob.errorMessage!!.contains("취소"))
+    }
+
+    @Test
+    @DisplayName("이미 완료되었거나 취소된 작업은 다시 취소할 수 없다")
+    fun `cancelJob throws IllegalStateException when job already finished`() {
+        val job = ExtractionJob(id = 10L, user = testUser, sourceUrl = "https://youtube.com/watch?v=123", status = ExtractionJobStatus.COMPLETED)
+        given(extractionJobRepository.findByIdAndUserId(10L, 1L)).willReturn(Optional.of(job))
+
+        assertThrows<IllegalStateException> {
+            extractionService.cancelJob(1L, 10L)
+        }
+    }
 }

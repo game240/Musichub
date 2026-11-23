@@ -26,4 +26,12 @@ export const extractionApi = {
     const response = await apiClient.get<ExtractionJobDto[]>('/extractions');
     return response.data;
   },
+
+  /**
+   * 진행 중인 추출 작업 취소(중단)
+   */
+  async cancelExtraction(id: number): Promise<ExtractionJobDto> {
+    const response = await apiClient.post<ExtractionJobDto>(`/extractions/${id}/cancel`);
+    return response.data;
+  },
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, DownloadCloud, RefreshCw, UploadCloud, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Clock, DownloadCloud, RefreshCw, UploadCloud, CheckCircle2, AlertCircle, Ban } from 'lucide-react';
 import type { ExtractionJobStatus } from '../../../types/extraction';
 
 export interface ExtractionStatusBadgeProps {
@@ -48,6 +48,13 @@ export const ExtractionStatusBadge: React.FC<ExtractionStatusBadgeProps> = ({ st
         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-red-500/10 text-red-400 border border-red-500/20">
           <AlertCircle className="w-3 h-3 text-red-400" />
           실패
+        </span>
+      );
+    case 'CANCELLED':
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-neutral-500/10 text-neutral-400 border border-neutral-500/20">
+          <Ban className="w-3 h-3 text-neutral-400" />
+          취소됨
         </span>
       );
   }
