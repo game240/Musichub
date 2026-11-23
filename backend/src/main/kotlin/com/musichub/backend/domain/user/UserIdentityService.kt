@@ -65,7 +65,7 @@ class UserIdentityService(
     }
 
     @Transactional
-    fun requestPasswordSetup(userId: Long) {
+    fun requestPasswordVerification(userId: Long) {
         val user = userRepository.findById(userId)
             .orElseThrow { NoSuchElementException("사용자를 찾을 수 없습니다.") }
 
@@ -73,16 +73,26 @@ class UserIdentityService(
             .map { !it.passwordHash.isNullOrBlank() }
             .orElse(false) || !user.passwordHash.isNullOrBlank()
 
-        if (hasPassword) {
-            throw IllegalStateException("이미 비밀번호가 등록되어 있습니다. 비밀번호 변경 기능을 이용해 주세요.")
-        }
-
         val code = verificationManager.createCode(userId)
-        emailService.sendPasswordSetupCode(user.email, code)
+        if (hasPassword) {
+            emailService.sendPasswordChangeCode(user.email, code)
+        } else {
+            emailService.sendPasswordSetupCode(user.email, code)
+        }
+    }
+
+    @Transactional
+    fun requestPasswordSetup(userId: Long) {
+        requestPasswordVerification(userId)
     }
 
     @Transactional
     fun confirmPasswordSetup(userId: Long, code: String, newPassword: String) {
+        setPassword(userId, code, null, newPassword)
+    }
+
+    @Transactional
+    fun setPassword(userId: Long, code: String, currentPassword: String?, newPassword: String) {
         require(PASSWORD_REGEX.matches(newPassword)) { "비밀번호는 8자 이상이며 영문, 숫자, 특수문자를 모두 포함해야 합니다." }
 
         verificationManager.verifyCode(userId, code)
@@ -91,12 +101,26 @@ class UserIdentityService(
             .orElseThrow { NoSuchElementException("사용자를 찾을 수 없습니다.") }
 
         val localIdentityOpt = userIdentityRepository.findByUserIdAndProvider(userId, AuthProvider.LOCAL)
-        val hashed = passwordEncoder.encode(newPassword)
+        val hasPassword = localIdentityOpt.map { !it.passwordHash.isNullOrBlank() }.orElse(false)
+            || !user.passwordHash.isNullOrBlank()
 
+        if (hasPassword) {
+            val identity = localIdentityOpt.orElse(null)
+            val currentHash = identity?.passwordHash ?: user.passwordHash
+            if (currentPassword.isNullOrBlank()) {
+                throw IllegalArgumentException("기존 비밀번호를 입력해 주세요.")
+            }
+            if (currentHash.isNullOrBlank() || !passwordEncoder.matches(currentPassword, currentHash)) {
+                throw IllegalArgumentException("현재 비밀번호가 일치하지 않습니다.")
+            }
+        }
+
+        val hashed = passwordEncoder.encode(newPassword)
         if (localIdentityOpt.isPresent) {
             val identity = localIdentityOpt.get()
             identity.passwordHash = hashed
         } else {
+            // Google 등으로 최초 가입한 후 일반 로그인(비밀번호) 수단 신규 추가
             userIdentityRepository.save(
                 UserIdentity(
                     user = user,
@@ -107,43 +131,6 @@ class UserIdentityService(
             )
         }
         user.passwordHash = hashed
-    }
-
-    @Transactional
-    fun setPassword(userId: Long, currentPassword: String?, newPassword: String) {
-        require(PASSWORD_REGEX.matches(newPassword)) { "비밀번호는 8자 이상이며 영문, 숫자, 특수문자를 모두 포함해야 합니다." }
-
-        val user = userRepository.findById(userId)
-            .orElseThrow { NoSuchElementException("사용자를 찾을 수 없습니다.") }
-
-        val localIdentityOpt = userIdentityRepository.findByUserIdAndProvider(userId, AuthProvider.LOCAL)
-
-        if (localIdentityOpt.isPresent) {
-            val identity = localIdentityOpt.get()
-            if (!identity.passwordHash.isNullOrBlank()) {
-                if (currentPassword.isNullOrBlank()) {
-                    throw IllegalArgumentException("기존 비밀번호를 입력해 주세요.")
-                }
-                if (!passwordEncoder.matches(currentPassword, identity.passwordHash)) {
-                    throw IllegalArgumentException("현재 비밀번호가 일치하지 않습니다.")
-                }
-            }
-            val hashed = passwordEncoder.encode(newPassword)
-            identity.passwordHash = hashed
-            user.passwordHash = hashed
-        } else {
-            // Google 등으로 최초 가입한 후 일반 로그인(비밀번호) 수단 신규 추가
-            val hashed = passwordEncoder.encode(newPassword)
-            userIdentityRepository.save(
-                UserIdentity(
-                    user = user,
-                    provider = AuthProvider.LOCAL,
-                    providerId = user.email,
-                    passwordHash = hashed
-                )
-            )
-            user.passwordHash = hashed
-        }
     }
 
     @Transactional

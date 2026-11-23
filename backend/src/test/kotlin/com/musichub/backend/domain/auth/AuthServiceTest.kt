@@ -2,6 +2,7 @@ package com.musichub.backend.domain.auth
 
 import com.musichub.backend.domain.user.AuthProvider
 import com.musichub.backend.domain.user.User
+import com.musichub.backend.domain.user.UserRole
 import com.musichub.backend.domain.user.UserIdentity
 import com.musichub.backend.domain.user.UserIdentityRepository
 import com.musichub.backend.domain.user.UserRepository
@@ -49,7 +50,7 @@ class AuthServiceTest {
         jwtProvider = mock(JwtProvider::class.java)
         passwordEncoder = BCryptPasswordEncoder()
 
-        given(jwtProvider.generateAccessToken(anyLong(), anyString())).willReturn("mock-access-token")
+        given(jwtProvider.generateAccessToken(anyLong(), anyString(), nullable(UserRole::class.java))).willReturn("mock-access-token")
         given(jwtProvider.generateRefreshTokenValue()).willReturn("mock-refresh-token")
         given(jwtProvider.hashToken(anyString())).willReturn("mock-token-hash")
         given(jwtProvider.accessTokenValidityMs).willReturn(900000L)
@@ -206,5 +207,34 @@ class AuthServiceTest {
         }
 
         assertEquals("이메일 또는 비밀번호가 올바르지 않습니다.", ex.message)
+    }
+
+    @Test
+    fun `loginWithLocal succeeds with user role preserved in result`() {
+        val hashedPassword = passwordEncoder.encode("Password123!")
+        val user = User(
+            id = 10L,
+            authProvider = AuthProvider.LOCAL,
+            providerId = "admin@test.com",
+            email = "admin@test.com",
+            passwordHash = hashedPassword,
+            role = UserRole.ADMIN
+        )
+
+        given(userRepository.findByAuthProviderAndProviderId(AuthProvider.LOCAL, "admin@test.com"))
+            .willReturn(Optional.of(user))
+        given(refreshTokenRepository.save(any(RefreshToken::class.java)))
+            .willAnswer { it.arguments[0] }
+
+        val request = LocalLoginRequest(
+            email = "admin@test.com",
+            password = "Password123!"
+        )
+
+        val result = authService.loginWithLocal(request, "TestBrowser")
+
+        assertNotNull(result)
+        assertEquals(UserRole.ADMIN, result.user.role)
+        assertTrue(result.user.isAdmin())
     }
 }

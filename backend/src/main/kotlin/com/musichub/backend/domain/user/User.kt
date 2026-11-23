@@ -9,6 +9,11 @@ enum class AuthProvider {
     LOCAL
 }
 
+enum class UserRole {
+    ADMIN,
+    DOWNLOADER
+}
+
 @Entity
 @Table(
     name = "users",
@@ -46,6 +51,10 @@ class User(
     @Column(name = "volume", nullable = false)
     var volume: Int = 100,
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role")
+    var role: UserRole? = null,
+
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant = Instant.now(),
 
@@ -67,4 +76,6 @@ class User(
         this.storageUsedBytes = (this.storageUsedBytes - bytes).coerceAtLeast(0)
         this.updatedAt = Instant.now()
     }
+
+    fun isAdmin(): Boolean = role == UserRole.ADMIN
 }

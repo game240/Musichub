@@ -1,5 +1,6 @@
 package com.musichub.backend.global.security
 
+import com.musichub.backend.domain.user.UserRole
 import io.jsonwebtoken.Claims
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
@@ -20,15 +21,21 @@ class JwtProvider(
         Keys.hmacShaKeyFor(secret.toByteArray(StandardCharsets.UTF_8))
     }
 
-    fun generateAccessToken(userId: Long, email: String): String {
+    fun generateAccessToken(userId: Long, email: String, role: UserRole? = null): String {
         val now = Date()
         val validity = Date(now.time + accessTokenValidityMs)
 
-        return Jwts.builder()
+        val builder = Jwts.builder()
             .subject(userId.toString())
             .claim("email", email)
             .issuedAt(now)
             .expiration(validity)
+
+        if (role != null) {
+            builder.claim("role", role.name)
+        }
+
+        return builder
             .signWith(key)
             .compact()
     }

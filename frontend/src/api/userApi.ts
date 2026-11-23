@@ -22,6 +22,10 @@ export const userApi = {
     await apiClient.post('/users/me/identities/password', data);
   },
 
+  async requestPasswordCode(): Promise<void> {
+    await apiClient.post('/users/me/identities/password/request-code');
+  },
+
   async requestPasswordSetupCode(): Promise<void> {
     await apiClient.post('/users/me/identities/password-setup/request');
   },

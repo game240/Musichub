@@ -1,3 +1,5 @@
+export type UserRole = 'ADMIN' | 'DOWNLOADER' | null;
+
 export interface UserDto {
   id: number;
   email: string;
@@ -5,6 +7,7 @@ export interface UserDto {
   profileImageUrl: string | null;
   storageUsedBytes: number;
   volume: number;
+  role?: UserRole;
 }
 
 export interface AuthResponse {
@@ -42,6 +45,7 @@ export interface UserIdentitiesResponse {
 }
 
 export interface SetPasswordRequest {
+  code: string;
   currentPassword?: string;
   newPassword: string;
 }
