@@ -48,4 +48,9 @@ interface MusicFileRepository : JpaRepository<MusicFile, Long> {
 
     @Query("SELECT COALESCE(SUM(m.fileSize), 0) FROM MusicFile m")
     fun sumTotalFileSize(): Long
+
+    fun countByUserIdAndStatus(userId: Long, status: MusicFileStatus): Long
+
+    @Query("SELECT m.user.id, COUNT(m) FROM MusicFile m WHERE m.status = :status AND m.user.id IN :userIds GROUP BY m.user.id")
+    fun countTracksByUserIdsAndStatus(userIds: Collection<Long>, status: MusicFileStatus): List<Array<Any>>
 }
