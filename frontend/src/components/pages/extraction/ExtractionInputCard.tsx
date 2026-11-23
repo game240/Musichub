@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clipboard, Sparkles, AlertCircle } from 'lucide-react';
+import { Clipboard, AlertCircle, Download } from 'lucide-react';
 import { YoutubeIcon } from '../../atoms/YoutubeIcon';
 import { Button } from '../../atoms/Button';
 import { Spinner } from '../../atoms/Spinner';
@@ -64,10 +64,7 @@ export const ExtractionInputCard: React.FC<ExtractionInputCardProps> = ({ onSubm
         </div>
         <div>
           <h2 className="text-sm sm:text-base font-semibold text-neutral-100 flex items-center gap-2">
-            새 YouTube 음원 추출
-            <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-[#5e6ad2]/15 text-[#8590ea] border border-[#5e6ad2]/25">
-              MP3 최고 음질
-            </span>
+            YouTube 음원 추출
           </h2>
           <p className="text-xs text-neutral-400 mt-0.5">
             YouTube 또는 YouTube Music 영상 링크를 입력하여 보관함에 고음질 MP3로 추가하세요.
@@ -118,12 +115,7 @@ export const ExtractionInputCard: React.FC<ExtractionInputCardProps> = ({ onSubm
           </div>
         ) : null}
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-1">
-          <div className="text-[11px] text-neutral-400 flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#8590ea] shrink-0" />
-            <span>재생시간 최대 30분 이내 단일 영상 지원 &bull; 썸네일 및 태그 자동 파싱</span>
-          </div>
-
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 pt-1">  
           <Button
             type="submit"
             disabled={isLoading || !url.trim() || isInvalid}
@@ -136,8 +128,8 @@ export const ExtractionInputCard: React.FC<ExtractionInputCardProps> = ({ onSubm
               </span>
             ) : (
               <span className="flex items-center gap-2">
-                <YoutubeIcon className="w-4 h-4 text-red-500" />
-                <span>음원 추출 시작</span>
+                <Download className="w-4 h-4" />
+                <span>음원 추출</span>
               </span>
             )}
           </Button>
