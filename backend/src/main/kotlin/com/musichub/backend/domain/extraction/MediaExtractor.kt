@@ -25,8 +25,10 @@ class MediaExtractor {
         val outputTemplate = File(workDir, "audio.%(ext)s").absolutePath
 
         // yt-dlp 실행: 오디오만 추출, MP3 변환, 최고 품질, 썸네일/메타데이터 임베딩, 최대 30분 제한
+        // --print는 기본적으로 --simulate를 활성화하므로 반드시 --no-simulate를 명시해야 실제 다운로드가 진행됨
         val command = listOf(
             "yt-dlp",
+            "--no-simulate",
             "--extract-audio",
             "--audio-format", "mp3",
             "--audio-quality", "0",
@@ -35,7 +37,6 @@ class MediaExtractor {
             "--add-metadata",
             "--match-filter", "duration <= 1800",
             "--output", outputTemplate,
-            "--no-warnings",
             "--print", "title",
             url
         )
@@ -54,17 +55,24 @@ class MediaExtractor {
         }
 
         var titleOutput: String? = null
+        var stdoutOutput = ""
         var errorOutput = ""
 
         try {
-            val titleReaderThread = Thread {
+            val stdoutReaderThread = Thread {
                 try {
-                    titleOutput = process.inputStream.bufferedReader().use { it.readLine() }
+                    val lines = mutableListOf<String>()
+                    process.inputStream.bufferedReader().forEachLine { line ->
+                        lines.add(line)
+                    }
+                    stdoutOutput = lines.joinToString("\n")
+                    // [download] 등의 접두어가 없는 첫 줄이 --print title로 출력된 제목
+                    titleOutput = lines.firstOrNull { !it.startsWith("[") && it.isNotBlank() }
                 } catch (e: Exception) {
                     logger.debug("Stdout 읽기 중 예외: {}", e.message)
                 }
             }
-            titleReaderThread.start()
+            stdoutReaderThread.start()
 
             val errorReaderThread = Thread {
                 try {
@@ -76,7 +84,7 @@ class MediaExtractor {
             errorReaderThread.start()
 
             val finished = process.waitFor(5, TimeUnit.MINUTES)
-            titleReaderThread.join(1000)
+            stdoutReaderThread.join(1000)
             errorReaderThread.join(1000)
 
             if (!finished) {
@@ -100,6 +108,10 @@ class MediaExtractor {
 
         val generatedFile = File(workDir, "audio.mp3")
         if (!generatedFile.exists() || generatedFile.length() == 0L) {
+            val combinedLogs = "$stdoutOutput\n$errorOutput"
+            if (combinedLogs.contains("does not pass filter", ignoreCase = true)) {
+                throw RuntimeException("재생 시간이 30분을 초과하는 영상은 추출할 수 없습니다.")
+            }
             throw IllegalStateException("추출된 오디오 파일이 존재하지 않거나 빈 파일입니다.")
         }
 
