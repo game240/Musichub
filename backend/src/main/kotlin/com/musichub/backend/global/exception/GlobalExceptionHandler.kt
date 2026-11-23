@@ -65,6 +65,29 @@ class GlobalExceptionHandler {
         )
     }
 
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException::class)
+    fun handleAccessDenied(
+        e: org.springframework.security.access.AccessDeniedException,
+        request: jakarta.servlet.http.HttpServletRequest
+    ): ResponseEntity<ErrorResponse> {
+        if (request.requestURI.startsWith("/api/extractions")) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                ErrorResponse(
+                    status = HttpStatus.NOT_FOUND.value(),
+                    error = "Not Found",
+                    message = "요청하신 리소스를 찾을 수 없습니다."
+                )
+            )
+        }
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+            ErrorResponse(
+                status = HttpStatus.FORBIDDEN.value(),
+                error = "Forbidden",
+                message = "접근 권한이 없습니다."
+            )
+        )
+    }
+
     @ExceptionHandler(Exception::class)
     fun handleGeneralException(e: Exception): ResponseEntity<ErrorResponse> {
         logger.error("처리되지 않은 서버 내부 에러: {}", e.message, e)

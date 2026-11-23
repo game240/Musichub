@@ -26,9 +26,18 @@ class ExtractionService(
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
 
+    companion object {
+        private const val MAX_STORAGE_BYTES = 2L * 1024 * 1024 * 1024 // 2.0 GB
+        private const val ESTIMATED_TRACK_BYTES = 10L * 1024 * 1024 // 10 MB
+    }
+
     @Transactional
     fun createJob(userId: Long, sourceUrl: String): ExtractionJob {
         val user = userRepository.findById(userId).orElseThrow { IllegalArgumentException("사용자를 찾을 수 없습니다.") }
+
+        if (user.storageUsedBytes + ESTIMATED_TRACK_BYTES > MAX_STORAGE_BYTES) {
+            throw IllegalStateException("보관함 용량이 부족합니다. 저장 공간을 확보한 후 다시 시도해주세요.")
+        }
 
         val job = ExtractionJob(
             user = user,
@@ -112,11 +121,24 @@ class ExtractionService(
 
         } catch (e: Exception) {
             logger.error("추출 작업 실패: jobId={}, error={}", jobId, e.message, e)
-            job.markFailed(e.message ?: "알 수 없는 오류", isRetryable = true)
+            val isRetryable = isRetryableException(e)
+            job.markFailed(e.message ?: "알 수 없는 오류", isRetryable = isRetryable)
             extractionJobRepository.save(job)
         } finally {
             // 임시 디렉토리 및 파일 정리
             tempDir.deleteRecursively()
         }
+    }
+
+    private fun isRetryableException(e: Exception): Boolean {
+        val msg = e.message ?: return false
+        // 비공개 영상, 30분 초과, 영상 삭제, 연령 제한 등 비가역적 오류는 재시도하지 않음
+        return !(msg.contains("초과") ||
+                msg.contains("비공개") ||
+                msg.contains("삭제") ||
+                msg.contains("제한") ||
+                msg.contains("스트리밍") ||
+                msg.contains("저작권") ||
+                msg.contains("빈 파일"))
     }
 }

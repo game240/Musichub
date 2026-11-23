@@ -17,6 +17,11 @@ RUN ./gradlew bootJar --no-daemon -x test
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
+# Install ffmpeg, python3, and yt-dlp for media extraction
+RUN apk add --no-cache ffmpeg python3 py3-pip curl ca-certificates && \
+    curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && \
+    chmod a+rx /usr/local/bin/yt-dlp
+
 # 빌드 결과물 복사
 COPY --from=builder /app/build/libs/musichub-backend-0.0.1-SNAPSHOT.jar app.jar
 

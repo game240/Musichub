@@ -1,0 +1,67 @@
+package com.musichub.backend.domain.extraction
+
+import com.musichub.backend.domain.user.User
+import com.musichub.backend.domain.user.UserRole
+import com.musichub.backend.global.security.UserPrincipal
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import org.mockito.BDDMockito.given
+import org.mockito.Mockito.mock
+
+class ExtractionControllerTest {
+
+    private lateinit var extractionService: ExtractionService
+    private lateinit var extractionJobRepository: ExtractionJobRepository
+    private lateinit var extractionController: ExtractionController
+
+    private val downloaderPrincipal = UserPrincipal(id = 1L, email = "dl@test.com", role = UserRole.DOWNLOADER)
+    private val testUser = User(id = 1L, email = "dl@test.com", providerId = "p1", role = UserRole.DOWNLOADER)
+
+    @BeforeEach
+    fun setUp() {
+        extractionService = mock(ExtractionService::class.java)
+        extractionJobRepository = mock(ExtractionJobRepository::class.java)
+        extractionController = ExtractionController(extractionService, extractionJobRepository)
+    }
+
+    @Test
+    @DisplayName("유효한 YouTube URL인 경우 작업 요청 성공")
+    fun `requestExtraction succeeds with valid YouTube URLs`() {
+        val validUrls = listOf(
+            "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "http://youtu.be/dQw4w9WgXcQ",
+            "https://music.youtube.com/watch?v=dQw4w9WgXcQ&feature=share",
+            "https://youtube.com/shorts/dQw4w9WgXcQ"
+        )
+
+        for (url in validUrls) {
+            val job = ExtractionJob(id = 100L, user = testUser, sourceUrl = url)
+            given(extractionService.createJob(1L, url)).willReturn(job)
+
+            val response = extractionController.requestExtraction(downloaderPrincipal, ExtractionRequest(url))
+            assertEquals(202, response.statusCode.value())
+            assertEquals(url, response.body?.sourceUrl)
+        }
+    }
+
+    @Test
+    @DisplayName("유효하지 않은 URL이나 빈 값인 경우 400 에러 발생")
+    fun `requestExtraction throws IllegalArgumentException on invalid URL`() {
+        val invalidUrls = listOf(
+            "",
+            "   ",
+            "https://google.com",
+            "https://vimeo.com/123456",
+            "not-a-url"
+        )
+
+        for (url in invalidUrls) {
+            assertThrows<IllegalArgumentException> {
+                extractionController.requestExtraction(downloaderPrincipal, ExtractionRequest(url))
+            }
+        }
+    }
+}
