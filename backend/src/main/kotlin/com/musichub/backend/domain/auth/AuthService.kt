@@ -198,7 +198,7 @@ class AuthService(
     }
 
     private fun issueTokens(user: User, deviceInfo: String?): TokenResult {
-        val accessToken = jwtProvider.generateAccessToken(user.id, user.email)
+        val accessToken = jwtProvider.generateAccessToken(user.id, user.email, user.role)
         val refreshTokenValue = jwtProvider.generateRefreshTokenValue()
         val tokenHash = jwtProvider.hashToken(refreshTokenValue)
         val expiresAt = Instant.now().plusMillis(jwtProvider.refreshTokenValidityMs)
