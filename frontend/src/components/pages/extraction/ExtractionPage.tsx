@@ -289,44 +289,7 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
     );
   };
 
-  // 7. 종료된 히스토리 전체 일괄 삭제 (5초 되돌리기 지원)
-  const handleClearHistory = () => {
-    const finishedJobs = jobs.filter((j) =>
-      ['COMPLETED', 'FAILED', 'CANCELLED'].includes(j.status)
-    );
-    if (finishedJobs.length === 0) return;
-
-    // 선택 해제
-    clearSelection();
-
-    // 즉시 UI 캐시에서 종료된 작업 제거
-    queryClient.setQueryData<ExtractionJobDto[]>(['extractions'], (old = []) =>
-      old.filter((j) =>
-        ['PENDING', 'DOWNLOADING', 'CONVERTING', 'UPLOADING'].includes(j.status)
-      )
-    );
-
-    const key = `clear-all-${Date.now()}`;
-    registerPendingDeletion(
-      key,
-      `전체 추출 히스토리(${finishedJobs.length}건)가 삭제되었습니다.`,
-      async () => {
-        await extractionApi.clearExtractionHistory();
-      },
-      () => {
-        queryClient.setQueryData<ExtractionJobDto[]>(['extractions'], (old = []) => {
-          const existingIds = new Set(old.map((j) => j.id));
-          const toRestore = finishedJobs.filter((j) => !existingIds.has(j.id));
-          return [...old, ...toRestore].sort(
-            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-        });
-        addToast('전체 히스토리 삭제가 취소되었습니다.', 'info');
-      }
-    );
-  };
-
-  // 8. 선택한 히스토리 일괄 삭제 (5초 되돌리기 지원)
+  // 7. 선택한 히스토리 일괄 삭제 (5초 되돌리기 지원)
   const handleDeleteSelectedJobs = () => {
     if (selectedJobIds.size === 0) return;
     const targetJobs = jobs.filter((j) => selectedJobIds.has(j.id));
@@ -459,7 +422,7 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-24 sm:pb-28 flex flex-col gap-6">
+      <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-24 sm:pb-28 flex flex-col gap-4">
         {/* 1. Extraction Input Form */}
         <ExtractionInputCard
           onSubmit={handleCreateExtraction}
@@ -488,11 +451,10 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
           onToggleSelectAll={toggleSelectAll}
           onBatchEdit={handleOpenBatchEdit}
           isBatchLoading={isFetchingBatchTracks}
-          onClearSelection={clearSelection}
           onGoToLibrary={onBack}
           onEditMetadata={handleOpenEditMetadata}
           onDeleteJob={handleDeleteJob}
-          onClearHistory={handleClearHistory}
+          onDeleteSelected={handleDeleteSelectedJobs}
         />
       </main>
 

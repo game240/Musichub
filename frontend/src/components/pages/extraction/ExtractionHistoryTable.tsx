@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink, Music, AlertCircle, Clock, Calendar, Pencil, Trash2, X } from 'lucide-react';
+import { ExternalLink, Music, AlertCircle, Clock, Calendar, Pencil, Trash2 } from 'lucide-react';
 import type { ExtractionJobDto } from '../../../types/extraction';
 import { ExtractionStatusBadge } from './ExtractionStatusBadge';
 import { Tooltip } from '../../atoms/Tooltip';
@@ -16,12 +16,10 @@ export interface ExtractionHistoryTableProps {
   onToggleSelectAll: () => void;
   onBatchEdit: () => void;
   isBatchLoading?: boolean;
-  onClearSelection: () => void;
   onGoToLibrary: () => void;
   onEditMetadata: (musicFileId: number) => void;
   onDeleteJob: (jobId: number) => void;
-  onClearHistory: () => void;
-  isClearing?: boolean;
+  onDeleteSelected?: () => void;
   deletingJobId?: number | null;
 }
 
@@ -34,12 +32,10 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
   onToggleSelectAll,
   onBatchEdit,
   isBatchLoading = false,
-  onClearSelection,
   onGoToLibrary,
   onEditMetadata,
   onDeleteJob,
-  onClearHistory,
-  isClearing = false,
+  onDeleteSelected,
   deletingJobId = null,
 }) => {
   if (jobs.length === 0) {
@@ -56,10 +52,6 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
     );
   }
 
-  const hasFinishedJobs = jobs.some((j) =>
-    ['COMPLETED', 'FAILED', 'CANCELLED'].includes(j.status)
-  );
-
   const selectableJobs = jobs.filter((j) => j.status === 'COMPLETED' && j.musicFileId !== null);
   const isAllSelected =
     selectableJobs.length > 0 && selectableJobs.every((j) => selectedJobIds.has(j.id));
@@ -71,12 +63,17 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
   const formatDate = (isoString: string) => {
     try {
       const date = new Date(isoString);
-      return date.toLocaleString('ko-KR', {
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+
+      const hours = date.getHours();
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const period = hours >= 12 ? '오후' : '오전';
+      const hour12 = hours % 12 === 0 ? 12 : hours % 12;
+      const formattedHour = String(hour12).padStart(2, '0');
+
+      return `${year}-${month}-${day} ${period} ${formattedHour}:${minutes}`;
     } catch {
       return isoString;
     }
@@ -84,9 +81,9 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
 
   return (
     <div className="bg-[#0f1011] border border-white/[0.08] rounded-2xl overflow-hidden shadow-xl backdrop-blur-xl">
-      {/* Table Card Header with Fixed Minimum Height */}
-      <div className="px-5 py-3.5 sm:py-4 border-b border-white/[0.06] flex items-center justify-between min-h-[58px]">
-        <div className="flex items-center gap-2 min-w-0">
+      {/* Table Card Header with Fixed Height */}
+      <div className="px-5 border-b border-white/[0.06] flex items-center justify-between h-[60px] min-h-[60px]">
+        <div className="h-8 flex items-center gap-2 min-w-0">
           <Clock className="w-4 h-4 text-neutral-400 shrink-0" />
           <h3 className="text-xs font-semibold text-neutral-200 shrink-0">추출 작업 히스토리</h3>
           <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-white/[0.05] text-neutral-400 border border-white/[0.06] shrink-0">
@@ -99,8 +96,8 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
           )}
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          {isSelectionMode ? (
+        <div className="h-8 flex items-center gap-2 shrink-0">
+          {isSelectionMode && (
             <>
               <button
                 type="button"
@@ -115,27 +112,19 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                 )}
                 <span>선택 음원 정보 일괄 수정</span>
               </button>
-              <button
-                type="button"
-                onClick={onClearSelection}
-                className="h-8 inline-flex items-center gap-1 px-2.5 rounded-lg text-xs text-neutral-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] transition-colors cursor-pointer"
-              >
-                <X className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">선택 해제</span>
-              </button>
+              {onDeleteSelected ? (
+                <button
+                  type="button"
+                  onClick={onDeleteSelected}
+                  className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg text-[11px] font-medium text-neutral-400 hover:text-red-300 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-colors cursor-pointer"
+                  title="선택한 추출 기록 삭제 (보관함의 음원은 유지됩니다)"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>선택 항목 삭제</span>
+                </button>
+              ) : null}
             </>
-          ) : hasFinishedJobs ? (
-            <button
-              type="button"
-              onClick={onClearHistory}
-              disabled={isClearing}
-              className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg text-[11px] font-medium text-neutral-400 hover:text-red-300 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-colors cursor-pointer disabled:opacity-50"
-              title="완료 및 종료된 추출 내역 모두 삭제 (보관함의 음원은 유지됩니다)"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>기록 전체 삭제</span>
-            </button>
-          ) : null}
+          )}
         </div>
       </div>
 
@@ -181,7 +170,7 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
               </th>
               <th className="py-3 px-4 w-auto">추출 음원 정보</th>
               <th className="py-3 px-4 w-32 sm:w-36">상태</th>
-              <th className="py-3 px-4 w-36 sm:w-40">요청 일시</th>
+              <th className="py-3 px-4 w-44 sm:w-48">추출 날짜</th>
               <th className="py-3 px-4 w-40 sm:w-44 text-right">관리</th>
             </tr>
           </thead>
@@ -195,37 +184,40 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
               const isFocused = focusedJobId === job.id;
 
               return (
-                <tr
+                <Tooltip
                   key={job.id}
-                  onClick={(e) => {
-                    const target = e.target as HTMLElement;
-                    if (
-                      target.closest('a') ||
-                      target.closest('button') ||
-                      target.closest('input')
-                    ) {
-                      return;
-                    }
-                    if (onFocusJob) {
-                      onFocusJob(job.id);
-                    }
-                  }}
-                  className={cn(
-                    'transition-colors duration-150 group cursor-pointer relative',
-                    isSelected && isFocused
-                      ? 'bg-[#5e6ad2]/[0.12] hover:bg-[#5e6ad2]/[0.16]'
-                      : isSelected
-                      ? 'bg-[#5e6ad2]/[0.08] hover:bg-[#5e6ad2]/[0.12]'
-                      : isFocused
-                      ? 'bg-[#5e6ad2]/[0.05] hover:bg-[#5e6ad2]/[0.09]'
-                      : 'hover:bg-white/[0.02]',
-                  )}
-                  title={
+                  content={
                     isFocused
                       ? '현재 상단에 상태가 표시 중인 곡입니다'
                       : '클릭하여 상단에서 진행 상태 확인'
                   }
+                  side="top"
                 >
+                  <tr
+                    onClick={(e) => {
+                      const target = e.target as HTMLElement;
+                      if (
+                        target.closest('a') ||
+                        target.closest('button') ||
+                        target.closest('input')
+                      ) {
+                        return;
+                      }
+                      if (onFocusJob) {
+                        onFocusJob(job.id);
+                      }
+                    }}
+                    className={cn(
+                      'transition-colors duration-150 group cursor-pointer relative',
+                      isSelected && isFocused
+                        ? 'bg-[#5e6ad2]/[0.12] hover:bg-[#5e6ad2]/[0.16]'
+                        : isSelected
+                        ? 'bg-[#5e6ad2]/[0.08] hover:bg-[#5e6ad2]/[0.12]'
+                        : isFocused
+                        ? 'bg-[#5e6ad2]/[0.05] hover:bg-[#5e6ad2]/[0.09]'
+                        : 'hover:bg-white/[0.02]',
+                    )}
+                  >
                   {/* Column 1: Checkbox only column */}
                   <td
                     className={cn(
@@ -326,7 +318,7 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                   </td>
 
                   {/* Column 4: Requested At */}
-                  <td className="py-3 px-4 w-36 sm:w-40 text-neutral-400 text-[11px] font-mono whitespace-nowrap">
+                  <td className="py-3 px-4 w-44 sm:w-48 text-neutral-400 text-[11px] font-mono whitespace-nowrap">
                     <div className="flex items-center gap-1.5">
                       <Calendar className="w-3 h-3 text-neutral-500 shrink-0" />
                       <span>{formatDate(job.createdAt)}</span>
@@ -362,7 +354,7 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                           <span>듣기</span>
                         </button>
 
-                        <Tooltip content="기록 삭제 (음원은 보관함에 안전하게 유지됩니다)">
+                        <Tooltip content="기록 삭제">
                           <button
                             type="button"
                             onClick={(e) => {
@@ -371,7 +363,6 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                             }}
                             disabled={isDeletingThis}
                             className="p-1 rounded-lg text-neutral-500 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-colors cursor-pointer disabled:opacity-50"
-                            title="기록 삭제"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -399,7 +390,8 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                     )}
                   </td>
                 </tr>
-              );
+              </Tooltip>
+            );
             })}
           </tbody>
         </table>

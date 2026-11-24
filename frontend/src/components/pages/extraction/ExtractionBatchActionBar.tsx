@@ -65,7 +65,7 @@ export const ExtractionBatchActionBar: React.FC<ExtractionBatchActionBarProps> =
           ) : (
             <>
               <Pencil className="w-3.5 h-3.5" />
-              <span className="whitespace-nowrap">음원 정보 일괄 수정</span>
+              <span className="whitespace-nowrap">일괄 수정</span>
             </>
           )}
         </button>
