@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ExternalLink, Music, AlertCircle, Clock, Calendar, Pencil, Trash2, Download } from 'lucide-react';
+import { ExternalLink, Music, AlertCircle, Clock, Calendar, Pencil, ListX, Download } from 'lucide-react';
 import type { ExtractionJobDto } from '../../../types/extraction';
 import { ExtractionStatusBadge } from './ExtractionStatusBadge';
 import { Tooltip } from '../../atoms/Tooltip';
@@ -121,10 +121,10 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                   type="button"
                   onClick={onDeleteSelected}
                   className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg text-[11px] font-medium text-neutral-400 hover:text-red-300 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-colors cursor-pointer"
-                  title="선택한 추출 기록 삭제 (보관함의 음원은 유지됩니다)"
+                  title="선택한 항목 목록에서 제거 (보관함의 음원은 유지됩니다)"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>선택 항목 삭제</span>
+                  <ListX className="w-3.5 h-3.5" />
+                  <span>선택 항목 제거</span>
                 </button>
               ) : null}
             </>
@@ -383,7 +383,7 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                           </button>
                         </Tooltip>
 
-                        <Tooltip content="기록 삭제">
+                        <Tooltip content="목록에서 제거">
                           <button
                             type="button"
                             onClick={(e) => {
@@ -392,15 +392,15 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                             }}
                             disabled={isDeletingThis}
                             className="p-1.5 text-neutral-400 hover:text-red-400 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer disabled:opacity-50"
-                            title="기록 삭제"
+                            title="목록에서 제거"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <ListX className="w-4 h-4" />
                           </button>
                         </Tooltip>
                       </div>
                     ) : isFinished ? (
                       <div className="flex items-center justify-end">
-                        <Tooltip content="기록 삭제">
+                        <Tooltip content="목록에서 제거">
                           <button
                             type="button"
                             onClick={(e) => {
@@ -409,9 +409,9 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                             }}
                             disabled={isDeletingThis}
                             className="p-1.5 text-neutral-400 hover:text-red-400 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer disabled:opacity-50"
-                            title="기록 삭제"
+                            title="목록에서 제거"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <ListX className="w-4 h-4" />
                           </button>
                         </Tooltip>
                       </div>

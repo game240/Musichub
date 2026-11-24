@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pencil, Trash2, X, Download } from 'lucide-react';
+import { Pencil, ListX, X, Download } from 'lucide-react';
 import { Spinner } from '../../atoms/Spinner';
 import { Tooltip } from '../../atoms/Tooltip';
 import { cn } from '../../../utils/cn';
@@ -111,15 +111,15 @@ export const ExtractionBatchActionBar: React.FC<ExtractionBatchActionBarProps> =
 
       {/* Action: Batch Delete Selected History Records */}
       {onDeleteSelected ? (
-        <Tooltip content="선택한 추출 기록 삭제 (보관함 음원은 유지)" side="top">
+        <Tooltip content="선택한 항목 목록에서 제거 (보관함 음원은 유지)" side="top">
           <button
             type="button"
             onClick={onDeleteSelected}
             disabled={isLoading || isDownloading}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 transition-colors cursor-pointer disabled:opacity-50"
           >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline whitespace-nowrap">기록 삭제</span>
+            <ListX className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline whitespace-nowrap">목록에서 제거</span>
           </button>
         </Tooltip>
       ) : null}

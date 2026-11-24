@@ -278,7 +278,7 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
 
     registerPendingDeletion(
       key,
-      `"${displayTitle}" 추출 기록이 삭제되었습니다.`,
+      `"${displayTitle}" 항목이 목록에서 제거되었습니다.`,
       async () => {
         await extractionApi.deleteExtraction(jobId);
       },
@@ -289,7 +289,7 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
             (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
         });
-        addToast(`"${displayTitle}" 삭제가 취소되었습니다.`, 'info');
+        addToast(`"${displayTitle}" 제거가 취소되었습니다.`, 'info');
       }
     );
   };
@@ -313,7 +313,7 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
     const key = `batch-${Date.now()}`;
     registerPendingDeletion(
       key,
-      `${targetJobs.length}건의 추출 기록이 삭제되었습니다.`,
+      `${targetJobs.length}건의 항목이 목록에서 제거되었습니다.`,
       async () => {
         await Promise.all(targetJobs.map((j) => extractionApi.deleteExtraction(j.id)));
       },
@@ -325,7 +325,7 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
             (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
         });
-        addToast(`${targetJobs.length}건의 삭제가 취소되었습니다.`, 'info');
+        addToast(`${targetJobs.length}건의 제거가 취소되었습니다.`, 'info');
       }
     );
   };
