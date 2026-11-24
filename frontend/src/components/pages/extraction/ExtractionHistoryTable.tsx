@@ -173,7 +173,7 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
               <th className="py-3 px-4 w-auto">추출 음원 정보</th>
               <th className="py-3 px-4 w-32 sm:w-36">상태</th>
               <th className="py-3 px-4 w-44 sm:w-48">추출 날짜</th>
-              <th className="py-3 px-4 w-36 sm:w-40 text-right"></th>
+              <th className="py-3 px-4 w-32 sm:w-36 text-right"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/[0.04]">
@@ -328,11 +328,11 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                   </td>
 
                   {/* Column 5: Action Buttons */}
-                  <td className="py-3 px-4 w-36 sm:w-40 text-right whitespace-nowrap">
+                  <td className="py-3 px-4 w-32 sm:w-36 text-right whitespace-nowrap">
                     {hasMusicFile ? (
-                      <div className="flex items-center justify-end gap-1.5">
+                      <div className="flex items-center justify-end gap-1">
                         {onDownloadTrack && (
-                          <Tooltip content="음원 파일 다운로드">
+                          <Tooltip content="음원 다운로드">
                             <button
                               type="button"
                               onClick={(e) => {
@@ -340,29 +340,29 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                                 onDownloadTrack(job.musicFileId!, displayTitle);
                               }}
                               disabled={downloadingMusicFileId === job.musicFileId}
-                              className="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-white/[0.08] border border-transparent hover:border-white/[0.08] transition-colors cursor-pointer disabled:opacity-50"
+                              className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer disabled:opacity-50"
                               title="음원 다운로드"
                             >
                               {downloadingMusicFileId === job.musicFileId ? (
-                                <Spinner size="sm" className="w-3.5 h-3.5 text-[#8590ea]" />
+                                <Spinner size="sm" className="w-4 h-4 text-[#8590ea]" />
                               ) : (
-                                <Download className="w-3.5 h-3.5" />
+                                <Download className="w-4 h-4" />
                               )}
                             </button>
                           </Tooltip>
                         )}
 
-                        <Tooltip content="메타데이터 수정">
+                        <Tooltip content="정보 수정">
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               onEditMetadata(job.musicFileId!);
                             }}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-neutral-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/[0.06] transition-colors cursor-pointer"
+                            className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"
+                            title="정보 수정"
                           >
-                            <Pencil className="w-3.5 h-3.5 text-[#8590ea]" />
-                            <span className="hidden sm:inline">수정</span>
+                            <Pencil className="w-4 h-4" />
                           </button>
                         </Tooltip>
 
@@ -374,9 +374,10 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                               onDeleteJob(job.id);
                             }}
                             disabled={isDeletingThis}
-                            className="p-1 rounded-lg text-neutral-500 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-colors cursor-pointer disabled:opacity-50"
+                            className="p-1.5 text-neutral-400 hover:text-red-400 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer disabled:opacity-50"
+                            title="기록 삭제"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </Tooltip>
                       </div>
@@ -390,10 +391,10 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                               onDeleteJob(job.id);
                             }}
                             disabled={isDeletingThis}
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium text-neutral-400 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-colors cursor-pointer disabled:opacity-50"
+                            className="p-1.5 text-neutral-400 hover:text-red-400 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer disabled:opacity-50"
+                            title="기록 삭제"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>삭제</span>
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </Tooltip>
                       </div>
