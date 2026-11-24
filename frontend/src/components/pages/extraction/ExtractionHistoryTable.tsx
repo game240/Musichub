@@ -10,6 +10,8 @@ import { cn } from '../../../utils/cn';
 export interface ExtractionHistoryTableProps {
   jobs: ExtractionJobDto[];
   selectedJobIds: Set<number>;
+  focusedJobId?: number | null;
+  onFocusJob?: (jobId: number) => void;
   onToggleSelectJob: (jobId: number) => void;
   onToggleSelectAll: () => void;
   onBatchEdit: () => void;
@@ -26,6 +28,8 @@ export interface ExtractionHistoryTableProps {
 export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
   jobs,
   selectedJobIds,
+  focusedJobId = null,
+  onFocusJob,
   onToggleSelectJob,
   onToggleSelectAll,
   onBatchEdit,
@@ -150,6 +154,7 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                             ? 'opacity-100 z-10 pointer-events-auto'
                             : 'opacity-0 group-hover/head:opacity-100 z-10 pointer-events-none group-hover/head:pointer-events-auto',
                         )}
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <Checkbox
                           checked={isAllSelected}
@@ -187,6 +192,7 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
               const isFinished = ['COMPLETED', 'FAILED', 'CANCELLED'].includes(job.status);
               const isDeletingThis = deletingJobId === job.id;
               const isSelected = selectedJobIds.has(job.id);
+              const isFocused = focusedJobId === job.id;
 
               return (
                 <tr
@@ -200,19 +206,45 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                     ) {
                       return;
                     }
-                    if (hasMusicFile) {
-                      onToggleSelectJob(job.id);
+                    if (onFocusJob) {
+                      onFocusJob(job.id);
                     }
                   }}
                   className={cn(
-                    'transition-colors duration-150 group',
-                    hasMusicFile && 'cursor-pointer',
-                    isSelected
+                    'transition-colors duration-150 group cursor-pointer relative',
+                    isSelected && isFocused
+                      ? 'bg-[#5e6ad2]/[0.12] hover:bg-[#5e6ad2]/[0.16]'
+                      : isSelected
                       ? 'bg-[#5e6ad2]/[0.08] hover:bg-[#5e6ad2]/[0.12]'
+                      : isFocused
+                      ? 'bg-[#5e6ad2]/[0.05] hover:bg-[#5e6ad2]/[0.09]'
                       : 'hover:bg-white/[0.02]',
                   )}
+                  title={
+                    isFocused
+                      ? '현재 상단에 상태가 표시 중인 곡입니다'
+                      : '클릭하여 상단에서 진행 상태 확인'
+                  }
                 >
-                  <td className="w-12 py-3 px-2 text-center select-none">
+                  {/* Column 1: Checkbox only column */}
+                  <td
+                    className={cn(
+                      'w-12 py-3 px-2 text-center select-none relative',
+                      hasMusicFile && 'cursor-pointer',
+                    )}
+                    onClick={(e) => {
+                      if (hasMusicFile) {
+                        e.stopPropagation();
+                        onToggleSelectJob(job.id);
+                      }
+                    }}
+                    title={hasMusicFile ? (isSelected ? '선택 해제' : '선택') : undefined}
+                  >
+                    {/* Left active indicator line for the currently focused/inspected job */}
+                    {isFocused && (
+                      <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[#5e6ad2] rounded-r z-20 shadow-sm shadow-[#5e6ad2]/50" />
+                    )}
+
                     <div className="w-7 h-7 mx-auto relative flex items-center justify-center">
                       {hasMusicFile ? (
                         <>
@@ -223,6 +255,7 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                                 ? 'opacity-100 z-10 pointer-events-auto'
                                 : 'opacity-0 group-hover:opacity-100 z-10 pointer-events-none group-hover:pointer-events-auto',
                             )}
+                            onClick={(e) => e.stopPropagation()}
                           >
                             <Checkbox
                               checked={isSelected}
@@ -246,6 +279,8 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                       )}
                     </div>
                   </td>
+
+                  {/* Column 2: Song Info */}
                   <td className="py-3 px-4 w-auto overflow-hidden">
                     <div className="flex items-start gap-2.5 min-w-0">
                       <div className="p-1.5 rounded-lg bg-white/[0.04] text-neutral-400 shrink-0 mt-0.5">
@@ -272,6 +307,8 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                       </div>
                     </div>
                   </td>
+
+                  {/* Column 3: Status Badge */}
                   <td className="py-3 px-4 w-32 sm:w-36">
                     <div className="flex items-center gap-1.5">
                       <ExtractionStatusBadge status={job.status} />
@@ -287,12 +324,16 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                       ) : null}
                     </div>
                   </td>
+
+                  {/* Column 4: Requested At */}
                   <td className="py-3 px-4 w-36 sm:w-40 text-neutral-400 text-[11px] font-mono whitespace-nowrap">
                     <div className="flex items-center gap-1.5">
                       <Calendar className="w-3 h-3 text-neutral-500 shrink-0" />
                       <span>{formatDate(job.createdAt)}</span>
                     </div>
                   </td>
+
+                  {/* Column 5: Action Buttons */}
                   <td className="py-3 px-4 w-40 sm:w-44 text-right whitespace-nowrap">
                     {hasMusicFile ? (
                       <div className="flex items-center justify-end gap-1.5">
@@ -305,7 +346,7 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                             }}
                             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-neutral-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/[0.06] transition-colors cursor-pointer"
                           >
-                            <Pencil className="w-3 h-3 text-[#8590ea]" />
+                            <Pencil className="w-3.5 h-3.5 text-[#8590ea]" />
                             <span className="hidden sm:inline">수정</span>
                           </button>
                         </Tooltip>

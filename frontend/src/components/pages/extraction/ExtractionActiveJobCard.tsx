@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, DownloadCloud, RefreshCw, UploadCloud, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, DownloadCloud, RefreshCw, UploadCloud, CheckCircle2, XCircle, X } from 'lucide-react';
 import type { ExtractionJobDto, ExtractionJobStatus } from '../../../types/extraction';
 import { Spinner } from '../../atoms/Spinner';
 
 export interface ExtractionActiveJobCardProps {
   job: ExtractionJobDto;
   onCancel?: (jobId: number) => void;
+  onClose?: () => void;
   isCancelling?: boolean;
+  totalActiveCount?: number;
 }
 
 const STEPS: Array<{ key: ExtractionJobStatus; label: string; icon: React.FC<{ className?: string }> }> = [
@@ -38,7 +40,9 @@ const getStepIndex = (status: ExtractionJobStatus): number => {
 export const ExtractionActiveJobCard: React.FC<ExtractionActiveJobCardProps> = ({
   job,
   onCancel,
+  onClose,
   isCancelling = false,
+  totalActiveCount = 1,
 }) => {
   const currentStep = getStepIndex(job.status);
   const [progressPercent, setProgressPercent] = useState(1);
@@ -127,11 +131,22 @@ export const ExtractionActiveJobCard: React.FC<ExtractionActiveJobCardProps> = (
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-neutral-100">
-              현재 음원 추출 진행 중 (#{job.id})
+              {job.status === 'COMPLETED'
+                ? `추출 완료 (#${job.id})`
+                : job.status === 'FAILED'
+                ? `추출 실패 (#${job.id})`
+                : job.status === 'CANCELLED'
+                ? `추출 취소됨 (#${job.id})`
+                : `음원 추출 진행 중 (#${job.id})`}
             </span>
+            {totalActiveCount > 1 ? (
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#5e6ad2]/20 text-[#8590ea] border border-[#5e6ad2]/30">
+                총 {totalActiveCount}개 작업 진행 중 · 하단 목록 클릭으로 전환 가능
+              </span>
+            ) : null}
           </div>
           <p className="text-[11px] text-neutral-400 mt-0.5 truncate max-w-md">
-            {job.sourceUrl}
+            {job.musicFileTitle || job.sourceUrl}
           </p>
         </div>
 
@@ -159,6 +174,15 @@ export const ExtractionActiveJobCard: React.FC<ExtractionActiveJobCardProps> = (
                   <span>추출 중단</span>
                 </>
               )}
+            </button>
+          ) : onClose ? (
+            <button
+              type="button"
+              onClick={onClose}
+              title="상태 카드 닫기"
+              className="p-1 rounded-lg text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.06] transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
             </button>
           ) : null}
         </div>

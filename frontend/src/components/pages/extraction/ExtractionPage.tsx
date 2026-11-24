@@ -33,6 +33,7 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
   const queryClient = useQueryClient();
 
   const [editingTrack, setEditingTrack] = useState<MusicFileDto | null>(null);
+  const [focusedJobId, setFocusedJobId] = useState<number | null>(null);
   const prevActiveJobIdsRef = useRef<Set<number>>(new Set());
 
   // Batch selection states
@@ -81,10 +82,15 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
     refetchOnWindowFocus: false,
   });
 
-  // 2. 활성 작업 감지
-  const activeJob = jobs.find((j) =>
+  // 2. 활성 작업 및 카드에 표시할 작업 감지
+  const activeJobs = jobs.filter((j) =>
     ['PENDING', 'DOWNLOADING', 'CONVERTING', 'UPLOADING'].includes(j.status)
   );
+
+  const displayedJob =
+    (focusedJobId ? jobs.find((j) => j.id === focusedJobId) : null) ||
+    activeJobs[0] ||
+    null;
 
   // 3. 작업 완료 감지 시 토스트 알림 및 보관함 캐시 무효화
   useEffect(() => {
@@ -165,6 +171,7 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
     mutationFn: (sourceUrl: string) => extractionApi.requestExtraction(sourceUrl),
     onSuccess: (newJob) => {
       addToast('음원 추출 작업이 등록되었습니다. 잠시 기다려주세요.', 'info');
+      setFocusedJobId(newJob.id);
       queryClient.setQueryData<ExtractionJobDto[]>(['extractions'], (old = []) => [
         newJob,
         ...old,
@@ -459,11 +466,14 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
           isLoading={createJobMutation.isPending}
         />
 
-        {/* 2. Active Job Realtime Progress Indicator */}
-        {activeJob ? (
+        {/* 2. Active / Inspected Job Realtime Progress Indicator */}
+        {displayedJob ? (
           <ExtractionActiveJobCard
-            job={activeJob}
+            key={displayedJob.id}
+            job={displayedJob}
+            totalActiveCount={activeJobs.length}
             onCancel={handleCancelExtraction}
+            onClose={() => setFocusedJobId(null)}
             isCancelling={cancelJobMutation.isPending}
           />
         ) : null}
@@ -472,6 +482,8 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
         <ExtractionHistoryTable
           jobs={jobs}
           selectedJobIds={selectedJobIds}
+          focusedJobId={displayedJob?.id ?? null}
+          onFocusJob={(jobId) => setFocusedJobId((prev) => (prev === jobId ? null : jobId))}
           onToggleSelectJob={toggleSelectJob}
           onToggleSelectAll={toggleSelectAll}
           onBatchEdit={handleOpenBatchEdit}
