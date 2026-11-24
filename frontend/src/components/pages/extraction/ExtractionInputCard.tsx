@@ -72,40 +72,60 @@ export const ExtractionInputCard: React.FC<ExtractionInputCardProps> = ({ onSubm
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <div className="relative flex items-center">
-          <div className="absolute left-3.5 text-neutral-400 pointer-events-none">
-            <YoutubeIcon className="w-4 h-4 text-neutral-500" />
-          </div>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          <div className="relative flex-1 flex items-center min-w-0">
+            <div className="absolute left-3.5 text-neutral-400 pointer-events-none">
+              <YoutubeIcon className="w-4 h-4 text-neutral-500" />
+            </div>
 
-          <input
-            type="url"
-            value={url}
-            onChange={(e) => {
-              setUrl(e.target.value);
-              if (errorMessage) setErrorMessage(null);
-            }}
-            placeholder="https://www.youtube.com/watch?v=... 또는 https://youtu.be/..."
-            disabled={isLoading}
-            className={`w-full bg-white/[0.03] border rounded-xl pl-10 pr-24 py-2.5 text-xs text-neutral-100 placeholder-neutral-500 transition-colors outline-none focus:ring-1 ${
-              isInvalid
-                ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20'
-                : 'border-white/[0.1] focus:border-[#5e6ad2] focus:ring-[#5e6ad2]/20'
-            }`}
-          />
-
-          <div className="absolute right-2 flex items-center gap-1">
-            <button
-              type="button"
-              onClick={handlePaste}
+            <input
+              type="url"
+              value={url}
+              onChange={(e) => {
+                setUrl(e.target.value);
+                if (errorMessage) setErrorMessage(null);
+              }}
+              placeholder="https://www.youtube.com/watch?v=... 또는 https://youtu.be/..."
               disabled={isLoading}
-              title="클립보드에서 붙여넣기"
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-neutral-400 hover:text-white bg-white/[0.05] hover:bg-white/[0.1] transition-colors cursor-pointer disabled:opacity-50"
-            >
-              <Clipboard className="w-3 h-3" />
-              <span>붙여넣기</span>
-            </button>
+              className={`w-full bg-white/[0.03] border rounded-xl pl-10 pr-20 sm:pr-24 py-2.5 text-xs text-neutral-100 placeholder-neutral-500 transition-colors outline-none focus:ring-1 ${
+                isInvalid
+                  ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20'
+                  : 'border-white/[0.1] focus:border-[#5e6ad2] focus:ring-[#5e6ad2]/20'
+              }`}
+            />
+
+            <div className="absolute right-2 flex items-center gap-1">
+              <button
+                type="button"
+                onClick={handlePaste}
+                disabled={isLoading}
+                title="클립보드에서 붙여넣기"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-neutral-400 hover:text-white bg-white/[0.05] hover:bg-white/[0.1] transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <Clipboard className="w-3 h-3" />
+                <span>붙여넣기</span>
+              </button>
+            </div>
           </div>
+
+          <Button
+            type="submit"
+            disabled={isLoading || !url.trim() || isInvalid}
+            className="h-[38px] rounded-xl px-4 sm:px-5 text-xs font-semibold shrink-0 cursor-pointer whitespace-nowrap"
+          >
+            {isLoading ? (
+              <span className="flex items-center gap-1.5 sm:gap-2">
+                <Spinner size="sm" />
+                <span>추출 요청 중...</span>
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 sm:gap-2">
+                <Download className="w-4 h-4" />
+                <span>음원 추출</span>
+              </span>
+            )}
+          </Button>
         </div>
 
         {errorMessage ? (
@@ -114,26 +134,6 @@ export const ExtractionInputCard: React.FC<ExtractionInputCardProps> = ({ onSubm
             <span>{errorMessage}</span>
           </div>
         ) : null}
-
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 pt-1">  
-          <Button
-            type="submit"
-            disabled={isLoading || !url.trim() || isInvalid}
-            className="w-full sm:w-auto px-5 py-2 text-xs font-semibold shrink-0 cursor-pointer"
-          >
-            {isLoading ? (
-              <span className="flex items-center gap-2">
-                <Spinner size="sm" />
-                <span>추출 요청 중...</span>
-              </span>
-            ) : (
-              <span className="flex items-center gap-2">
-                <Download className="w-4 h-4" />
-                <span>음원 추출</span>
-              </span>
-            )}
-          </Button>
-        </div>
       </form>
     </div>
   );
