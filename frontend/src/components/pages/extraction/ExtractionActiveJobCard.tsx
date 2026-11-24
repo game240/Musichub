@@ -141,7 +141,7 @@ export const ExtractionActiveJobCard: React.FC<ExtractionActiveJobCardProps> = (
             </span>
             {totalActiveCount > 1 ? (
               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#5e6ad2]/20 text-[#8590ea] border border-[#5e6ad2]/30">
-                총 {totalActiveCount}개 작업 진행 중 · 하단 목록 클릭으로 전환 가능
+                총 {totalActiveCount}개 작업 진행 중
               </span>
             ) : null}
           </div>
