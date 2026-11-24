@@ -11,7 +11,8 @@ enum class ExtractionJobStatus {
     CONVERTING,
     UPLOADING,
     COMPLETED,
-    FAILED
+    FAILED,
+    CANCELLED
 }
 
 @Entity
@@ -88,6 +89,13 @@ class ExtractionJob(
             this.status = ExtractionJobStatus.FAILED
             this.completedAt = Instant.now()
         }
+        this.updatedAt = Instant.now()
+    }
+
+    fun markCancelled() {
+        this.status = ExtractionJobStatus.CANCELLED
+        this.errorMessage = "사용자에 의해 취소되었습니다."
+        this.completedAt = Instant.now()
         this.updatedAt = Instant.now()
     }
 }

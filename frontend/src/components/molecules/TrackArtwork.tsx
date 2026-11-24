@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Music2 } from 'lucide-react';
-import { musicApi } from '../../../../api/musicApi';
+import { musicApi } from '../../api/musicApi';
 
 export interface TrackArtworkProps {
   trackId: number;

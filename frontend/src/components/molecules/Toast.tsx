@@ -46,6 +46,19 @@ export const Toast: React.FC<ToastProps> = ({ toast, onClose }) => {
         </span>
       </div>
 
+      {toast.action ? (
+        <button
+          type="button"
+          onClick={() => {
+            toast.action?.onClick();
+            onClose(toast.id);
+          }}
+          className="px-2.5 py-1 text-xs font-semibold text-[#8590ea] hover:text-white bg-[#5e6ad2]/20 hover:bg-[#5e6ad2]/35 border border-[#5e6ad2]/30 rounded-lg transition-colors cursor-pointer shrink-0"
+        >
+          {toast.action.label}
+        </button>
+      ) : null}
+
       <button
         type="button"
         onClick={() => onClose(toast.id)}

@@ -2,6 +2,7 @@ package com.musichub.backend.domain.extraction
 
 import com.musichub.backend.global.security.UserPrincipal
 import org.springframework.http.ResponseEntity
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
 import java.time.Instant
@@ -17,6 +18,9 @@ data class ExtractionJobDto(
     val attempts: Int,
     val errorMessage: String?,
     val musicFileId: Long?,
+    val musicFileTitle: String?,
+    val musicFileArtist: String?,
+    val musicFileDurationMs: Long?,
     val startedAt: Instant?,
     val completedAt: Instant?,
     val createdAt: Instant
@@ -29,6 +33,9 @@ data class ExtractionJobDto(
             attempts = entity.attempts,
             errorMessage = entity.errorMessage,
             musicFileId = entity.musicFile?.id,
+            musicFileTitle = entity.musicFile?.title,
+            musicFileArtist = entity.musicFile?.artist,
+            musicFileDurationMs = entity.musicFile?.durationMs,
             startedAt = entity.startedAt,
             completedAt = entity.completedAt,
             createdAt = entity.createdAt
@@ -38,17 +45,33 @@ data class ExtractionJobDto(
 
 @RestController
 @RequestMapping("/api/extractions")
+@PreAuthorize("hasAnyRole('ADMIN', 'DOWNLOADER')")
 class ExtractionController(
     private val extractionService: ExtractionService,
     private val extractionJobRepository: ExtractionJobRepository
 ) {
+
+    companion object {
+        private val YOUTUBE_URL_REGEX = Regex(
+            "^(https?://)?(www\\.|m\\.|music\\.)?(youtube\\.com/(watch\\?v=|shorts/|embed/)|youtu\\.be/)[a-zA-Z0-9_-]+.*$",
+            RegexOption.IGNORE_CASE
+        )
+    }
 
     @PostMapping
     fun requestExtraction(
         @AuthenticationPrincipal user: UserPrincipal,
         @RequestBody request: ExtractionRequest
     ): ResponseEntity<ExtractionJobDto> {
-        val job = extractionService.createJob(user.id, request.sourceUrl)
+        val trimmedUrl = request.sourceUrl.trim()
+        if (trimmedUrl.isBlank()) {
+            throw IllegalArgumentException("YouTube 영상 URL을 입력해주세요.")
+        }
+        if (!YOUTUBE_URL_REGEX.matches(trimmedUrl)) {
+            throw IllegalArgumentException("올바른 YouTube 영상 URL을 입력해주세요. (예: https://www.youtube.com/watch?v=...)")
+        }
+
+        val job = extractionService.createJob(user.id, trimmedUrl)
         return ResponseEntity.accepted().body(ExtractionJobDto.from(job))
     }
 
@@ -63,6 +86,15 @@ class ExtractionController(
         return ResponseEntity.ok(ExtractionJobDto.from(job))
     }
 
+    @PostMapping("/{id}/cancel")
+    fun cancelExtraction(
+        @AuthenticationPrincipal user: UserPrincipal,
+        @PathVariable id: Long
+    ): ResponseEntity<ExtractionJobDto> {
+        val job = extractionService.cancelJob(user.id, id)
+        return ResponseEntity.ok(ExtractionJobDto.from(job))
+    }
+
     @GetMapping
     fun listMyExtractions(
         @AuthenticationPrincipal user: UserPrincipal
@@ -70,5 +102,22 @@ class ExtractionController(
         val jobs = extractionJobRepository.findAllByUserIdOrderByCreatedAtDesc(user.id)
             .map { ExtractionJobDto.from(it) }
         return ResponseEntity.ok(jobs)
+    }
+
+    @DeleteMapping("/{id}")
+    fun deleteExtraction(
+        @AuthenticationPrincipal user: UserPrincipal,
+        @PathVariable id: Long
+    ): ResponseEntity<Void> {
+        extractionService.deleteJob(user.id, id)
+        return ResponseEntity.noContent().build()
+    }
+
+    @DeleteMapping
+    fun clearFinishedExtractions(
+        @AuthenticationPrincipal user: UserPrincipal
+    ): ResponseEntity<Map<String, Any>> {
+        val deletedCount = extractionService.clearFinishedJobs(user.id)
+        return ResponseEntity.ok(mapOf("deletedCount" to deletedCount))
     }
 }
