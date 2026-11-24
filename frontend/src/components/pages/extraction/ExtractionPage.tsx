@@ -8,6 +8,8 @@ import type { ExtractionJobDto } from '../../../types/extraction';
 import type { MusicFileDto } from '../../../types/music';
 import { useToastStore } from '../../../stores/toastStore';
 import { usePlayerStore } from '../../../stores/playerStore';
+import { triggerBrowserDownload } from '../../../utils/downloadFile';
+import { downloadTracksBatch } from '../../../utils/downloadBatch';
 import { ExtractionInputCard } from './ExtractionInputCard';
 import { ExtractionActiveJobCard } from './ExtractionActiveJobCard';
 import { ExtractionHistoryTable } from './ExtractionHistoryTable';
@@ -39,6 +41,11 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
   const [isFetchingBatchTracks, setIsFetchingBatchTracks] = useState(false);
   const [batchEditTracks, setBatchEditTracks] = useState<MusicFileDto[]>([]);
   const [isBatchEditModalOpen, setIsBatchEditModalOpen] = useState(false);
+
+  // Download states
+  const [downloadingMusicFileId, setDownloadingMusicFileId] = useState<number | null>(null);
+  const [isBatchDownloading, setIsBatchDownloading] = useState(false);
+  const [batchDownloadProgress, setBatchDownloadProgress] = useState<string | null>(null);
 
   // Pending deletions map for undo capability (keyed by action identifier)
   const pendingDeletionsRef = useRef<Map<string, PendingDeletion>>(new Map());
@@ -374,6 +381,47 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
     setIsBatchEditModalOpen(false);
   };
 
+  // 11. 단건 음원 다운로드
+  const handleDownloadTrack = async (musicFileId: number, title?: string) => {
+    try {
+      setDownloadingMusicFileId(musicFileId);
+      const { downloadUrl, fileName } = await musicApi.getDownloadUrl(musicFileId);
+      triggerBrowserDownload(downloadUrl, fileName);
+      addToast(`"${title || fileName}" 다운로드가 시작되었습니다.`, 'info');
+    } catch (err) {
+      console.error('Failed to download track:', err);
+      addToast('음원 파일 다운로드에 실패했습니다.', 'error');
+    } finally {
+      setDownloadingMusicFileId(null);
+    }
+  };
+
+  // 12. 선택한 음원 일괄 다운로드
+  const handleBatchDownload = async () => {
+    const targetJobs = jobs.filter(
+      (j) => selectedJobIds.has(j.id) && j.musicFileId !== null
+    );
+    if (targetJobs.length === 0 || isBatchDownloading) return;
+
+    setIsBatchDownloading(true);
+    setBatchDownloadProgress(`1/${targetJobs.length}`);
+    try {
+      const tracks = await Promise.all(
+        targetJobs.map((j) => musicApi.getMusicFile(j.musicFileId!))
+      );
+      await downloadTracksBatch(tracks, (done, total) => {
+        setBatchDownloadProgress(`${done}/${total}`);
+      });
+      addToast(`${tracks.length}개 음원 일괄 다운로드가 완료되었습니다.`, 'success');
+    } catch (err) {
+      console.error('Batch download failed:', err);
+      addToast('일괄 다운로드 중 오류가 발생했습니다.', 'error');
+    } finally {
+      setIsBatchDownloading(false);
+      setBatchDownloadProgress(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#08090a] text-neutral-100 flex flex-col">
       {/* Top Header */}
@@ -424,6 +472,8 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
             totalActiveCount={activeJobs.length}
             onCancel={handleCancelExtraction}
             onClose={() => setFocusedJobId(null)}
+            onDownload={handleDownloadTrack}
+            isDownloading={downloadingMusicFileId === displayedJob.musicFileId}
             isCancelling={cancelJobMutation.isPending}
           />
         ) : null}
@@ -441,6 +491,8 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
           onEditMetadata={handleOpenEditMetadata}
           onDeleteJob={handleDeleteJob}
           onDeleteSelected={handleDeleteSelectedJobs}
+          onDownloadTrack={handleDownloadTrack}
+          downloadingMusicFileId={downloadingMusicFileId}
         />
       </main>
 
@@ -449,6 +501,9 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
         isOpen={selectedJobIds.size > 0}
         selectedCount={selectedJobIds.size}
         isLoading={isFetchingBatchTracks}
+        isDownloading={isBatchDownloading}
+        downloadProgressText={batchDownloadProgress}
+        onDownloadSelected={handleBatchDownload}
         onEditMetadata={handleOpenBatchEdit}
         onDeleteSelected={handleDeleteSelectedJobs}
         onClearSelection={clearSelection}

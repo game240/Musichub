@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, DownloadCloud, RefreshCw, UploadCloud, CheckCircle2, XCircle, X } from 'lucide-react';
+import { Loader2, DownloadCloud, RefreshCw, UploadCloud, CheckCircle2, XCircle, X, Download } from 'lucide-react';
 import type { ExtractionJobDto, ExtractionJobStatus } from '../../../types/extraction';
 import { Spinner } from '../../atoms/Spinner';
 
@@ -7,6 +7,8 @@ export interface ExtractionActiveJobCardProps {
   job: ExtractionJobDto;
   onCancel?: (jobId: number) => void;
   onClose?: () => void;
+  onDownload?: (musicFileId: number, title?: string) => void;
+  isDownloading?: boolean;
   isCancelling?: boolean;
   totalActiveCount?: number;
 }
@@ -41,6 +43,8 @@ export const ExtractionActiveJobCard: React.FC<ExtractionActiveJobCardProps> = (
   job,
   onCancel,
   onClose,
+  onDownload,
+  isDownloading = false,
   isCancelling = false,
   totalActiveCount = 1,
 }) => {
@@ -154,6 +158,28 @@ export const ExtractionActiveJobCard: React.FC<ExtractionActiveJobCardProps> = (
           <span className="text-xs font-mono font-semibold text-[#8590ea]">
             {displayedPercent}%
           </span>
+
+          {job.status === 'COMPLETED' && job.musicFileId && onDownload ? (
+            <button
+              type="button"
+              onClick={() => onDownload(job.musicFileId!, job.musicFileTitle || undefined)}
+              disabled={isDownloading}
+              title="추출된 음원 파일 다운로드"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium text-white bg-[#5e6ad2] hover:bg-[#6f7cf4] shadow-sm shadow-[#5e6ad2]/20 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {isDownloading ? (
+                <>
+                  <Spinner size="sm" />
+                  <span>다운로드 중...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-3.5 h-3.5" />
+                  <span>음원 다운로드</span>
+                </>
+              )}
+            </button>
+          ) : null}
 
           {canCancel ? (
             <button

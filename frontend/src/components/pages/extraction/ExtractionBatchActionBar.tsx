@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pencil, Trash2, X } from 'lucide-react';
+import { Pencil, Trash2, X, Download } from 'lucide-react';
 import { Spinner } from '../../atoms/Spinner';
 import { Tooltip } from '../../atoms/Tooltip';
 import { cn } from '../../../utils/cn';
@@ -10,6 +10,9 @@ export interface ExtractionBatchActionBarProps {
   isLoading?: boolean;
   onEditMetadata: () => void;
   onDeleteSelected?: () => void;
+  onDownloadSelected?: () => void;
+  isDownloading?: boolean;
+  downloadProgressText?: string | null;
   onClearSelection: () => void;
 }
 
@@ -19,6 +22,9 @@ export const ExtractionBatchActionBar: React.FC<ExtractionBatchActionBarProps> =
   isLoading = false,
   onEditMetadata,
   onDeleteSelected,
+  onDownloadSelected,
+  isDownloading = false,
+  downloadProgressText = null,
   onClearSelection,
 }) => {
   const isVisible = isOpen && selectedCount > 0;
@@ -46,15 +52,47 @@ export const ExtractionBatchActionBar: React.FC<ExtractionBatchActionBarProps> =
         </span>
       </div>
 
+      {/* Action: Batch Download */}
+      {onDownloadSelected ? (
+        <Tooltip content={isDownloading ? '다운로드 진행 중' : '선택한 곡 일괄 다운로드'} side="top">
+          <button
+            type="button"
+            onClick={onDownloadSelected}
+            disabled={isDownloading || isLoading}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors',
+              'bg-[#5e6ad2] hover:bg-[#6f7cf4] text-white shadow-sm shadow-[#5e6ad2]/20 disabled:opacity-60 disabled:cursor-not-allowed',
+            )}
+          >
+            {isDownloading ? (
+              <>
+                <Spinner size="sm" />
+                <span className="text-[11px] whitespace-nowrap">
+                  {downloadProgressText ? `다운로드 (${downloadProgressText})` : '다운로드 중...'}
+                </span>
+              </>
+            ) : (
+              <>
+                <Download className="w-3.5 h-3.5" />
+                <span className="whitespace-nowrap">일괄 다운로드</span>
+              </>
+            )}
+          </button>
+        </Tooltip>
+      ) : null}
+
       {/* Action: Batch Edit Metadata */}
       <Tooltip content="선택한 곡 메타데이터 일괄 수정" side="top">
         <button
           type="button"
           onClick={onEditMetadata}
-          disabled={isLoading}
+          disabled={isLoading || isDownloading}
           className={cn(
             'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors',
-            'bg-[#5e6ad2] hover:bg-[#6f7cf4] text-white shadow-sm shadow-[#5e6ad2]/20 disabled:opacity-60 disabled:cursor-not-allowed',
+            onDownloadSelected
+              ? 'bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/[0.1]'
+              : 'bg-[#5e6ad2] hover:bg-[#6f7cf4] text-white shadow-sm shadow-[#5e6ad2]/20',
+            'disabled:opacity-60 disabled:cursor-not-allowed',
           )}
         >
           {isLoading ? (
@@ -77,7 +115,7 @@ export const ExtractionBatchActionBar: React.FC<ExtractionBatchActionBarProps> =
           <button
             type="button"
             onClick={onDeleteSelected}
-            disabled={isLoading}
+            disabled={isLoading || isDownloading}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 transition-colors cursor-pointer disabled:opacity-50"
           >
             <Trash2 className="w-3.5 h-3.5" />

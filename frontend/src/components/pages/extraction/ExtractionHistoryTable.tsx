@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink, Music, AlertCircle, Clock, Calendar, Pencil, Trash2 } from 'lucide-react';
+import { ExternalLink, Music, AlertCircle, Clock, Calendar, Pencil, Trash2, Download } from 'lucide-react';
 import type { ExtractionJobDto } from '../../../types/extraction';
 import { ExtractionStatusBadge } from './ExtractionStatusBadge';
 import { Tooltip } from '../../atoms/Tooltip';
@@ -19,6 +19,8 @@ export interface ExtractionHistoryTableProps {
   onEditMetadata: (musicFileId: number) => void;
   onDeleteJob: (jobId: number) => void;
   onDeleteSelected?: () => void;
+  onDownloadTrack?: (musicFileId: number, title?: string) => void;
+  downloadingMusicFileId?: number | null;
   deletingJobId?: number | null;
 }
 
@@ -34,6 +36,8 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
   onEditMetadata,
   onDeleteJob,
   onDeleteSelected,
+  onDownloadTrack,
+  downloadingMusicFileId = null,
   deletingJobId = null,
 }) => {
   if (jobs.length === 0) {
@@ -169,7 +173,7 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
               <th className="py-3 px-4 w-auto">추출 음원 정보</th>
               <th className="py-3 px-4 w-32 sm:w-36">상태</th>
               <th className="py-3 px-4 w-44 sm:w-48">추출 날짜</th>
-              <th className="py-3 px-4 w-32 sm:w-36 text-right"></th>
+              <th className="py-3 px-4 w-36 sm:w-40 text-right"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/[0.04]">
@@ -324,9 +328,30 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                   </td>
 
                   {/* Column 5: Action Buttons */}
-                  <td className="py-3 px-4 w-32 sm:w-36 text-right whitespace-nowrap">
+                  <td className="py-3 px-4 w-36 sm:w-40 text-right whitespace-nowrap">
                     {hasMusicFile ? (
                       <div className="flex items-center justify-end gap-1.5">
+                        {onDownloadTrack && (
+                          <Tooltip content="음원 파일 다운로드">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDownloadTrack(job.musicFileId!, displayTitle);
+                              }}
+                              disabled={downloadingMusicFileId === job.musicFileId}
+                              className="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-white/[0.08] border border-transparent hover:border-white/[0.08] transition-colors cursor-pointer disabled:opacity-50"
+                              title="음원 다운로드"
+                            >
+                              {downloadingMusicFileId === job.musicFileId ? (
+                                <Spinner size="sm" className="w-3.5 h-3.5 text-[#8590ea]" />
+                              ) : (
+                                <Download className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </Tooltip>
+                        )}
+
                         <Tooltip content="메타데이터 수정">
                           <button
                             type="button"
