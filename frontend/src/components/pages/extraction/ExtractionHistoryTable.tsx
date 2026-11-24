@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ExternalLink, Music, AlertCircle, Clock, Calendar, Pencil, Trash2, Download } from 'lucide-react';
 import type { ExtractionJobDto } from '../../../types/extraction';
 import { ExtractionStatusBadge } from './ExtractionStatusBadge';
@@ -40,6 +40,8 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
   downloadingMusicFileId = null,
   deletingJobId = null,
 }) => {
+  const [hoveredActionJobId, setHoveredActionJobId] = useState<number | null>(null);
+
   if (jobs.length === 0) {
     return (
       <div className="bg-[#0f1011] border border-white/[0.08] rounded-2xl p-12 text-center flex flex-col items-center justify-center gap-3">
@@ -184,15 +186,13 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
               const isDeletingThis = deletingJobId === job.id;
               const isSelected = selectedJobIds.has(job.id);
               const isFocused = focusedJobId === job.id;
+              const isRowTooltipDisabled = isFocused || hoveredActionJobId === job.id;
 
               return (
                 <Tooltip
                   key={job.id}
-                  content={
-                    isFocused
-                      ? '현재 상단에 상태가 표시 중인 곡입니다'
-                      : '클릭하여 상단에서 진행 상태 확인'
-                  }
+                  content={isRowTooltipDisabled ? undefined : '클릭하여 진행 상태 확인'}
+                  open={isRowTooltipDisabled ? false : undefined}
                   side="top"
                 >
                   <tr
@@ -211,20 +211,17 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                     }}
                     className={cn(
                       'transition-colors duration-150 group cursor-pointer relative',
-                      isSelected && isFocused
-                        ? 'bg-[#5e6ad2]/[0.12] hover:bg-[#5e6ad2]/[0.16]'
-                        : isSelected
+                      isSelected
                         ? 'bg-[#5e6ad2]/[0.08] hover:bg-[#5e6ad2]/[0.12]'
-                        : isFocused
-                        ? 'bg-[#5e6ad2]/[0.05] hover:bg-[#5e6ad2]/[0.09]'
-                        : 'hover:bg-white/[0.02]',
+                        : 'hover:bg-white/[0.02] has-[td:first-child:hover]:bg-transparent',
                     )}
                   >
                   {/* Column 1: Checkbox only column */}
                   <td
                     className={cn(
-                      'w-12 py-3 px-2 text-center select-none relative',
-                      hasMusicFile && 'cursor-pointer',
+                      'w-12 py-3 px-2 text-center select-none relative transition-colors duration-150',
+                      hasMusicFile ? 'cursor-pointer hover:bg-white/[0.02]' : 'cursor-default',
+                      isSelected ? 'bg-transparent' : 'bg-[#0f1011]',
                     )}
                     onClick={(e) => {
                       if (hasMusicFile) {
@@ -232,11 +229,13 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                         onToggleSelectJob(job.id);
                       }
                     }}
+                    onMouseEnter={() => setHoveredActionJobId(job.id)}
+                    onMouseLeave={() => setHoveredActionJobId(null)}
                     title={hasMusicFile ? (isSelected ? '선택 해제' : '선택') : undefined}
                   >
                     {/* Left active indicator line for the currently focused/inspected job */}
                     {isFocused && (
-                      <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[#5e6ad2] rounded-r z-20 shadow-sm shadow-[#5e6ad2]/50" />
+                      <span className="absolute left-0 top-1 bottom-1 w-1 bg-[#5e6ad2] rounded-r z-20 shadow-sm shadow-[#5e6ad2]/70 animate-in fade-in duration-150" />
                     )}
 
                     <div className="w-7 h-7 mx-auto relative flex items-center justify-center">
@@ -281,7 +280,7 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                         <Music className="w-4 h-4" />
                       </div>
                       <div className="overflow-hidden min-w-0 flex-1">
-                        <p className="font-medium text-neutral-100 truncate" title={displayTitle}>
+                        <p className="font-medium text-neutral-100 truncate">
                           {displayTitle}
                         </p>
                         {job.musicFileArtist ? (
@@ -289,15 +288,22 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                             {job.musicFileArtist}
                           </p>
                         ) : null}
-                        <a
-                          href={job.sourceUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[10px] text-[#8590ea] hover:underline flex items-center gap-1 mt-0.5 truncate"
-                        >
-                          <ExternalLink className="w-2.5 h-2.5 shrink-0" />
-                          <span className="truncate">{job.sourceUrl}</span>
-                        </a>
+                        <div className="flex items-center mt-0.5">
+                          <Tooltip content="YouTube 영상으로 이동" side="top">
+                            <a
+                              href={job.sourceUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              onMouseEnter={() => setHoveredActionJobId(job.id)}
+                              onMouseLeave={() => setHoveredActionJobId(null)}
+                              className="inline-flex items-center gap-1 max-w-full w-fit text-[10px] text-[#8590ea] hover:underline truncate"
+                            >
+                              <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+                              <span className="truncate">{job.sourceUrl}</span>
+                            </a>
+                          </Tooltip>
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -305,7 +311,14 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                   {/* Column 3: Status Badge */}
                   <td className="py-3 px-4 w-32 sm:w-36">
                     <div className="flex items-center gap-1.5">
-                      <ExtractionStatusBadge status={job.status} />
+                      <div
+                        className={cn(
+                          'inline-flex items-center rounded-md transition-all duration-150',
+                          isFocused && 'ring-1 ring-[#5e6ad2]/70 shadow-sm shadow-[#5e6ad2]/30',
+                        )}
+                      >
+                        <ExtractionStatusBadge status={job.status} />
+                      </div>
                       {job.status === 'FAILED' && job.errorMessage ? (
                         <Tooltip content={job.errorMessage}>
                           <button
@@ -328,7 +341,11 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                   </td>
 
                   {/* Column 5: Action Buttons */}
-                  <td className="py-3 px-4 w-32 sm:w-36 text-right whitespace-nowrap">
+                  <td
+                    className="py-3 px-4 w-32 sm:w-36 text-right whitespace-nowrap"
+                    onMouseEnter={() => setHoveredActionJobId(job.id)}
+                    onMouseLeave={() => setHoveredActionJobId(null)}
+                  >
                     {hasMusicFile ? (
                       <div className="flex items-center justify-end gap-1">
                         {onDownloadTrack && (
