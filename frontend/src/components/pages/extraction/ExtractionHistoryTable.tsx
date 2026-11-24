@@ -114,7 +114,7 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                 ) : (
                   <Pencil className="w-3.5 h-3.5" />
                 )}
-                <span>선택 음원 정보 일괄 수정</span>
+                <span>음원 정보 일괄 수정</span>
               </button>
               {onDeleteSelected ? (
                 <button
@@ -191,7 +191,7 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
               return (
                 <Tooltip
                   key={`${job.id}-${isFocused}`}
-                  content={isRowTooltipDisabled ? undefined : '클릭하여 진행 상태 확인'}
+                  content={isRowTooltipDisabled ? undefined : '클릭하여 상태 확인'}
                   side="top"
                 >
                   <tr
