@@ -13,7 +13,7 @@ import { TrackTable } from './track/TrackTable';
 import { UploadModal } from './upload/UploadModal';
 import { EditMetadataModal } from '../../organisms/EditMetadataModal';
 import { BatchActionBar } from './track/BatchActionBar';
-import { BatchEditMetadataModal } from './track/BatchEditMetadataModal';
+import { BatchEditMetadataModal } from '../../organisms/BatchEditMetadataModal';
 import { ConfirmDialog } from '../../organisms/ConfirmDialog';
 import { triggerBrowserDownload } from '../../../utils/downloadFile';
 import { downloadTracksBatch } from '../../../utils/downloadBatch';

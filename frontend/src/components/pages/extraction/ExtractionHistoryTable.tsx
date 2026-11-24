@@ -1,11 +1,20 @@
 import React from 'react';
-import { ExternalLink, Music, AlertCircle, Clock, Calendar, Pencil, Trash2 } from 'lucide-react';
+import { ExternalLink, Music, AlertCircle, Clock, Calendar, Pencil, Trash2, X } from 'lucide-react';
 import type { ExtractionJobDto } from '../../../types/extraction';
 import { ExtractionStatusBadge } from './ExtractionStatusBadge';
 import { Tooltip } from '../../atoms/Tooltip';
+import { Checkbox } from '../../atoms/Checkbox';
+import { Spinner } from '../../atoms/Spinner';
+import { cn } from '../../../utils/cn';
 
 export interface ExtractionHistoryTableProps {
   jobs: ExtractionJobDto[];
+  selectedJobIds: Set<number>;
+  onToggleSelectJob: (jobId: number) => void;
+  onToggleSelectAll: () => void;
+  onBatchEdit: () => void;
+  isBatchLoading?: boolean;
+  onClearSelection: () => void;
   onGoToLibrary: () => void;
   onEditMetadata: (musicFileId: number) => void;
   onDeleteJob: (jobId: number) => void;
@@ -16,6 +25,12 @@ export interface ExtractionHistoryTableProps {
 
 export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
   jobs,
+  selectedJobIds,
+  onToggleSelectJob,
+  onToggleSelectAll,
+  onBatchEdit,
+  isBatchLoading = false,
+  onClearSelection,
   onGoToLibrary,
   onEditMetadata,
   onDeleteJob,
@@ -41,6 +56,14 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
     ['COMPLETED', 'FAILED', 'CANCELLED'].includes(j.status)
   );
 
+  const selectableJobs = jobs.filter((j) => j.status === 'COMPLETED' && j.musicFileId !== null);
+  const isAllSelected =
+    selectableJobs.length > 0 && selectableJobs.every((j) => selectedJobIds.has(j.id));
+  const isIndeterminate =
+    !isAllSelected && selectableJobs.some((j) => selectedJobIds.has(j.id));
+  const isSelectionMode = selectedJobIds.size > 0;
+  const showMasterCheckbox = isSelectionMode || isAllSelected || isIndeterminate;
+
   const formatDate = (isoString: string) => {
     try {
       const date = new Date(isoString);
@@ -64,27 +87,84 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
           <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-white/[0.05] text-neutral-400 border border-white/[0.06]">
             {jobs.length}건
           </span>
+          {isSelectionMode && (
+            <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-[#5e6ad2]/20 text-[#8590ea] border border-[#5e6ad2]/30">
+              {selectedJobIds.size}개 선택됨
+            </span>
+          )}
         </div>
 
-        {hasFinishedJobs ? (
-          <button
-            type="button"
-            onClick={onClearHistory}
-            disabled={isClearing}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-neutral-400 hover:text-red-300 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-colors cursor-pointer disabled:opacity-50"
-            title="완료 및 종료된 추출 내역 모두 삭제 (보관함의 음원은 유지됩니다)"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>기록 전체 삭제</span>
-          </button>
-        ) : null}
+        <div className="flex items-center gap-2">
+          {isSelectionMode ? (
+            <>
+              <button
+                type="button"
+                onClick={onBatchEdit}
+                disabled={isBatchLoading}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium text-white bg-[#5e6ad2] hover:bg-[#6f7cf4] shadow-sm shadow-[#5e6ad2]/20 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {isBatchLoading ? (
+                  <Spinner size="sm" />
+                ) : (
+                  <Pencil className="w-3.5 h-3.5" />
+                )}
+                <span>선택 음원 정보 일괄 수정</span>
+              </button>
+              <button
+                type="button"
+                onClick={onClearSelection}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs text-neutral-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] transition-colors cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">선택 해제</span>
+              </button>
+            </>
+          ) : hasFinishedJobs ? (
+            <button
+              type="button"
+              onClick={onClearHistory}
+              disabled={isClearing}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-neutral-400 hover:text-red-300 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-colors cursor-pointer disabled:opacity-50"
+              title="완료 및 종료된 추출 내역 모두 삭제 (보관함의 음원은 유지됩니다)"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>기록 전체 삭제</span>
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs">
           <thead>
-            <tr className="border-b border-white/[0.06] text-neutral-400 font-medium bg-white/[0.02]">
-              <th className="py-3 px-4 w-12 text-center">#</th>
+            <tr className="group/head border-b border-white/[0.06] text-neutral-400 font-medium bg-white/[0.02]">
+              <th className="py-3 px-3 w-12 text-center">
+                <div className="w-7 h-7 mx-auto flex items-center justify-center">
+                  {selectableJobs.length > 0 ? (
+                    showMasterCheckbox ? (
+                      <Checkbox
+                        checked={isAllSelected}
+                        indeterminate={isIndeterminate}
+                        onChange={() => onToggleSelectAll()}
+                        aria-label="완료된 음원 전체 선택"
+                      />
+                    ) : (
+                      <>
+                        <span className="group-hover/head:hidden">#</span>
+                        <div className="hidden group-hover/head:flex items-center justify-center">
+                          <Checkbox
+                            checked={false}
+                            onChange={() => onToggleSelectAll()}
+                            aria-label="완료된 음원 전체 선택"
+                          />
+                        </div>
+                      </>
+                    )
+                  ) : (
+                    <span>#</span>
+                  )}
+                </div>
+              </th>
               <th className="py-3 px-4">추출 음원 정보</th>
               <th className="py-3 px-4 w-36">상태</th>
               <th className="py-3 px-4 w-40">요청 일시</th>
@@ -97,14 +177,57 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
               const hasMusicFile = job.musicFileId !== null && job.status === 'COMPLETED';
               const isFinished = ['COMPLETED', 'FAILED', 'CANCELLED'].includes(job.status);
               const isDeletingThis = deletingJobId === job.id;
+              const isSelected = selectedJobIds.has(job.id);
 
               return (
                 <tr
                   key={job.id}
-                  className="hover:bg-white/[0.02] transition-colors group"
+                  onClick={(e) => {
+                    const target = e.target as HTMLElement;
+                    if (
+                      target.closest('a') ||
+                      target.closest('button') ||
+                      target.closest('input')
+                    ) {
+                      return;
+                    }
+                    if (hasMusicFile) {
+                      onToggleSelectJob(job.id);
+                    }
+                  }}
+                  className={cn(
+                    'transition-colors group',
+                    hasMusicFile && 'cursor-pointer',
+                    isSelected
+                      ? 'bg-[#5e6ad2]/[0.08] hover:bg-[#5e6ad2]/[0.12]'
+                      : 'hover:bg-white/[0.02]'
+                  )}
                 >
-                  <td className="py-3 px-4 text-center font-mono text-neutral-500">
-                    {job.id}
+                  <td className="py-3 px-3 text-center font-mono text-neutral-500">
+                    <div className="w-7 h-7 mx-auto flex items-center justify-center">
+                      {hasMusicFile ? (
+                        isSelected || isSelectionMode ? (
+                          <Checkbox
+                            checked={isSelected}
+                            onChange={() => onToggleSelectJob(job.id)}
+                            aria-label={`${displayTitle} 선택`}
+                          />
+                        ) : (
+                          <>
+                            <span className="group-hover:hidden">{job.id}</span>
+                            <div className="hidden group-hover:flex items-center justify-center">
+                              <Checkbox
+                                checked={false}
+                                onChange={() => onToggleSelectJob(job.id)}
+                                aria-label={`${displayTitle} 선택`}
+                              />
+                            </div>
+                          </>
+                        )
+                      ) : (
+                        <span>{job.id}</span>
+                      )}
+                    </div>
                   </td>
                   <td className="py-3 px-4 max-w-md">
                     <div className="flex items-start gap-2.5">
@@ -159,7 +282,10 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                         <Tooltip content="메타데이터 수정">
                           <button
                             type="button"
-                            onClick={() => onEditMetadata(job.musicFileId!)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEditMetadata(job.musicFileId!);
+                            }}
                             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-neutral-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/[0.06] transition-colors cursor-pointer"
                           >
                             <Pencil className="w-3 h-3 text-[#8590ea]" />
@@ -169,7 +295,10 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
 
                         <button
                           type="button"
-                          onClick={onGoToLibrary}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onGoToLibrary();
+                          }}
                           className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-[#8590ea] hover:text-white bg-[#5e6ad2]/10 hover:bg-[#5e6ad2]/25 border border-[#5e6ad2]/20 transition-colors cursor-pointer"
                         >
                           <span>듣기</span>
@@ -178,7 +307,10 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                         <Tooltip content="기록 삭제 (음원은 보관함에 안전하게 유지됩니다)">
                           <button
                             type="button"
-                            onClick={() => onDeleteJob(job.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteJob(job.id);
+                            }}
                             disabled={isDeletingThis}
                             className="p-1 rounded-lg text-neutral-500 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-colors cursor-pointer disabled:opacity-50"
                             title="기록 삭제"
@@ -192,7 +324,10 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                         <Tooltip content="기록 삭제">
                           <button
                             type="button"
-                            onClick={() => onDeleteJob(job.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteJob(job.id);
+                            }}
                             disabled={isDeletingThis}
                             className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium text-neutral-400 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-colors cursor-pointer disabled:opacity-50"
                           >

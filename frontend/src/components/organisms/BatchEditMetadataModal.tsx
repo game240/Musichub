@@ -1,15 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, ChevronUp, X, Music } from 'lucide-react';
-import { Modal } from '../../../organisms/Modal';
-import { Button } from '../../../atoms/Button';
-import { Input } from '../../../atoms/Input';
-import { Checkbox } from '../../../atoms/Checkbox';
-import { Spinner } from '../../../atoms/Spinner';
-import { TrackArtwork } from './TrackArtwork';
-import { musicApi, type UpdateMusicMetadataDto } from '../../../../api/musicApi';
-import { useTagSyncStore } from '../../../../stores/tagSyncStore';
-import type { MusicFileDto } from '../../../../types/music';
-import { cn } from '../../../../utils/cn';
+import { Modal } from './Modal';
+import { Button } from '../atoms/Button';
+import { Input } from '../atoms/Input';
+import { Checkbox } from '../atoms/Checkbox';
+import { Spinner } from '../atoms/Spinner';
+import { TrackArtwork } from '../molecules/TrackArtwork';
+import { musicApi, type UpdateMusicMetadataDto } from '../../api/musicApi';
+import { useTagSyncStore } from '../../stores/tagSyncStore';
+import type { MusicFileDto } from '../../types/music';
+import { cn } from '../../utils/cn';
 
 export interface BatchEditMetadataModalProps {
   isOpen: boolean;
