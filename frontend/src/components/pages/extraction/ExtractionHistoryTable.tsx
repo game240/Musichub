@@ -190,9 +190,8 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
 
               return (
                 <Tooltip
-                  key={job.id}
+                  key={`${job.id}-${isFocused}`}
                   content={isRowTooltipDisabled ? undefined : '클릭하여 진행 상태 확인'}
-                  open={isRowTooltipDisabled ? false : undefined}
                   side="top"
                 >
                   <tr
@@ -205,6 +204,7 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                       ) {
                         return;
                       }
+                      setHoveredActionJobId(null);
                       if (onFocusJob) {
                         onFocusJob(job.id);
                       }
