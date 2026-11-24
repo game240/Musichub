@@ -1,12 +1,11 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, RefreshCw, Shield, DownloadCloud } from 'lucide-react';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { YoutubeIcon } from '../../atoms/YoutubeIcon';
 import { extractionApi } from '../../../api/extractionApi';
 import { musicApi } from '../../../api/musicApi';
 import type { ExtractionJobDto } from '../../../types/extraction';
 import type { MusicFileDto } from '../../../types/music';
-import { useAuthStore } from '../../../stores/authStore';
 import { useToastStore } from '../../../stores/toastStore';
 import { usePlayerStore } from '../../../stores/playerStore';
 import { ExtractionInputCard } from './ExtractionInputCard';
@@ -27,7 +26,6 @@ interface PendingDeletion {
 }
 
 export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
-  const user = useAuthStore((state) => state.user);
   const addToast = useToastStore((state) => state.addToast);
   const updateTrackInfo = usePlayerStore((state) => state.updateTrackInfo);
   const queryClient = useQueryClient();
@@ -397,17 +395,6 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
               <YoutubeIcon className="w-4 h-4" />
             </div>
             <h1 className="text-sm font-semibold text-neutral-100">YouTube 음원 추출</h1>
-            {user?.role === 'ADMIN' ? (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-red-500/10 text-red-400 border border-red-500/20">
-                <Shield className="w-3 h-3" />
-                ADMIN
-              </span>
-            ) : user?.role === 'DOWNLOADER' ? (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                <DownloadCloud className="w-3 h-3" />
-                DOWNLOADER
-              </span>
-            ) : null}
           </div>
         </div>
 
