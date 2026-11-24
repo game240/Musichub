@@ -21,19 +21,20 @@ export const ExtractionBatchActionBar: React.FC<ExtractionBatchActionBarProps> =
   onDeleteSelected,
   onClearSelection,
 }) => {
-  if (!isOpen || selectedCount === 0) {
-    return null;
-  }
+  const isVisible = isOpen && selectedCount > 0;
 
   return (
     <aside
       aria-label="선택한 음원 일괄 관리"
       className={cn(
-        'fixed bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 z-40',
-        'max-w-[calc(100vw-24px)] w-max',
+        'fixed bottom-6 sm:bottom-8 left-0 right-0 mx-auto z-40',
+        'max-w-[calc(100vw-24px)] w-fit',
         'bg-[#0f1011]/95 border border-white/[0.14] backdrop-blur-xl shadow-2xl shadow-black/90',
-        'rounded-full px-3 py-1.5 sm:px-4 sm:py-2 flex items-center gap-2',
-        'transition-all duration-200 animate-in fade-in slide-in-from-bottom-3 select-none',
+        'rounded-full px-3 py-1.5 sm:px-4 sm:py-2 flex items-center gap-2 select-none',
+        'transition-all duration-200 ease-out',
+        isVisible
+          ? 'opacity-100 translate-y-0 pointer-events-auto'
+          : 'opacity-0 translate-y-3 pointer-events-none',
       )}
     >
       {/* Selected Count Indicator */}

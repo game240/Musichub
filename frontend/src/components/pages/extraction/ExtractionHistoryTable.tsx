@@ -80,28 +80,29 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
 
   return (
     <div className="bg-[#0f1011] border border-white/[0.08] rounded-2xl overflow-hidden shadow-xl backdrop-blur-xl">
-      <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Clock className="w-4 h-4 text-neutral-400" />
-          <h3 className="text-xs font-semibold text-neutral-200">추출 작업 히스토리</h3>
-          <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-white/[0.05] text-neutral-400 border border-white/[0.06]">
+      {/* Table Card Header with Fixed Minimum Height */}
+      <div className="px-5 py-3.5 sm:py-4 border-b border-white/[0.06] flex items-center justify-between min-h-[58px]">
+        <div className="flex items-center gap-2 min-w-0">
+          <Clock className="w-4 h-4 text-neutral-400 shrink-0" />
+          <h3 className="text-xs font-semibold text-neutral-200 shrink-0">추출 작업 히스토리</h3>
+          <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-white/[0.05] text-neutral-400 border border-white/[0.06] shrink-0">
             {jobs.length}건
           </span>
           {isSelectionMode && (
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-[#5e6ad2]/20 text-[#8590ea] border border-[#5e6ad2]/30">
+            <span className="h-5 flex items-center text-[11px] font-mono px-2 rounded-full bg-[#5e6ad2]/20 text-[#8590ea] border border-[#5e6ad2]/30 shrink-0 animate-in fade-in duration-150">
               {selectedJobIds.size}개 선택됨
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {isSelectionMode ? (
             <>
               <button
                 type="button"
                 onClick={onBatchEdit}
                 disabled={isBatchLoading}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium text-white bg-[#5e6ad2] hover:bg-[#6f7cf4] shadow-sm shadow-[#5e6ad2]/20 transition-colors cursor-pointer disabled:opacity-50"
+                className="h-8 inline-flex items-center gap-1.5 px-3 rounded-lg text-xs font-medium text-white bg-[#5e6ad2] hover:bg-[#6f7cf4] shadow-sm shadow-[#5e6ad2]/20 transition-colors cursor-pointer disabled:opacity-50"
               >
                 {isBatchLoading ? (
                   <Spinner size="sm" />
@@ -113,7 +114,7 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
               <button
                 type="button"
                 onClick={onClearSelection}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs text-neutral-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] transition-colors cursor-pointer"
+                className="h-8 inline-flex items-center gap-1 px-2.5 rounded-lg text-xs text-neutral-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] transition-colors cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">선택 해제</span>
@@ -124,7 +125,7 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
               type="button"
               onClick={onClearHistory}
               disabled={isClearing}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-neutral-400 hover:text-red-300 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-colors cursor-pointer disabled:opacity-50"
+              className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg text-[11px] font-medium text-neutral-400 hover:text-red-300 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-colors cursor-pointer disabled:opacity-50"
               title="완료 및 종료된 추출 내역 모두 삭제 (보관함의 음원은 유지됩니다)"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -135,40 +136,48 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs">
+        <table className="w-full table-fixed text-left text-xs border-collapse min-w-[720px]">
           <thead>
             <tr className="group/head border-b border-white/[0.06] text-neutral-400 font-medium bg-white/[0.02]">
-              <th className="py-3 px-3 w-12 text-center">
-                <div className="w-7 h-7 mx-auto flex items-center justify-center">
+              <th className="w-12 py-3 px-2 text-center select-none">
+                <div className="w-7 h-7 mx-auto relative flex items-center justify-center">
                   {selectableJobs.length > 0 ? (
-                    showMasterCheckbox ? (
-                      <Checkbox
-                        checked={isAllSelected}
-                        indeterminate={isIndeterminate}
-                        onChange={() => onToggleSelectAll()}
-                        aria-label="완료된 음원 전체 선택"
-                      />
-                    ) : (
-                      <>
-                        <span className="group-hover/head:hidden">#</span>
-                        <div className="hidden group-hover/head:flex items-center justify-center">
-                          <Checkbox
-                            checked={false}
-                            onChange={() => onToggleSelectAll()}
-                            aria-label="완료된 음원 전체 선택"
-                          />
-                        </div>
-                      </>
-                    )
+                    <>
+                      <div
+                        className={cn(
+                          'absolute inset-0 flex items-center justify-center transition-opacity duration-150',
+                          showMasterCheckbox
+                            ? 'opacity-100 z-10 pointer-events-auto'
+                            : 'opacity-0 group-hover/head:opacity-100 z-10 pointer-events-none group-hover/head:pointer-events-auto',
+                        )}
+                      >
+                        <Checkbox
+                          checked={isAllSelected}
+                          indeterminate={isIndeterminate}
+                          onChange={() => onToggleSelectAll()}
+                          aria-label="완료된 음원 전체 선택"
+                        />
+                      </div>
+                      <span
+                        className={cn(
+                          'font-mono text-neutral-500 transition-opacity duration-150',
+                          showMasterCheckbox
+                            ? 'opacity-0 pointer-events-none'
+                            : 'opacity-100 group-hover/head:opacity-0',
+                        )}
+                      >
+                        #
+                      </span>
+                    </>
                   ) : (
-                    <span>#</span>
+                    <span className="font-mono text-neutral-500">#</span>
                   )}
                 </div>
               </th>
-              <th className="py-3 px-4">추출 음원 정보</th>
-              <th className="py-3 px-4 w-36">상태</th>
-              <th className="py-3 px-4 w-40">요청 일시</th>
-              <th className="py-3 px-4 w-44 text-right">관리</th>
+              <th className="py-3 px-4 w-auto">추출 음원 정보</th>
+              <th className="py-3 px-4 w-32 sm:w-36">상태</th>
+              <th className="py-3 px-4 w-36 sm:w-40">요청 일시</th>
+              <th className="py-3 px-4 w-40 sm:w-44 text-right">관리</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/[0.04]">
@@ -196,45 +205,53 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                     }
                   }}
                   className={cn(
-                    'transition-colors group',
+                    'transition-colors duration-150 group',
                     hasMusicFile && 'cursor-pointer',
                     isSelected
                       ? 'bg-[#5e6ad2]/[0.08] hover:bg-[#5e6ad2]/[0.12]'
-                      : 'hover:bg-white/[0.02]'
+                      : 'hover:bg-white/[0.02]',
                   )}
                 >
-                  <td className="py-3 px-3 text-center font-mono text-neutral-500">
-                    <div className="w-7 h-7 mx-auto flex items-center justify-center">
+                  <td className="w-12 py-3 px-2 text-center select-none">
+                    <div className="w-7 h-7 mx-auto relative flex items-center justify-center">
                       {hasMusicFile ? (
-                        isSelected || isSelectionMode ? (
-                          <Checkbox
-                            checked={isSelected}
-                            onChange={() => onToggleSelectJob(job.id)}
-                            aria-label={`${displayTitle} 선택`}
-                          />
-                        ) : (
-                          <>
-                            <span className="group-hover:hidden">{job.id}</span>
-                            <div className="hidden group-hover:flex items-center justify-center">
-                              <Checkbox
-                                checked={false}
-                                onChange={() => onToggleSelectJob(job.id)}
-                                aria-label={`${displayTitle} 선택`}
-                              />
-                            </div>
-                          </>
-                        )
+                        <>
+                          <div
+                            className={cn(
+                              'absolute inset-0 flex items-center justify-center transition-opacity duration-150',
+                              isSelected || isSelectionMode
+                                ? 'opacity-100 z-10 pointer-events-auto'
+                                : 'opacity-0 group-hover:opacity-100 z-10 pointer-events-none group-hover:pointer-events-auto',
+                            )}
+                          >
+                            <Checkbox
+                              checked={isSelected}
+                              onChange={() => onToggleSelectJob(job.id)}
+                              aria-label={`${displayTitle} 선택`}
+                            />
+                          </div>
+                          <span
+                            className={cn(
+                              'font-mono text-neutral-500 transition-opacity duration-150',
+                              isSelected || isSelectionMode
+                                ? 'opacity-0 pointer-events-none'
+                                : 'opacity-100 group-hover:opacity-0',
+                            )}
+                          >
+                            {job.id}
+                          </span>
+                        </>
                       ) : (
-                        <span>{job.id}</span>
+                        <span className="font-mono text-neutral-500">{job.id}</span>
                       )}
                     </div>
                   </td>
-                  <td className="py-3 px-4 max-w-md">
-                    <div className="flex items-start gap-2.5">
+                  <td className="py-3 px-4 w-auto overflow-hidden">
+                    <div className="flex items-start gap-2.5 min-w-0">
                       <div className="p-1.5 rounded-lg bg-white/[0.04] text-neutral-400 shrink-0 mt-0.5">
                         <Music className="w-4 h-4" />
                       </div>
-                      <div className="overflow-hidden">
+                      <div className="overflow-hidden min-w-0 flex-1">
                         <p className="font-medium text-neutral-100 truncate" title={displayTitle}>
                           {displayTitle}
                         </p>
@@ -255,7 +272,7 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                       </div>
                     </div>
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4 w-32 sm:w-36">
                     <div className="flex items-center gap-1.5">
                       <ExtractionStatusBadge status={job.status} />
                       {job.status === 'FAILED' && job.errorMessage ? (
@@ -270,13 +287,13 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                       ) : null}
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-neutral-400 text-[11px] font-mono">
+                  <td className="py-3 px-4 w-36 sm:w-40 text-neutral-400 text-[11px] font-mono whitespace-nowrap">
                     <div className="flex items-center gap-1.5">
-                      <Calendar className="w-3 h-3 text-neutral-500" />
+                      <Calendar className="w-3 h-3 text-neutral-500 shrink-0" />
                       <span>{formatDate(job.createdAt)}</span>
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-right">
+                  <td className="py-3 px-4 w-40 sm:w-44 text-right whitespace-nowrap">
                     {hasMusicFile ? (
                       <div className="flex items-center justify-end gap-1.5">
                         <Tooltip content="메타데이터 수정">
@@ -331,7 +348,7 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                             disabled={isDeletingThis}
                             className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium text-neutral-400 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-colors cursor-pointer disabled:opacity-50"
                           >
-                            <Trash2 className="w-3 h-3" />
+                            <Trash2 className="w-3.5 h-3.5" />
                             <span>삭제</span>
                           </button>
                         </Tooltip>
