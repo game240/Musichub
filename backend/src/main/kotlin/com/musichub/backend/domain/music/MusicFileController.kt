@@ -130,6 +130,15 @@ class MusicFileController(
         return ResponseEntity.ok(page)
     }
 
+    @GetMapping("/{id}")
+    fun getMusicFile(
+        @AuthenticationPrincipal user: UserPrincipal,
+        @PathVariable id: Long
+    ): ResponseEntity<MusicFileDto> {
+        val musicFile = musicFileService.getMusicFile(user.id, id)
+        return ResponseEntity.ok(musicFileService.toDto(musicFile))
+    }
+
     @GetMapping("/{id}/play")
     fun getPlayUrl(
         @AuthenticationPrincipal user: UserPrincipal,

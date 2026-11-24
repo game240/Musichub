@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { UploadCloud, Music, RefreshCw, CheckSquare } from 'lucide-react';
+import { YoutubeIcon } from '../../atoms/YoutubeIcon';
 import { musicApi } from '../../../api/musicApi';
 import type { MusicFileDto } from '../../../types/music';
 import { usePlayerStore } from '../../../stores/playerStore';
@@ -10,19 +11,23 @@ import { Button } from '../../atoms/Button';
 import { Tooltip } from '../../atoms/Tooltip';
 import { TrackTable } from './track/TrackTable';
 import { UploadModal } from './upload/UploadModal';
-import { EditMetadataModal } from './track/EditMetadataModal';
+import { EditMetadataModal } from '../../organisms/EditMetadataModal';
 import { BatchActionBar } from './track/BatchActionBar';
-import { BatchEditMetadataModal } from './track/BatchEditMetadataModal';
+import { BatchEditMetadataModal } from '../../organisms/BatchEditMetadataModal';
 import { ConfirmDialog } from '../../organisms/ConfirmDialog';
 import { triggerBrowserDownload } from '../../../utils/downloadFile';
 import { downloadTracksBatch } from '../../../utils/downloadBatch';
 import { toast } from '../../../stores/toastStore';
 
-export const LibraryPage: React.FC = () => {
+export interface LibraryPageProps {
+  onNavigateExtraction?: () => void;
+}
+
+export const LibraryPage: React.FC<LibraryPageProps> = ({ onNavigateExtraction }) => {
   const queryClient = useQueryClient();
   const { currentTrack, isPlaying, playTrack, addToQueue, addTracksToQueue, updateTrackInfo } =
     usePlayerStore();
-  const { updateStorageUsage } = useAuthStore();
+  const { user, updateStorageUsage } = useAuthStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -311,6 +316,18 @@ export const LibraryPage: React.FC = () => {
             <CheckSquare className="w-4 h-4 text-[#8590ea]" />
             <span>{isSelectionMode ? '선택 종료' : '선택'}</span>
           </Button>
+
+          {/* YouTube Extraction Button for ADMIN / DOWNLOADER */}
+          {(user?.role === 'ADMIN' || user?.role === 'DOWNLOADER') && onNavigateExtraction ? (
+            <Button
+              variant="secondary"
+              onClick={onNavigateExtraction}
+              className="flex items-center gap-1.5 border-white/[0.1] hover:border-red-500/30 hover:bg-red-500/10 text-neutral-200 hover:text-white"
+            >
+              <YoutubeIcon className="w-4 h-4 text-red-500" />
+              <span>YouTube 추출</span>
+            </Button>
+          ) : null}
 
           <Button
             variant="primary"

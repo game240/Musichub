@@ -1,15 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, ChevronUp, X, Music } from 'lucide-react';
-import { Modal } from '../../../organisms/Modal';
-import { Button } from '../../../atoms/Button';
-import { Input } from '../../../atoms/Input';
-import { Checkbox } from '../../../atoms/Checkbox';
-import { Spinner } from '../../../atoms/Spinner';
-import { TrackArtwork } from './TrackArtwork';
-import { musicApi, type UpdateMusicMetadataDto } from '../../../../api/musicApi';
-import { useTagSyncStore } from '../../../../stores/tagSyncStore';
-import type { MusicFileDto } from '../../../../types/music';
-import { cn } from '../../../../utils/cn';
+import { Modal } from './Modal';
+import { Button } from '../atoms/Button';
+import { Input } from '../atoms/Input';
+import { Checkbox } from '../atoms/Checkbox';
+import { Spinner } from '../atoms/Spinner';
+import { TrackArtwork } from '../molecules/TrackArtwork';
+import { musicApi, type UpdateMusicMetadataDto } from '../../api/musicApi';
+import { useTagSyncStore } from '../../stores/tagSyncStore';
+import type { MusicFileDto } from '../../types/music';
+import { cn } from '../../utils/cn';
 
 export interface BatchEditMetadataModalProps {
   isOpen: boolean;
@@ -491,7 +491,6 @@ const BatchEditMetadataForm: React.FC<BatchEditMetadataFormProps> = ({
           type="submit"
           variant="primary"
           disabled={!hasAnyFieldSelected || isSaving || trackList.length === 0}
-          className="min-w-[130px]"
         >
           {isSaving ? (
             <div className="flex items-center gap-2">
@@ -499,7 +498,7 @@ const BatchEditMetadataForm: React.FC<BatchEditMetadataFormProps> = ({
               <span>적용 중 ({saveProgress})...</span>
             </div>
           ) : (
-            <span>{trackList.length}개 곡 일괄 적용</span>
+            <span>일괄 적용</span>
           )}
         </Button>
       </div>
@@ -521,7 +520,7 @@ export const BatchEditMetadataModal: React.FC<BatchEditMetadataModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`음원 정보 일괄 수정 (${tracks.length}곡)`}
+      title="음원 정보 일괄 수정"
       maxWidth="lg"
     >
       <BatchEditMetadataForm tracks={tracks} onClose={onClose} onSuccess={onSuccess} />

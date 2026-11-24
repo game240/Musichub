@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ListMusic, Download, Play, Pause, SkipBack, SkipForward } from 'lucide-react';
 import { usePlayerStore } from '../../../stores/playerStore';
-import { TrackArtwork } from '../library/track/TrackArtwork';
+import { TrackArtwork } from '../../molecules/TrackArtwork';
 import { PlayerControls } from './PlayerControls';
 import { PlayerSeekBar } from './PlayerSeekBar';
 import { VolumeSlider } from '../../molecules/VolumeSlider';

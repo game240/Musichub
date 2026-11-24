@@ -69,6 +69,11 @@ export const musicApi = {
     return response.data;
   },
 
+  async getMusicFile(id: number): Promise<MusicFileDto> {
+    const response = await apiClient.get<MusicFileDto>(`/music-files/${id}`);
+    return response.data;
+  },
+
   async getPlayUrl(id: number): Promise<PlayUrlResult> {
     const response = await apiClient.get<PlayUrlResult>(`/music-files/${id}/play`);
     return response.data;

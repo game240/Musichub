@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Play, Pause, Trash2, ListPlus, Pencil, Download, MoreVertical } from 'lucide-react';
 import type { MusicFileDto } from '../../../../types/music';
-import { TrackArtwork } from './TrackArtwork';
+import { TrackArtwork } from '../../../molecules/TrackArtwork';
 import { formatDurationMs } from '../../../../utils/formatTime';
 import { formatBytes } from '../../../../utils/formatBytes';
 import { Tooltip } from '../../../atoms/Tooltip';

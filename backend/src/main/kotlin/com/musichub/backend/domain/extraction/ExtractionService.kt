@@ -14,6 +14,7 @@ import java.io.ByteArrayInputStream
 import java.io.File
 import java.nio.file.Files
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 @Service
 class ExtractionService(
@@ -25,10 +26,21 @@ class ExtractionService(
     private val mediaExtractor: MediaExtractor
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
+    private val activeProcesses = ConcurrentHashMap<Long, Process>()
+    private val cancelledJobIds = ConcurrentHashMap.newKeySet<Long>()
+
+    companion object {
+        private const val MAX_STORAGE_BYTES = 2L * 1024 * 1024 * 1024 // 2.0 GB
+        private const val ESTIMATED_TRACK_BYTES = 10L * 1024 * 1024 // 10 MB
+    }
 
     @Transactional
     fun createJob(userId: Long, sourceUrl: String): ExtractionJob {
         val user = userRepository.findById(userId).orElseThrow { IllegalArgumentException("사용자를 찾을 수 없습니다.") }
+
+        if (user.storageUsedBytes + ESTIMATED_TRACK_BYTES > MAX_STORAGE_BYTES) {
+            throw IllegalStateException("보관함 용량이 부족합니다. 저장 공간을 확보한 후 다시 시도해주세요.")
+        }
 
         val job = ExtractionJob(
             user = user,
@@ -36,6 +48,58 @@ class ExtractionService(
             status = ExtractionJobStatus.PENDING
         )
         return extractionJobRepository.save(job)
+    }
+
+    @Transactional
+    fun cancelJob(userId: Long, jobId: Long): ExtractionJob {
+        val job = extractionJobRepository.findByIdAndUserId(jobId, userId)
+            .orElseThrow { NoSuchElementException("추출 작업을 찾을 수 없습니다.") }
+
+        if (job.status == ExtractionJobStatus.COMPLETED ||
+            job.status == ExtractionJobStatus.FAILED ||
+            job.status == ExtractionJobStatus.CANCELLED) {
+            throw IllegalStateException("이미 종료되었거나 취소할 수 없는 작업입니다.")
+        }
+
+        cancelledJobIds.add(jobId)
+        val activeProcess = activeProcesses[jobId]
+        if (activeProcess != null && activeProcess.isAlive) {
+            logger.info("취소 요청으로 yt-dlp 프로세스 강제 종료: jobId={}", jobId)
+            activeProcess.destroyForcibly()
+        }
+
+        job.markCancelled()
+        return extractionJobRepository.save(job)
+    }
+
+    @Transactional
+    fun deleteJob(userId: Long, jobId: Long) {
+        val job = extractionJobRepository.findByIdAndUserId(jobId, userId)
+            .orElseThrow { NoSuchElementException("추출 작업을 찾을 수 없습니다.") }
+
+        if (job.status in listOf(
+            ExtractionJobStatus.PENDING,
+            ExtractionJobStatus.DOWNLOADING,
+            ExtractionJobStatus.CONVERTING,
+            ExtractionJobStatus.UPLOADING
+        )) {
+            throw IllegalStateException("진행 중인 작업은 삭제할 수 없습니다. 먼저 추출을 중단해주세요.")
+        }
+
+        extractionJobRepository.delete(job)
+        logger.info("추출 작업 기록 삭제 완료: jobId={}, userId={}", jobId, userId)
+    }
+
+    @Transactional
+    fun clearFinishedJobs(userId: Long): Int {
+        val finishedStatuses = listOf(
+            ExtractionJobStatus.COMPLETED,
+            ExtractionJobStatus.FAILED,
+            ExtractionJobStatus.CANCELLED
+        )
+        val deletedCount = extractionJobRepository.deleteByUserIdAndStatusIn(userId, finishedStatuses)
+        logger.info("종료된 추출 작업 기록 일괄 삭제 완료: userId={}, count={}", userId, deletedCount)
+        return deletedCount
     }
 
     @Async
@@ -46,19 +110,38 @@ class ExtractionService(
 
         val tempDir = Files.createTempDirectory("musichub-extract-$jobId-").toFile()
         try {
+            if (cancelledJobIds.contains(jobId) || job.status == ExtractionJobStatus.CANCELLED) {
+                logger.info("작업 시작 전 취소됨: jobId={}", jobId)
+                return
+            }
+
             logger.info("추출 작업 비동기 처리 시작: jobId={}", jobId)
 
             // 1. 다운로드 및 MP3 변환
-            val extractResult = mediaExtractor.extractAudio(job.sourceUrl, tempDir)
+            val extractResult = mediaExtractor.extractAudio(job.sourceUrl, tempDir) { proc ->
+                if (cancelledJobIds.contains(jobId)) {
+                    proc.destroyForcibly()
+                } else {
+                    activeProcesses[jobId] = proc
+                }
+            }
+
+            if (cancelledJobIds.contains(jobId)) {
+                logger.info("추출 다운로드 중 취소 감지: jobId={}", jobId)
+                return
+            }
+
             val audioFile = extractResult.audioFile
             val fileSize = audioFile.length()
 
             // 2. 메타데이터 파싱
             job.status = ExtractionJobStatus.CONVERTING
             extractionJobRepository.save(job)
+            if (cancelledJobIds.contains(jobId)) return
             val metadata = metadataReader.read(audioFile)
 
             // 3. R2 업로드
+            if (cancelledJobIds.contains(jobId)) return
             job.status = ExtractionJobStatus.UPLOADING
             extractionJobRepository.save(job)
 
@@ -80,6 +163,11 @@ class ExtractionService(
                     contentLength = metadata.artwork.size.toLong(),
                     mimeType = artworkMime
                 )
+            }
+
+            if (cancelledJobIds.contains(jobId)) {
+                logger.info("R2 업로드 후 취소 감지: jobId={}", jobId)
+                return
             }
 
             // 4. MusicFile 등록 및 용량 반영
@@ -111,12 +199,30 @@ class ExtractionService(
             logger.info("추출 작업 성공 완료: jobId={}, musicFileId={}", jobId, savedMusicFile.id)
 
         } catch (e: Exception) {
+            if (cancelledJobIds.contains(jobId)) {
+                logger.info("취소된 작업의 프로세스 중단 완료: jobId={}", jobId)
+                return
+            }
             logger.error("추출 작업 실패: jobId={}, error={}", jobId, e.message, e)
-            job.markFailed(e.message ?: "알 수 없는 오류", isRetryable = true)
+            val isRetryable = isRetryableException(e)
+            job.markFailed(e.message ?: "알 수 없는 오류", isRetryable = isRetryable)
             extractionJobRepository.save(job)
         } finally {
-            // 임시 디렉토리 및 파일 정리
+            activeProcesses.remove(jobId)
+            cancelledJobIds.remove(jobId)
             tempDir.deleteRecursively()
         }
+    }
+
+    private fun isRetryableException(e: Exception): Boolean {
+        val msg = e.message ?: return false
+        // 비공개 영상, 30분 초과, 영상 삭제, 연령 제한 등 비가역적 오류는 재시도하지 않음
+        return !(msg.contains("초과") ||
+                msg.contains("비공개") ||
+                msg.contains("삭제") ||
+                msg.contains("제한") ||
+                msg.contains("스트리밍") ||
+                msg.contains("저작권") ||
+                msg.contains("빈 파일"))
     }
 }
