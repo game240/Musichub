@@ -311,14 +311,7 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                   {/* Column 3: Status Badge */}
                   <td className="py-3 px-4 w-32 sm:w-36">
                     <div className="flex items-center gap-1.5">
-                      <div
-                        className={cn(
-                          'inline-flex items-center rounded-md transition-all duration-150',
-                          isFocused && 'ring-1 ring-[#5e6ad2]/70 shadow-sm shadow-[#5e6ad2]/30',
-                        )}
-                      >
-                        <ExtractionStatusBadge status={job.status} />
-                      </div>
+                      <ExtractionStatusBadge status={job.status} />
                       {job.status === 'FAILED' && job.errorMessage ? (
                         <Tooltip content={job.errorMessage}>
                           <button
