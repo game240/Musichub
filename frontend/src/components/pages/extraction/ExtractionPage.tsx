@@ -20,6 +20,12 @@ export interface ExtractionPageProps {
   onBack: () => void;
 }
 
+interface PendingDeletion {
+  timerId: ReturnType<typeof setTimeout>;
+  commit: () => Promise<void>;
+  rollback: () => void;
+}
+
 export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
   const user = useAuthStore((state) => state.user);
   const addToast = useToastStore((state) => state.addToast);
@@ -34,7 +40,27 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
   const [isFetchingBatchTracks, setIsFetchingBatchTracks] = useState(false);
   const [batchEditTracks, setBatchEditTracks] = useState<MusicFileDto[]>([]);
   const [isBatchEditModalOpen, setIsBatchEditModalOpen] = useState(false);
-  const [isBatchDeletingJobs, setIsBatchDeletingJobs] = useState(false);
+
+  // Pending deletions map for undo capability (keyed by action identifier)
+  const pendingDeletionsRef = useRef<Map<string, PendingDeletion>>(new Map());
+
+  // 컴포넌트 언마운트 및 페이지 이탈(beforeunload) 시 지연 중인 삭제 요청을 즉시 서버에 커밋
+  useEffect(() => {
+    const flushAllPendingDeletions = () => {
+      pendingDeletionsRef.current.forEach(({ timerId, commit }) => {
+        clearTimeout(timerId);
+        commit();
+      });
+      pendingDeletionsRef.current.clear();
+    };
+
+    window.addEventListener('beforeunload', flushAllPendingDeletions);
+
+    return () => {
+      window.removeEventListener('beforeunload', flushAllPendingDeletions);
+      flushAllPendingDeletions();
+    };
+  }, []);
 
   // 1. 추출 작업 목록 조회 (스마트 조건부 2초 폴링)
   const {
@@ -179,94 +205,154 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
     cancelJobMutation.mutate(jobId);
   };
 
-  // 6. 단건 히스토리 삭제 뮤테이션
-  const deleteJobMutation = useMutation({
-    mutationFn: (jobId: number) => extractionApi.deleteExtraction(jobId),
-    onSuccess: (_, jobId) => {
-      addToast('추출 작업 기록이 삭제되었습니다.', 'info');
-      queryClient.setQueryData<ExtractionJobDto[]>(['extractions'], (old = []) =>
-        old.filter((j) => j.id !== jobId)
-      );
-      setSelectedJobIds((prev) => {
-        if (!prev.has(jobId)) return prev;
-        const next = new Set(prev);
-        next.delete(jobId);
-        return next;
-      });
-    },
-    onError: (err: unknown) => {
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        '기록 삭제에 실패했습니다.';
-      addToast(message, 'error');
-    },
-  });
+  // 지연 삭제 등록 헬퍼 (5초 동안 유지되는 되돌리기 토스트 제공)
+  const registerPendingDeletion = (
+    key: string,
+    message: string,
+    commitFn: () => Promise<void>,
+    rollbackFn: () => void,
+  ) => {
+    // 동일 키의 이전 대기 작업이 있다면 즉시 커밋
+    const existing = pendingDeletionsRef.current.get(key);
+    if (existing) {
+      clearTimeout(existing.timerId);
+      existing.commit();
+      pendingDeletionsRef.current.delete(key);
+    }
 
+    const timerId = setTimeout(async () => {
+      pendingDeletionsRef.current.delete(key);
+      try {
+        await commitFn();
+      } catch (err) {
+        console.error('Failed to commit deletion:', err);
+      }
+    }, 5000);
+
+    const rollback = () => {
+      clearTimeout(timerId);
+      pendingDeletionsRef.current.delete(key);
+      rollbackFn();
+    };
+
+    pendingDeletionsRef.current.set(key, { timerId, commit: commitFn, rollback });
+
+    addToast(message, 'info', 5000, {
+      label: '되돌리기',
+      onClick: rollback,
+    });
+  };
+
+  // 6. 단건 히스토리 삭제 (5초 되돌리기 지원)
   const handleDeleteJob = (jobId: number) => {
-    deleteJobMutation.mutate(jobId);
+    const targetJob = jobs.find((j) => j.id === jobId);
+    if (!targetJob) return;
+
+    // 선택 해제
+    setSelectedJobIds((prev) => {
+      if (!prev.has(jobId)) return prev;
+      const next = new Set(prev);
+      next.delete(jobId);
+      return next;
+    });
+
+    // 즉시 UI 캐시에서 낙관적 제거
+    queryClient.setQueryData<ExtractionJobDto[]>(['extractions'], (old = []) =>
+      old.filter((j) => j.id !== jobId)
+    );
+
+    const key = `job-${jobId}`;
+    const displayTitle = targetJob.musicFileTitle || targetJob.sourceUrl || '음원';
+
+    registerPendingDeletion(
+      key,
+      `"${displayTitle}" 추출 기록이 삭제되었습니다.`,
+      async () => {
+        await extractionApi.deleteExtraction(jobId);
+      },
+      () => {
+        queryClient.setQueryData<ExtractionJobDto[]>(['extractions'], (old = []) => {
+          if (old.some((j) => j.id === targetJob.id)) return old;
+          return [...old, targetJob].sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+        });
+        addToast(`"${displayTitle}" 삭제가 취소되었습니다.`, 'info');
+      }
+    );
   };
 
-  // 7. 종료된 히스토리 전체 일괄 삭제 뮤테이션
-  const clearHistoryMutation = useMutation({
-    mutationFn: () => extractionApi.clearExtractionHistory(),
-    onSuccess: (data) => {
-      addToast(
-        data.deletedCount > 0
-          ? `${data.deletedCount}건의 추출 히스토리가 삭제되었습니다.`
-          : '삭제할 추출 내역이 없습니다.',
-        'info'
-      );
-      queryClient.setQueryData<ExtractionJobDto[]>(['extractions'], (old = []) =>
-        old.filter((j) =>
-          ['PENDING', 'DOWNLOADING', 'CONVERTING', 'UPLOADING'].includes(j.status)
-        )
-      );
-      clearSelection();
-    },
-    onError: (err: unknown) => {
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        '기록 전체 삭제에 실패했습니다.';
-      addToast(message, 'error');
-    },
-  });
-
+  // 7. 종료된 히스토리 전체 일괄 삭제 (5초 되돌리기 지원)
   const handleClearHistory = () => {
-    if (
-      window.confirm(
-        '완료 및 종료된 추출 히스토리를 모두 삭제하시겠습니까?\n(보관함에 이미 저장된 음원 파일은 안전하게 유지됩니다.)'
+    const finishedJobs = jobs.filter((j) =>
+      ['COMPLETED', 'FAILED', 'CANCELLED'].includes(j.status)
+    );
+    if (finishedJobs.length === 0) return;
+
+    // 선택 해제
+    clearSelection();
+
+    // 즉시 UI 캐시에서 종료된 작업 제거
+    queryClient.setQueryData<ExtractionJobDto[]>(['extractions'], (old = []) =>
+      old.filter((j) =>
+        ['PENDING', 'DOWNLOADING', 'CONVERTING', 'UPLOADING'].includes(j.status)
       )
-    ) {
-      clearHistoryMutation.mutate();
-    }
+    );
+
+    const key = `clear-all-${Date.now()}`;
+    registerPendingDeletion(
+      key,
+      `전체 추출 히스토리(${finishedJobs.length}건)가 삭제되었습니다.`,
+      async () => {
+        await extractionApi.clearExtractionHistory();
+      },
+      () => {
+        queryClient.setQueryData<ExtractionJobDto[]>(['extractions'], (old = []) => {
+          const existingIds = new Set(old.map((j) => j.id));
+          const toRestore = finishedJobs.filter((j) => !existingIds.has(j.id));
+          return [...old, ...toRestore].sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+        });
+        addToast('전체 히스토리 삭제가 취소되었습니다.', 'info');
+      }
+    );
   };
 
-  // 8. 선택한 히스토리 일괄 삭제 핸들러
-  const handleDeleteSelectedJobs = async () => {
-    if (selectedJobIds.size === 0 || isBatchDeletingJobs) return;
-    if (
-      !window.confirm(
-        `선택한 ${selectedJobIds.size}건의 추출 히스토리를 삭제하시겠습니까?\n(보관함의 음원 파일은 안전하게 유지됩니다.)`
-      )
-    ) {
-      return;
-    }
+  // 8. 선택한 히스토리 일괄 삭제 (5초 되돌리기 지원)
+  const handleDeleteSelectedJobs = () => {
+    if (selectedJobIds.size === 0) return;
+    const targetJobs = jobs.filter((j) => selectedJobIds.has(j.id));
+    if (targetJobs.length === 0) return;
 
-    setIsBatchDeletingJobs(true);
-    const idsToDelete = Array.from(selectedJobIds);
-    try {
-      await Promise.all(idsToDelete.map((id) => extractionApi.deleteExtraction(id)));
-      addToast(`${idsToDelete.length}건의 추출 기록이 삭제되었습니다.`, 'info');
-      queryClient.setQueryData<ExtractionJobDto[]>(['extractions'], (old = []) =>
-        old.filter((j) => !selectedJobIds.has(j.id))
-      );
-      clearSelection();
-    } catch (err) {
-      console.error('Failed to delete selected extraction jobs:', err);
-      addToast('선택한 추출 기록 삭제 중 오류가 발생했습니다.', 'error');
-    } finally {
-      setIsBatchDeletingJobs(false);
-    }
+    const targetIds = new Set(targetJobs.map((j) => j.id));
+
+    // 선택 해제
+    clearSelection();
+
+    // 즉시 UI 캐시에서 선택된 작업 제거
+    queryClient.setQueryData<ExtractionJobDto[]>(['extractions'], (old = []) =>
+      old.filter((j) => !targetIds.has(j.id))
+    );
+
+    const key = `batch-${Date.now()}`;
+    registerPendingDeletion(
+      key,
+      `${targetJobs.length}건의 추출 기록이 삭제되었습니다.`,
+      async () => {
+        await Promise.all(targetJobs.map((j) => extractionApi.deleteExtraction(j.id)));
+      },
+      () => {
+        queryClient.setQueryData<ExtractionJobDto[]>(['extractions'], (old = []) => {
+          const existingIds = new Set(old.map((j) => j.id));
+          const toRestore = targetJobs.filter((j) => !existingIds.has(j.id));
+          return [...old, ...toRestore].sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+        });
+        addToast(`${targetJobs.length}건의 삭제가 취소되었습니다.`, 'info');
+      }
+    );
   };
 
   // 9. 단건 메타데이터 수정 열기 및 완료 핸들러
@@ -395,8 +481,6 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
           onEditMetadata={handleOpenEditMetadata}
           onDeleteJob={handleDeleteJob}
           onClearHistory={handleClearHistory}
-          isClearing={clearHistoryMutation.isPending}
-          deletingJobId={deleteJobMutation.variables ?? null}
         />
       </main>
 
@@ -404,7 +488,7 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
       <ExtractionBatchActionBar
         isOpen={selectedJobIds.size > 0}
         selectedCount={selectedJobIds.size}
-        isLoading={isFetchingBatchTracks || isBatchDeletingJobs}
+        isLoading={isFetchingBatchTracks}
         onEditMetadata={handleOpenBatchEdit}
         onDeleteSelected={handleDeleteSelectedJobs}
         onClearSelection={clearSelection}
