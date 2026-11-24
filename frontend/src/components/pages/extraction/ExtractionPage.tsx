@@ -451,7 +451,6 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
           onToggleSelectAll={toggleSelectAll}
           onBatchEdit={handleOpenBatchEdit}
           isBatchLoading={isFetchingBatchTracks}
-          onGoToLibrary={onBack}
           onEditMetadata={handleOpenEditMetadata}
           onDeleteJob={handleDeleteJob}
           onDeleteSelected={handleDeleteSelectedJobs}

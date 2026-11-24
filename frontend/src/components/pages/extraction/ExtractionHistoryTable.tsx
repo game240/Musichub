@@ -16,7 +16,6 @@ export interface ExtractionHistoryTableProps {
   onToggleSelectAll: () => void;
   onBatchEdit: () => void;
   isBatchLoading?: boolean;
-  onGoToLibrary: () => void;
   onEditMetadata: (musicFileId: number) => void;
   onDeleteJob: (jobId: number) => void;
   onDeleteSelected?: () => void;
@@ -32,7 +31,6 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
   onToggleSelectAll,
   onBatchEdit,
   isBatchLoading = false,
-  onGoToLibrary,
   onEditMetadata,
   onDeleteJob,
   onDeleteSelected,
@@ -171,7 +169,7 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
               <th className="py-3 px-4 w-auto">추출 음원 정보</th>
               <th className="py-3 px-4 w-32 sm:w-36">상태</th>
               <th className="py-3 px-4 w-44 sm:w-48">추출 날짜</th>
-              <th className="py-3 px-4 w-40 sm:w-44 text-right">관리</th>
+              <th className="py-3 px-4 w-32 sm:w-36 text-right"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/[0.04]">
@@ -326,7 +324,7 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                   </td>
 
                   {/* Column 5: Action Buttons */}
-                  <td className="py-3 px-4 w-40 sm:w-44 text-right whitespace-nowrap">
+                  <td className="py-3 px-4 w-32 sm:w-36 text-right whitespace-nowrap">
                     {hasMusicFile ? (
                       <div className="flex items-center justify-end gap-1.5">
                         <Tooltip content="메타데이터 수정">
@@ -342,17 +340,6 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                             <span className="hidden sm:inline">수정</span>
                           </button>
                         </Tooltip>
-
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onGoToLibrary();
-                          }}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-[#8590ea] hover:text-white bg-[#5e6ad2]/10 hover:bg-[#5e6ad2]/25 border border-[#5e6ad2]/20 transition-colors cursor-pointer"
-                        >
-                          <span>듣기</span>
-                        </button>
 
                         <Tooltip content="기록 삭제">
                           <button
