@@ -83,19 +83,32 @@ export const TrackRow: React.FC<TrackRowProps> = ({
         'group border-b border-white/[0.04] transition-colors duration-150 select-none',
         isSelectionMode && 'cursor-pointer',
         isSelected
-          ? 'bg-[#5e6ad2]/15'
+          ? 'bg-[#5e6ad2]/15 hover:bg-[#5e6ad2]/20'
           : isCurrent
-            ? 'bg-[#5e6ad2]/10 hover:bg-[#5e6ad2]/15'
-            : 'hover:bg-white/[0.03]',
+            ? 'bg-[#5e6ad2]/10 hover:bg-[#5e6ad2]/15 has-[td:first-child:hover]:bg-[#5e6ad2]/10'
+            : 'hover:bg-white/[0.03] has-[td:first-child:hover]:bg-transparent',
       )}
     >
       {/* Index & Play button / Checkbox */}
-      <td className="w-10 sm:w-14 py-2.5 px-1 sm:px-3 text-center relative">
+      <td
+        className={cn(
+          'w-10 sm:w-14 py-2.5 px-1 sm:px-3 text-center select-none relative transition-colors duration-150',
+          'cursor-pointer hover:bg-white/[0.03]',
+          isSelected || isCurrent ? 'bg-transparent' : 'bg-[#0f1011]',
+        )}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (onToggleSelect) {
+            onToggleSelect(track, e);
+          }
+        }}
+        title={isSelected ? '선택 해제' : '선택'}
+      >
         {/* Left active line for current or selected */}
         {isSelected ? (
-          <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[#8590ea] rounded-r" />
+          <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[#8590ea] rounded-r z-20" />
         ) : isCurrent ? (
-          <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[#5e6ad2] rounded-r" />
+          <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[#5e6ad2] rounded-r z-20" />
         ) : null}
 
         <div className="w-7 h-7 mx-auto relative flex items-center justify-center">
