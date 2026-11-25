@@ -17,7 +17,7 @@ import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
 import { Badge } from '../atoms/Badge';
 import { userApi } from '../../api/userApi';
-import type { SetPasswordRequest } from '../../types/auth';
+import type { SetPasswordRequest, UserIdentitiesResponse } from '../../types/auth';
 
 export interface AccountSecurityModalProps {
   isOpen: boolean;
@@ -44,10 +44,11 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
   const [googleActionError, setGoogleActionError] = useState<string | null>(null);
   const [googleActionSuccess, setGoogleActionSuccess] = useState<string | null>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['user-identities'],
     queryFn: () => userApi.getIdentities(),
     enabled: isOpen,
+    staleTime: 0,
   });
 
   const isGoogleLinked = data?.identities.some((i) => i.provider === 'GOOGLE') ?? false;
@@ -57,7 +58,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
   // 비밀번호 변경 (hasPassword === true)
   const setPasswordMutation = useMutation({
     mutationFn: (payload: SetPasswordRequest) => userApi.setPassword(payload),
-    onSuccess: () => {
+    onSuccess: async () => {
       setPasswordSuccess('비밀번호가 성공적으로 변경되었습니다.');
       setPasswordError(null);
       setVerificationCode('');
@@ -66,7 +67,8 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
       setConfirmPassword('');
       setIsPasswordFormOpen(false);
       setSetupStep('initial');
-      queryClient.invalidateQueries({ queryKey: ['user-identities'] });
+      await refetch();
+      await queryClient.invalidateQueries({ queryKey: ['user-identities'] });
     },
     onError: (err: unknown) => {
       let msg = '비밀번호 변경에 실패했습니다.';
@@ -103,7 +105,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
   const confirmSetupMutation = useMutation({
     mutationFn: ({ code, newPassword }: { code: string; newPassword: string }) =>
       userApi.confirmPasswordSetup(code, newPassword),
-    onSuccess: () => {
+    onSuccess: async () => {
       setPasswordSuccess(
         '비밀번호가 성공적으로 설정되었습니다. 이제 이메일/비밀번호로도 로그인하실 수 있습니다.',
       );
@@ -113,7 +115,22 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
       setConfirmPassword('');
       setIsPasswordFormOpen(false);
       setSetupStep('initial');
-      queryClient.invalidateQueries({ queryKey: ['user-identities'] });
+      queryClient.setQueryData<UserIdentitiesResponse>(['user-identities'], (prev) => {
+        if (!prev) return prev;
+        const hasLocal = prev.identities.some((i) => i.provider === 'LOCAL');
+        return {
+          ...prev,
+          hasPassword: true,
+          identities: hasLocal
+            ? prev.identities
+            : [
+                ...prev.identities,
+                { provider: 'LOCAL', identifier: userEmail, createdAt: new Date().toISOString() },
+              ],
+        };
+      });
+      await refetch();
+      await queryClient.invalidateQueries({ queryKey: ['user-identities'] });
     },
     onError: (err: unknown) => {
       let msg = '비밀번호 설정에 실패했습니다.';
@@ -128,10 +145,11 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
 
   const linkGoogleMutation = useMutation({
     mutationFn: (idToken: string) => userApi.linkGoogle(idToken),
-    onSuccess: () => {
+    onSuccess: async () => {
       setGoogleActionSuccess('Google 계정이 성공적으로 연결되었습니다.');
       setGoogleActionError(null);
-      queryClient.invalidateQueries({ queryKey: ['user-identities'] });
+      await refetch();
+      await queryClient.invalidateQueries({ queryKey: ['user-identities'] });
     },
     onError: (err: unknown) => {
       let msg = 'Google 계정 연결에 실패했습니다.';
@@ -147,10 +165,11 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
 
   const unlinkMutation = useMutation({
     mutationFn: (provider: 'GOOGLE' | 'LOCAL') => userApi.unlinkProvider(provider),
-    onSuccess: () => {
+    onSuccess: async () => {
       setGoogleActionSuccess('로그인 수단 연결이 해제되었습니다.');
       setGoogleActionError(null);
-      queryClient.invalidateQueries({ queryKey: ['user-identities'] });
+      await refetch();
+      await queryClient.invalidateQueries({ queryKey: ['user-identities'] });
     },
     onError: (err: unknown) => {
       let msg = '연결 해제에 실패했습니다.';
@@ -361,6 +380,13 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                 </Button>
               </div>
 
+              {passwordSuccess && !isPasswordFormOpen ? (
+                <div className="flex items-center gap-2 p-2.5 bg-green-500/10 border border-green-500/20 text-green-300 text-xs rounded-lg">
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-green-400" />
+                  <span>{passwordSuccess}</span>
+                </div>
+              ) : null}
+
               {/* Password Setting / Changing Area */}
               {isPasswordFormOpen ? (
                 <div className="mt-2 pt-3 border-t border-white/[0.06] flex flex-col gap-3">
@@ -415,7 +441,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
 
                   {/* Case 2: 인증번호 발송 완료 후 입력 폼 */}
                   {setupStep === 'code_sent' ? (
-                    <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-3">
+                    <form onSubmit={handlePasswordSubmit} autoComplete="off" className="flex flex-col gap-3">
                       {/* 인증코드 입력란 (설정 및 변경 모두 사용) */}
                       <div className="p-3 bg-[#5e6ad2]/10 border border-[#5e6ad2]/20 rounded-xl mb-1">
                         <div className="flex items-center justify-between mb-2">
@@ -433,6 +459,9 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                         </div>
                         <Input
                           type="text"
+                          name="verificationCode"
+                          autoComplete="one-time-code"
+                          inputMode="numeric"
                           maxLength={6}
                           value={verificationCode}
                           onChange={(e) => setVerificationCode(e.target.value)}
@@ -457,6 +486,8 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                           </label>
                           <Input
                             type="password"
+                            name="currentPassword"
+                            autoComplete="current-password"
                             value={currentPassword}
                             onChange={(e) => setCurrentPassword(e.target.value)}
                             placeholder="현재 비밀번호를 입력하세요"
@@ -472,6 +503,8 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                         </label>
                         <Input
                           type="password"
+                          name="newPassword"
+                          autoComplete="new-password"
                           value={newPassword}
                           onChange={(e) => setNewPassword(e.target.value)}
                           placeholder="영문, 숫자, 특수문자를 포함한 8자 이상 비밀번호"
@@ -487,6 +520,8 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                         <label className="block text-xs text-neutral-300 mb-1">비밀번호 확인</label>
                         <Input
                           type="password"
+                          name="confirmPassword"
+                          autoComplete="new-password"
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
                           placeholder="비밀번호를 다시 한번 입력하세요"

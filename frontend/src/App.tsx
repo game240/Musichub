@@ -134,7 +134,7 @@ const AppContent: React.FC = () => {
         <div className="md:pl-3 md:border-l border-white/[0.08]">
           <AccountDropdown
             user={user}
-            onOpenSecurityModal={() => setIsSecurityModalOpen(false)}
+            onOpenSecurityModal={() => setIsSecurityModalOpen(true)}
             onNavigateAdmin={navigateToAdmin}
             onNavigateExtraction={navigateToExtraction}
             onLogout={logout}

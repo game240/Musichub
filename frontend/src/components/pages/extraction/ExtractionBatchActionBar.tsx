@@ -82,7 +82,7 @@ export const ExtractionBatchActionBar: React.FC<ExtractionBatchActionBarProps> =
       ) : null}
 
       {/* Action: Batch Edit Metadata */}
-      <Tooltip content="선택한 곡 메타데이터 일괄 수정" side="top">
+      <Tooltip content="선택한 곡 정보 일괄 수정" side="top">
         <button
           type="button"
           onClick={onEditMetadata}
@@ -103,7 +103,7 @@ export const ExtractionBatchActionBar: React.FC<ExtractionBatchActionBarProps> =
           ) : (
             <>
               <Pencil className="w-3.5 h-3.5" />
-              <span className="whitespace-nowrap">일괄 수정</span>
+              <span className="whitespace-nowrap">정보 일괄 수정</span>
             </>
           )}
         </button>
