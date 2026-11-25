@@ -64,8 +64,25 @@ export const TrackTable: React.FC<TrackTableProps> = ({
       <table className="w-full text-left border-collapse">
         <thead>
           <tr className="group/head border-b border-white/[0.08] text-[11px] font-medium text-neutral-400 bg-white/[0.02]">
-            <th className="py-2.5 px-1 sm:px-3 w-10 sm:w-14 text-center">
-              <div className="w-7 h-7 mx-auto flex items-center justify-center">
+            <th
+              className="py-2.5 px-1 sm:px-3 w-10 sm:w-14 text-center select-none cursor-pointer transition-colors duration-150 hover:bg-white/[0.02]"
+              onClick={() => {
+                if (onToggleSelectAll && tracks.length > 0) {
+                  onToggleSelectAll();
+                }
+              }}
+              title={
+                tracks.length === 0
+                  ? undefined
+                  : isAllSelected
+                    ? '전체 선택 해제'
+                    : '전체 선택'
+              }
+            >
+              <div
+                className="w-7 h-7 mx-auto flex items-center justify-center"
+                onClick={(e) => e.stopPropagation()}
+              >
                 {showMasterCheckbox ? (
                   <Checkbox
                     checked={isAllSelected}
