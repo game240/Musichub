@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { UploadCloud, Music, RefreshCw, CheckSquare } from 'lucide-react';
+import { UploadCloud, Music, RefreshCw } from 'lucide-react';
 import { YoutubeIcon } from '../../atoms/YoutubeIcon';
 import { musicApi } from '../../../api/musicApi';
 import type { MusicFileDto } from '../../../types/music';
@@ -37,7 +37,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({ onNavigateExtraction }
 
   // Batch selection states
   const [selectedTrackIds, setSelectedTrackIds] = useState<Set<number>>(new Set());
-  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const isSelectionMode = selectedTrackIds.size > 0;
   const lastSelectedTrackIndexRef = useRef<number | null>(null);
 
   // Batch action states (Phase 2 & Phase 3)
@@ -80,7 +80,6 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({ onNavigateExtraction }
   // Multi-select helpers
   const clearSelection = useCallback(() => {
     setSelectedTrackIds(new Set());
-    setIsSelectionMode(false);
     lastSelectedTrackIndexRef.current = null;
   }, []);
 
@@ -114,10 +113,6 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({ onNavigateExtraction }
 
         lastSelectedTrackIndexRef.current = currentIndex;
 
-        if (next.size > 0) {
-          setIsSelectionMode(true);
-        }
-
         return next;
       });
     },
@@ -130,10 +125,8 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({ onNavigateExtraction }
     const isAllSelected = filteredTracks.every((t) => selectedTrackIds.has(t.id));
     if (isAllSelected) {
       setSelectedTrackIds(new Set());
-      setIsSelectionMode(false);
     } else {
       setSelectedTrackIds(new Set(filteredTracks.map((t) => t.id)));
-      setIsSelectionMode(true);
     }
   }, [filteredTracks, selectedTrackIds]);
 
@@ -143,7 +136,8 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({ onNavigateExtraction }
       // Ignore if focus is in an input or textarea
       const target = e.target as HTMLElement | null;
       const isInput =
-        target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+        target &&
+        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
 
       if (e.key === 'Escape' && isSelectionMode) {
         clearSelection();
@@ -151,7 +145,6 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({ onNavigateExtraction }
         if (filteredTracks.length > 0) {
           e.preventDefault();
           setSelectedTrackIds(new Set(filteredTracks.map((t) => t.id)));
-          setIsSelectionMode(true);
         }
       }
     };
@@ -299,23 +292,6 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({ onNavigateExtraction }
             <Music className="w-3.5 h-3.5 text-[#5e6ad2]" />
             <span>총 {filteredTracks.length}곡</span>
           </span>
-
-          {/* Toggle selection mode button */}
-          <Button
-            variant={isSelectionMode ? 'secondary' : 'ghost'}
-            size="md"
-            onClick={() => {
-              if (isSelectionMode) {
-                clearSelection();
-              } else {
-                setIsSelectionMode(true);
-              }
-            }}
-            className={isSelectionMode ? 'border-[#5e6ad2]/50 text-white bg-[#5e6ad2]/15' : ''}
-          >
-            <CheckSquare className="w-4 h-4 text-[#8590ea]" />
-            <span>{isSelectionMode ? '선택 종료' : '선택'}</span>
-          </Button>
 
           {/* YouTube Extraction Button for ADMIN / DOWNLOADER */}
           {(user?.role === 'ADMIN' || user?.role === 'DOWNLOADER') && onNavigateExtraction ? (
