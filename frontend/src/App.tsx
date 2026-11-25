@@ -136,7 +136,6 @@ const AppContent: React.FC = () => {
             user={user}
             onOpenSecurityModal={() => setIsSecurityModalOpen(true)}
             onNavigateAdmin={navigateToAdmin}
-            onNavigateExtraction={navigateToExtraction}
             onLogout={logout}
           />
         </div>
