@@ -37,6 +37,11 @@ data class TagSyncStatusResponse(
     val status: String
 )
 
+data class MetadataSuggestionsResponse(
+    val artists: List<String>,
+    val albums: List<String>
+)
+
 data class MusicFileDto(
     val id: Long,
     val fileName: String,
@@ -201,5 +206,19 @@ class MusicFileController(
     ): ResponseEntity<TagSyncStatusResponse> {
         val status = musicFileService.resyncTags(user.id, id)
         return ResponseEntity.ok(TagSyncStatusResponse(id = id, status = status.name))
+    }
+
+    @GetMapping("/metadata-suggestions")
+    fun getMetadataSuggestions(
+        @AuthenticationPrincipal user: UserPrincipal,
+        @RequestParam(required = false) artist: String?
+    ): ResponseEntity<MetadataSuggestionsResponse> {
+        val result = musicFileService.getMetadataSuggestions(user.id, artist)
+        return ResponseEntity.ok(
+            MetadataSuggestionsResponse(
+                artists = result.artists,
+                albums = result.albums
+            )
+        )
     }
 }

@@ -53,4 +53,48 @@ interface MusicFileRepository : JpaRepository<MusicFile, Long> {
 
     @Query("SELECT m.user.id, COUNT(m) FROM MusicFile m WHERE m.status = :status AND m.user.id IN :userIds GROUP BY m.user.id")
     fun countTracksByUserIdsAndStatus(userIds: Collection<Long>, status: MusicFileStatus): List<Array<Any>>
+
+    @Query("""
+        SELECT DISTINCT TRIM(m.artist)
+        FROM MusicFile m
+        WHERE m.user.id = :userId
+          AND m.status = :status
+          AND m.artist IS NOT NULL
+          AND TRIM(m.artist) != ''
+        ORDER BY TRIM(m.artist) ASC
+    """)
+    fun findDistinctArtistsByUserIdAndStatus(
+        userId: Long,
+        status: MusicFileStatus = MusicFileStatus.ACTIVE
+    ): List<String>
+
+    @Query("""
+        SELECT DISTINCT TRIM(m.album)
+        FROM MusicFile m
+        WHERE m.user.id = :userId
+          AND m.status = :status
+          AND m.album IS NOT NULL
+          AND TRIM(m.album) != ''
+        ORDER BY TRIM(m.album) ASC
+    """)
+    fun findDistinctAlbumsByUserIdAndStatus(
+        userId: Long,
+        status: MusicFileStatus = MusicFileStatus.ACTIVE
+    ): List<String>
+
+    @Query("""
+        SELECT DISTINCT TRIM(m.album)
+        FROM MusicFile m
+        WHERE m.user.id = :userId
+          AND m.status = :status
+          AND m.album IS NOT NULL
+          AND TRIM(m.album) != ''
+          AND LOWER(TRIM(m.artist)) = LOWER(TRIM(:artist))
+        ORDER BY TRIM(m.album) ASC
+    """)
+    fun findDistinctAlbumsByUserIdAndArtistAndStatus(
+        userId: Long,
+        artist: String,
+        status: MusicFileStatus = MusicFileStatus.ACTIVE
+    ): List<String>
 }

@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Modal } from './Modal';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
 import { Spinner } from '../atoms/Spinner';
+import { Combobox } from '../molecules/Combobox';
 import { musicApi, type UpdateMusicMetadataDto } from '../../api/musicApi';
 import { useTagSyncStore } from '../../stores/tagSyncStore';
+import { useDebounce } from '../../utils/useDebounce';
 import type { MusicFileDto } from '../../types/music';
 
 export interface EditMetadataModalProps {
@@ -21,6 +24,7 @@ interface EditMetadataFormProps {
 }
 
 const EditMetadataForm: React.FC<EditMetadataFormProps> = ({ track, onClose, onSuccess }) => {
+  const queryClient = useQueryClient();
   const [title, setTitle] = useState(track.title || '');
   const [artist, setArtist] = useState(track.artist || '');
   const [album, setAlbum] = useState(track.album || '');
@@ -32,6 +36,17 @@ const EditMetadataForm: React.FC<EditMetadataFormProps> = ({ track, onClose, onS
   const [lyrics, setLyrics] = useState(track.lyrics || '');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const debouncedArtist = useDebounce(artist.trim(), 250);
+
+  const { data: suggestions } = useQuery({
+    queryKey: ['metadata-suggestions', debouncedArtist],
+    queryFn: () => musicApi.getMetadataSuggestions(debouncedArtist),
+    staleTime: 60 * 1000,
+  });
+
+  const artistOptions = suggestions?.artists || [];
+  const albumOptions = suggestions?.albums || [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +68,7 @@ const EditMetadataForm: React.FC<EditMetadataFormProps> = ({ track, onClose, onS
       };
 
       const updated = await musicApi.updateMetadata(track.id, payload);
+      queryClient.invalidateQueries({ queryKey: ['metadata-suggestions'] });
       // 우측 하단 백그라운드 R2 태그 동기화 위젯에 태스크 등록
       useTagSyncStore.getState().startSync(track.id, payload.title || track.fileName);
       onSuccess(updated);
@@ -88,18 +104,20 @@ const EditMetadataForm: React.FC<EditMetadataFormProps> = ({ track, onClose, onS
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-xs font-medium text-neutral-300 mb-1.5">아티스트</label>
-          <Input
+          <Combobox
             value={artist}
-            onChange={(e) => setArtist(e.target.value)}
+            onChange={(val) => setArtist(val)}
+            options={artistOptions}
             placeholder="아티스트"
             disabled={isSaving}
           />
         </div>
         <div>
           <label className="block text-xs font-medium text-neutral-300 mb-1.5">앨범</label>
-          <Input
+          <Combobox
             value={album}
-            onChange={(e) => setAlbum(e.target.value)}
+            onChange={(val) => setAlbum(val)}
+            options={albumOptions}
             placeholder="앨범명"
             disabled={isSaving}
           />

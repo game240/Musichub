@@ -115,7 +115,19 @@ export const musicApi = {
     );
     return response.data;
   },
+
+  async getMetadataSuggestions(artist?: string): Promise<MetadataSuggestionsDto> {
+    const response = await apiClient.get<MetadataSuggestionsDto>('/music-files/metadata-suggestions', {
+      params: { artist: artist?.trim() || undefined },
+    });
+    return response.data;
+  },
 };
+
+export interface MetadataSuggestionsDto {
+  artists: string[];
+  albums: string[];
+}
 
 export interface UpdateMusicMetadataDto {
   title?: string;
