@@ -12,6 +12,8 @@ import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionSynchronization
+import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.multipart.MultipartFile
 import java.io.ByteArrayInputStream
 import java.nio.file.Files
@@ -330,10 +332,8 @@ class MusicFileService(
         musicFile.tagSyncStatus = TagSyncStatus.SYNCING
         musicFile.updatedAt = java.time.Instant.now()
 
-        // 2. 무거운 작업(R2 파일 다운로드 -> Jaudiotagger 태그 재작성 -> R2 재업로드)은 백그라운드 비동기로 실행
-        CompletableFuture.runAsync {
-            rewriteR2Tags(musicFileId, request)
-        }
+        // 2. 무거운 작업(R2 파일 다운로드 -> Jaudiotagger 태그 재작성 -> R2 재업로드)은 DB 커밋 완료 후 백그라운드 비동기로 실행
+        dispatchRewriteR2TagsAfterCommit(musicFileId, request)
 
         return musicFile
     }
@@ -371,21 +371,28 @@ class MusicFileService(
             }
 
             // 4. 유저 스토리지 사용량 델타 반영 & 상태 갱신
-            val deltaSize = newSize - musicFile.fileSize
-            if (deltaSize > 0) {
-                musicFile.user.addStorageUsage(deltaSize)
-            } else if (deltaSize < 0) {
-                musicFile.user.subtractStorageUsage(-deltaSize)
+            // ⚠️ 레이스 컨디션 방지: R2 업로드 완료 시점의 최신 DB 엔티티를 조회하여 상태와 파일 크기만 반영
+            val latestFile = musicFileRepository.findById(musicFileId).orElse(null)
+            if (latestFile != null) {
+                val deltaSize = newSize - latestFile.fileSize
+                if (deltaSize > 0) {
+                    latestFile.user.addStorageUsage(deltaSize)
+                } else if (deltaSize < 0) {
+                    latestFile.user.subtractStorageUsage(-deltaSize)
+                }
+                latestFile.fileSize = newSize
+                latestFile.tagSyncStatus = TagSyncStatus.SYNCED
+                musicFileRepository.save(latestFile)
+                logger.info("Successfully updated R2 audio tags in background for track id: {}", musicFileId)
             }
-            musicFile.fileSize = newSize
-            musicFile.tagSyncStatus = TagSyncStatus.SYNCED
-            musicFileRepository.save(musicFile)
-            logger.info("Successfully updated R2 audio tags in background for track id: {}", musicFileId)
         } catch (e: Exception) {
             logger.error("Failed to rewrite R2 audio tags for track id {}: {}", musicFileId, e.message, e)
             try {
-                musicFile.tagSyncStatus = TagSyncStatus.FAILED
-                musicFileRepository.save(musicFile)
+                val latestFile = musicFileRepository.findById(musicFileId).orElse(null)
+                if (latestFile != null) {
+                    latestFile.tagSyncStatus = TagSyncStatus.FAILED
+                    musicFileRepository.save(latestFile)
+                }
             } catch (saveEx: Exception) {
                 logger.error("Failed to mark tagSyncStatus as FAILED for track id {}: {}", musicFileId, saveEx.message)
             }
@@ -424,11 +431,25 @@ class MusicFileService(
         musicFile.tagSyncStatus = TagSyncStatus.SYNCING
         musicFileRepository.save(musicFile)
 
-        CompletableFuture.runAsync {
-            rewriteR2Tags(musicFileId, request)
-        }
+        dispatchRewriteR2TagsAfterCommit(musicFileId, request)
 
         return TagSyncStatus.SYNCING
+    }
+
+    private fun dispatchRewriteR2TagsAfterCommit(musicFileId: Long, request: UpdateMusicMetadataRequest) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(object : TransactionSynchronization {
+                override fun afterCommit() {
+                    CompletableFuture.runAsync {
+                        rewriteR2Tags(musicFileId, request)
+                    }
+                }
+            })
+        } else {
+            CompletableFuture.runAsync {
+                rewriteR2Tags(musicFileId, request)
+            }
+        }
     }
 
     private fun validateStorageQuotas(userId: Long, incomingBytes: Long) {
