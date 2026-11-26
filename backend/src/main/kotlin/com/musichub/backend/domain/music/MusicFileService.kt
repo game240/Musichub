@@ -37,6 +37,11 @@ data class DownloadUrlResult(
     val fileSize: Long
 )
 
+data class MetadataSuggestionsDto(
+    val artists: List<String>,
+    val albums: List<String>
+)
+
 @Service
 class MusicFileService(
     private val musicFileRepository: MusicFileRepository,
@@ -450,6 +455,23 @@ class MusicFileService(
                 rewriteR2Tags(musicFileId, request)
             }
         }
+    }
+
+    /**
+     * 메타데이터 자동완성 추천 목록 조회 (아티스트 및 앨범)
+     */
+    @Transactional(readOnly = true)
+    fun getMetadataSuggestions(userId: Long, artist: String?): MetadataSuggestionsDto {
+        val artists = musicFileRepository.findDistinctArtistsByUserIdAndStatus(userId)
+        val albums = if (!artist.isNullOrBlank()) {
+            val artistAlbums = musicFileRepository.findDistinctAlbumsByUserIdAndArtistAndStatus(userId, artist.trim())
+            val allAlbums = musicFileRepository.findDistinctAlbumsByUserIdAndStatus(userId)
+            val remaining = allAlbums.filter { it !in artistAlbums }
+            artistAlbums + remaining
+        } else {
+            musicFileRepository.findDistinctAlbumsByUserIdAndStatus(userId)
+        }
+        return MetadataSuggestionsDto(artists = artists, albums = albums)
     }
 
     private fun validateStorageQuotas(userId: Long, incomingBytes: Long) {

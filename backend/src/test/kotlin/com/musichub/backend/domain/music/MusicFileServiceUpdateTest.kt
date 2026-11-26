@@ -319,4 +319,39 @@ class MusicFileServiceUpdateTest {
         assertNull(latestTrack.album)
         verify(musicFileRepository).save(latestTrack)
     }
+
+    @Test
+    fun `getMetadataSuggestions returns all distinct artists and albums when artist is null or blank`() {
+        val userId = 1L
+        given(musicFileRepository.findDistinctArtistsByUserIdAndStatus(userId, MusicFileStatus.ACTIVE))
+            .willReturn(listOf("IU", "NewJeans", "Taeyeon"))
+        given(musicFileRepository.findDistinctAlbumsByUserIdAndStatus(userId, MusicFileStatus.ACTIVE))
+            .willReturn(listOf("Get Up", "INVU", "LILAC", "Palette"))
+
+        val result = musicFileService.getMetadataSuggestions(userId, null)
+
+        assertEquals(listOf("IU", "NewJeans", "Taeyeon"), result.artists)
+        assertEquals(listOf("Get Up", "INVU", "LILAC", "Palette"), result.albums)
+
+        val blankResult = musicFileService.getMetadataSuggestions(userId, "   ")
+        assertEquals(listOf("Get Up", "INVU", "LILAC", "Palette"), blankResult.albums)
+    }
+
+    @Test
+    fun `getMetadataSuggestions prioritizes artist albums when artist is provided`() {
+        val userId = 1L
+        val artist = "IU"
+        given(musicFileRepository.findDistinctArtistsByUserIdAndStatus(userId, MusicFileStatus.ACTIVE))
+            .willReturn(listOf("IU", "NewJeans", "Taeyeon"))
+        given(musicFileRepository.findDistinctAlbumsByUserIdAndArtistAndStatus(userId, "IU", MusicFileStatus.ACTIVE))
+            .willReturn(listOf("LILAC", "Palette"))
+        given(musicFileRepository.findDistinctAlbumsByUserIdAndStatus(userId, MusicFileStatus.ACTIVE))
+            .willReturn(listOf("Get Up", "INVU", "LILAC", "Palette"))
+
+        val result = musicFileService.getMetadataSuggestions(userId, artist)
+
+        assertEquals(listOf("IU", "NewJeans", "Taeyeon"), result.artists)
+        // Artist's albums ("LILAC", "Palette") should appear first, followed by others ("Get Up", "INVU")
+        assertEquals(listOf("LILAC", "Palette", "Get Up", "INVU"), result.albums)
+    }
 }
