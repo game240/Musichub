@@ -238,7 +238,7 @@ export const TrackRow: React.FC<TrackRowProps> = ({
       {/* Album */}
       <td className="py-2.5 px-4 hidden md:table-cell">
         <span className="text-xs text-neutral-400 truncate max-w-xs block">
-          {track.album || '—'}
+          {track.album?.trim() || '-'}
         </span>
       </td>
 
