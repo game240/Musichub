@@ -136,7 +136,6 @@ const AppContent: React.FC = () => {
             user={user}
             onOpenSecurityModal={() => setIsSecurityModalOpen(true)}
             onNavigateAdmin={navigateToAdmin}
-            onNavigateExtraction={navigateToExtraction}
             onLogout={logout}
           />
         </div>
@@ -149,7 +148,6 @@ const AppContent: React.FC = () => {
       <AppLayout headerRight={headerRight} bottomBar={<GlobalPlayer />}>
         <LibraryPage onNavigateExtraction={navigateToExtraction} />
       </AppLayout>
-      <FloatingTagSyncWidget />
       {user ? (
         <AccountSecurityModal
           isOpen={isSecurityModalOpen}
@@ -167,6 +165,7 @@ export const App: React.FC = () => {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider delayDuration={150}>
           <AppContent />
+          <FloatingTagSyncWidget />
         </TooltipProvider>
       </QueryClientProvider>
     </GoogleOAuthProvider>

@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, LogOut, ShieldCheck, ChevronDown, Users } from 'lucide-react';
-import { YoutubeIcon } from '../atoms/YoutubeIcon';
 import { formatBytes } from '../../utils/formatBytes';
 import type { UserRole } from '../../types/auth';
 
@@ -14,7 +13,6 @@ export interface AccountDropdownProps {
   };
   onOpenSecurityModal: () => void;
   onNavigateAdmin?: () => void;
-  onNavigateExtraction?: () => void;
   onLogout: () => void;
 }
 
@@ -22,7 +20,6 @@ export const AccountDropdown: React.FC<AccountDropdownProps> = ({
   user,
   onOpenSecurityModal,
   onNavigateAdmin,
-  onNavigateExtraction,
   onLogout,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -132,20 +129,6 @@ export const AccountDropdown: React.FC<AccountDropdownProps> = ({
             >
               <Users className="w-4 h-4 text-[#8590ea]" />
               <span>사용자 관리 (ADMIN)</span>
-            </button>
-          ) : null}
-
-          {(user.role === 'ADMIN' || user.role === 'DOWNLOADER') && onNavigateExtraction ? (
-            <button
-              type="button"
-              onClick={() => {
-                setIsOpen(false);
-                onNavigateExtraction();
-              }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-neutral-200 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer text-left mb-0.5"
-            >
-              <YoutubeIcon className="w-4 h-4 text-red-500" />
-              <span>YouTube 음원 추출</span>
             </button>
           ) : null}
 
