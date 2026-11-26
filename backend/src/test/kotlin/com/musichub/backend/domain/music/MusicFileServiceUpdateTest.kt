@@ -272,4 +272,51 @@ class MusicFileServiceUpdateTest {
         assertEquals(0, result.totalElements)
         verify(musicFileRepository).findAllByUserIdAndStatus(1L, MusicFileStatus.ACTIVE, pageable)
     }
+
+    @Test
+    fun `rewriteR2Tags fetches latest entity and preserves cleared metadata when saving SYNCED status`() {
+        val user = User(id = 1L, providerId = "test", email = "test@test.com")
+        // Stale snapshot before metadata update
+        val staleTrack = MusicFile(
+            id = 200L,
+            user = user,
+            storageKey = "users/1/audio/track2.mp3",
+            fileName = "track2.mp3",
+            fileSize = 1000L,
+            title = "Track 2",
+            album = "Old Album",
+            tagSyncStatus = TagSyncStatus.SYNCING
+        )
+        // Latest entity in DB after user cleared album
+        val latestTrack = MusicFile(
+            id = 200L,
+            user = user,
+            storageKey = "users/1/audio/track2.mp3",
+            fileName = "track2.mp3",
+            fileSize = 1000L,
+            title = "Track 2",
+            album = null,
+            tagSyncStatus = TagSyncStatus.SYNCING
+        )
+
+        // First findById for downloading R2 file returns stale or latest, second findById returns latest
+        given(musicFileRepository.findById(200L))
+            .willReturn(Optional.of(staleTrack))
+            .willReturn(Optional.of(latestTrack))
+
+        given(storageService.getObject("users/1/audio/track2.mp3"))
+            .willReturn(ByteArrayInputStream("dummy content".toByteArray()))
+
+        val request = UpdateMusicMetadataRequest(
+            title = "Track 2",
+            album = null
+        )
+
+        musicFileService.rewriteR2Tags(200L, request)
+
+        // Verify that the saved entity has album as null and tagSyncStatus as SYNCED
+        assertEquals(TagSyncStatus.SYNCED, latestTrack.tagSyncStatus)
+        assertNull(latestTrack.album)
+        verify(musicFileRepository).save(latestTrack)
+    }
 }
