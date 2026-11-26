@@ -237,8 +237,8 @@ export const Combobox = React.forwardRef<HTMLInputElement, ComboboxProps>(
                 );
               })
             ) : (
-              <div className="px-3 py-2 text-xs text-neutral-400 text-center">
-                일치하는 항목 없음 <span className="text-neutral-500">(직접 입력 유지)</span>
+              <div className="px-3 py-2 text-xs text-neutral-400">
+                일치하는 항목 없음
               </div>
             )}
           </div>
