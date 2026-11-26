@@ -1,13 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, ChevronUp, X, Music } from 'lucide-react';
 import { Modal } from './Modal';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
 import { Checkbox } from '../atoms/Checkbox';
 import { Spinner } from '../atoms/Spinner';
+import { Combobox } from '../molecules/Combobox';
 import { TrackArtwork } from '../molecules/TrackArtwork';
 import { musicApi, type UpdateMusicMetadataDto } from '../../api/musicApi';
 import { useTagSyncStore } from '../../stores/tagSyncStore';
+import { useDebounce } from '../../utils/useDebounce';
 import type { MusicFileDto } from '../../types/music';
 import { cn } from '../../utils/cn';
 
@@ -54,6 +57,18 @@ const BatchEditMetadataForm: React.FC<BatchEditMetadataFormProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [saveProgress, setSaveProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const queryClient = useQueryClient();
+  const debouncedArtist = useDebounce(artist.trim(), 250);
+
+  const { data: suggestions } = useQuery({
+    queryKey: ['metadata-suggestions', debouncedArtist],
+    queryFn: () => musicApi.getMetadataSuggestions(debouncedArtist),
+    staleTime: 60 * 1000,
+  });
+
+  const artistOptions = suggestions?.artists || [];
+  const albumOptions = suggestions?.albums || [];
 
   // Close floating track list popover on outside click
   useEffect(() => {
@@ -117,6 +132,7 @@ const BatchEditMetadataForm: React.FC<BatchEditMetadataFormProps> = ({
         setSaveProgress(`${completedCount}/${trackList.length}`);
       }
 
+      queryClient.invalidateQueries({ queryKey: ['metadata-suggestions'] });
       onSuccess();
       onClose();
     } catch (err: unknown) {
@@ -264,13 +280,14 @@ const BatchEditMetadataForm: React.FC<BatchEditMetadataFormProps> = ({
             아티스트
           </span>
         </div>
-        <Input
+        <Combobox
           ref={artistInputRef}
           value={artist}
-          onChange={(e) => {
-            setArtist(e.target.value);
+          onChange={(val) => {
+            setArtist(val);
             if (!applyArtist) setApplyArtist(true);
           }}
+          options={artistOptions}
           placeholder="일괄 적용할 아티스트 이름"
           disabled={isSaving}
           readOnly={!applyArtist}
@@ -280,7 +297,7 @@ const BatchEditMetadataForm: React.FC<BatchEditMetadataFormProps> = ({
               setTimeout(() => artistInputRef.current?.focus(), 0);
             }
           }}
-          className={cn(
+          inputClassName={cn(
             'transition-all',
             applyArtist
               ? 'cursor-text'
@@ -327,13 +344,14 @@ const BatchEditMetadataForm: React.FC<BatchEditMetadataFormProps> = ({
             앨범명
           </span>
         </div>
-        <Input
+        <Combobox
           ref={albumInputRef}
           value={album}
-          onChange={(e) => {
-            setAlbum(e.target.value);
+          onChange={(val) => {
+            setAlbum(val);
             if (!applyAlbum) setApplyAlbum(true);
           }}
+          options={albumOptions}
           placeholder="일괄 적용할 앨범명"
           disabled={isSaving}
           readOnly={!applyAlbum}
@@ -343,7 +361,7 @@ const BatchEditMetadataForm: React.FC<BatchEditMetadataFormProps> = ({
               setTimeout(() => albumInputRef.current?.focus(), 0);
             }
           }}
-          className={cn(
+          inputClassName={cn(
             'transition-all',
             applyAlbum
               ? 'cursor-text'
