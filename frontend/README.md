@@ -1,6 +1,6 @@
 # Music Hub Frontend
 
-Web client for Music Hub, a personal cloud music locker and streaming service using Cloudflare R2.
+Web client for Music Hub, a personal cloud music locker and streaming service.
 
 ## Tech Stack
 - React 19 + TypeScript

@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, DownloadCloud, RefreshCw, UploadCloud, CheckCircle2, XCircle, X, Download } from 'lucide-react';
+import {
+  Loader2,
+  DownloadCloud,
+  RefreshCw,
+  UploadCloud,
+  CheckCircle2,
+  XCircle,
+  X,
+  Download,
+} from 'lucide-react';
 import type { ExtractionJobDto, ExtractionJobStatus } from '../../../types/extraction';
 import { Spinner } from '../../atoms/Spinner';
 
@@ -13,11 +22,15 @@ export interface ExtractionActiveJobCardProps {
   totalActiveCount?: number;
 }
 
-const STEPS: Array<{ key: ExtractionJobStatus; label: string; icon: React.FC<{ className?: string }> }> = [
+const STEPS: Array<{
+  key: ExtractionJobStatus;
+  label: string;
+  icon: React.FC<{ className?: string }>;
+}> = [
   { key: 'PENDING', label: '대기 중', icon: Loader2 },
   { key: 'DOWNLOADING', label: '다운로드', icon: DownloadCloud },
   { key: 'CONVERTING', label: 'MP3 변환', icon: RefreshCw },
-  { key: 'UPLOADING', label: 'R2 업로드', icon: UploadCloud },
+  { key: 'UPLOADING', label: '클라우드 업로드', icon: UploadCloud },
   { key: 'COMPLETED', label: '완료', icon: CheckCircle2 },
 ];
 
@@ -75,11 +88,7 @@ export const ExtractionActiveJobCard: React.FC<ExtractionActiveJobCardProps> = (
 
   // 1%부터 시작하여 단계별로 부드럽게 증가하는 프로그레스 바
   useEffect(() => {
-    if (
-      job.status === 'COMPLETED' ||
-      job.status === 'FAILED' ||
-      job.status === 'CANCELLED'
-    ) {
+    if (job.status === 'COMPLETED' || job.status === 'FAILED' || job.status === 'CANCELLED') {
       return;
     }
 
@@ -124,10 +133,7 @@ export const ExtractionActiveJobCard: React.FC<ExtractionActiveJobCardProps> = (
   }, [job.status]);
 
   const canCancel =
-    onCancel &&
-    job.status !== 'COMPLETED' &&
-    job.status !== 'FAILED' &&
-    job.status !== 'CANCELLED';
+    onCancel && job.status !== 'COMPLETED' && job.status !== 'FAILED' && job.status !== 'CANCELLED';
 
   return (
     <div className="bg-[#0f1011] border border-[#5e6ad2]/30 rounded-2xl p-5 shadow-2xl relative overflow-hidden backdrop-blur-xl animate-fade-in">
@@ -138,10 +144,10 @@ export const ExtractionActiveJobCard: React.FC<ExtractionActiveJobCardProps> = (
               {job.status === 'COMPLETED'
                 ? `추출 완료 (#${job.id})`
                 : job.status === 'FAILED'
-                ? `추출 실패 (#${job.id})`
-                : job.status === 'CANCELLED'
-                ? `추출 취소됨 (#${job.id})`
-                : `음원 추출 진행 중 (#${job.id})`}
+                  ? `추출 실패 (#${job.id})`
+                  : job.status === 'CANCELLED'
+                    ? `추출 취소됨 (#${job.id})`
+                    : `음원 추출 진행 중 (#${job.id})`}
             </span>
             {totalActiveCount > 1 ? (
               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#5e6ad2]/20 text-[#8590ea] border border-[#5e6ad2]/30">
@@ -236,8 +242,8 @@ export const ExtractionActiveJobCard: React.FC<ExtractionActiveJobCardProps> = (
                 isCurrent
                   ? 'bg-[#5e6ad2]/15 border border-[#5e6ad2]/30 text-white'
                   : isDone
-                  ? 'text-neutral-400'
-                  : 'text-neutral-600'
+                    ? 'text-neutral-400'
+                    : 'text-neutral-600'
               }`}
             >
               <div
@@ -245,8 +251,8 @@ export const ExtractionActiveJobCard: React.FC<ExtractionActiveJobCardProps> = (
                   isCurrent
                     ? 'bg-[#5e6ad2] text-white shadow-lg shadow-[#5e6ad2]/50'
                     : isDone
-                    ? 'bg-emerald-500/20 text-emerald-400'
-                    : 'bg-white/[0.05] text-neutral-500'
+                      ? 'bg-emerald-500/20 text-emerald-400'
+                      : 'bg-white/[0.05] text-neutral-500'
                 }`}
               >
                 <Icon
@@ -254,8 +260,8 @@ export const ExtractionActiveJobCard: React.FC<ExtractionActiveJobCardProps> = (
                     isCurrent && step.key === 'CONVERTING'
                       ? 'animate-spin'
                       : isCurrent
-                      ? 'animate-pulse'
-                      : ''
+                        ? 'animate-pulse'
+                        : ''
                   }`}
                 />
               </div>

@@ -11,7 +11,7 @@ export const LandingFeatures: React.FC = () => {
       tag: '초고속 스트리밍',
       title: '0초 대기 시간의 네이티브 Range Request',
       description:
-        '곡 전체가 다운로드되길 기다릴 필요가 없습니다. Cloudflare R2의 Presigned URL 기술로 100MB가 넘는 고음질 FLAC 음원도 즉시 재생되고, 원하는 재생 위치로 딜레이 없이 즉시 이동(Seek)합니다.',
+        '곡 전체가 다운로드되길 기다릴 필요가 없습니다. 클라우드 다이렉트 스트리밍 기술로 100MB가 넘는 고음질 FLAC 음원도 즉시 재생되고, 원하는 재생 위치로 딜레이 없이 즉시 이동(Seek)합니다.',
       metric: '0ms 초기 버퍼링',
     },
     {

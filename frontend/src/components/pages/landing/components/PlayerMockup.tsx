@@ -62,7 +62,7 @@ export const PlayerMockup: React.FC = () => {
             <span className="w-2.5 h-2.5 rounded-full bg-neutral-700/80" />
           </div>
           <span className="ml-2 font-mono text-[11px] text-neutral-500">
-            Music Hub • R2 Direct Stream
+            Music Hub • Direct Cloud Stream
           </span>
         </div>
 

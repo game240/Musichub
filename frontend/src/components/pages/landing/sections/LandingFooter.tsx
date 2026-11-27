@@ -58,8 +58,8 @@ export const LandingFooter: React.FC<LandingFooterProps> = ({ onNavigateLegal })
       </div>
 
       <div className="max-w-6xl mx-auto mt-6 pt-6 border-t border-white/[0.04] text-center text-neutral-400 text-[11px] font-mono">
-        © {new Date().getFullYear()} Music Hub. All rights reserved. Powered by Cloudflare R2 &
-        Spring Boot.
+        © {new Date().getFullYear()} Music Hub. All rights reserved. Built for Personal Music
+        Collections.
       </div>
     </footer>
   );

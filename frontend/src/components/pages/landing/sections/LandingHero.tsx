@@ -69,7 +69,7 @@ export const LandingHero: React.FC<LandingHeroProps> = ({ onStart }) => {
         <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs text-neutral-400">
           <div className="flex items-center gap-1.5">
             <Cloud className="w-3.5 h-3.5 text-[#5e6ad2]" />
-            <span>영구 무료 10GB R2 스토리지</span>
+            <span>영구 무료 10GB 클라우드 스토리지</span>
           </div>
           <div className="flex items-center gap-1.5">
             <Zap className="w-3.5 h-3.5 text-[#5e6ad2]" />

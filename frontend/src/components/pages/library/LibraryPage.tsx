@@ -404,7 +404,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({ onNavigateExtraction }
         title="음원 삭제"
         message={`"${
           trackToDelete?.title || trackToDelete?.fileName || '선택한 곡'
-        }" 음원을 보관함에서 삭제하시겠습니까? 클라우드 스토리지(R2)에서도 즉시 영구 삭제되며 복구할 수 없습니다.`}
+        }" 음원을 보관함에서 삭제하시겠습니까? 클라우드 저장소에서도 즉시 영구 삭제되며 복구할 수 없습니다.`}
         confirmLabel="삭제하기"
         isLoading={deleteMutation.isPending}
       />
@@ -417,7 +417,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({ onNavigateExtraction }
         }}
         onConfirm={handleBatchDeleteConfirm}
         title="음원 일괄 삭제"
-        message={`선택한 ${selectedTracks.length}개의 음원을 보관함에서 영구 삭제하시겠습니까? 클라우드 스토리지(R2)에서도 즉시 영구 삭제되며 복구할 수 없습니다.`}
+        message={`선택한 ${selectedTracks.length}개의 음원을 보관함에서 영구 삭제하시겠습니까? 클라우드 저장소에서도 즉시 영구 삭제되며 복구할 수 없습니다.`}
         confirmLabel="일괄 삭제하기"
         isLoading={isBatchDeleting}
       />

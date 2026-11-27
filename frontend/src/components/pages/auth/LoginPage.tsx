@@ -180,7 +180,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateLegal, onBackToL
         <div className="grid grid-cols-3 gap-1.5 sm:gap-2 w-full mb-6 text-[11px] sm:text-xs text-neutral-300">
           <div className="p-2 sm:p-3 bg-white/[0.03] rounded-xl border border-white/[0.06] flex flex-col items-center gap-1 sm:gap-1.5">
             <Cloud className="w-4 h-4 text-[#5e6ad2]" />
-            <span>R2 스토리지</span>
+            <span>클라우드 스토리지</span>
           </div>
           <div className="p-2 sm:p-3 bg-white/[0.03] rounded-xl border border-white/[0.06] flex flex-col items-center gap-1.5">
             <Sparkles className="w-4 h-4 text-[#8590ea]" />
