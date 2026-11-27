@@ -22,7 +22,7 @@ interface ToastState {
     message: string,
     type?: ToastType,
     durationMs?: number,
-    action?: ToastAction
+    action?: ToastAction,
   ) => string;
   dismissToast: (id: string) => void;
   removeToast: (id: string) => void;

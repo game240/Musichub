@@ -12,7 +12,10 @@ export interface ExtractionInputCardProps {
 const YOUTUBE_REGEX =
   /^(https?:\/\/)?(www\.|m\.|music\.)?(youtube\.com\/(watch\?v=|shorts\/|embed\/)|youtu\.be\/)[a-zA-Z0-9_-]+.*/i;
 
-export const ExtractionInputCard: React.FC<ExtractionInputCardProps> = ({ onSubmit, isLoading }) => {
+export const ExtractionInputCard: React.FC<ExtractionInputCardProps> = ({
+  onSubmit,
+  isLoading,
+}) => {
   const [url, setUrl] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -38,7 +41,9 @@ export const ExtractionInputCard: React.FC<ExtractionInputCardProps> = ({ onSubm
     }
 
     if (!YOUTUBE_REGEX.test(trimmed)) {
-      setErrorMessage('올바른 YouTube 영상 URL 형식이 아닙니다. (예: https://www.youtube.com/watch?v=...)');
+      setErrorMessage(
+        '올바른 YouTube 영상 URL 형식이 아닙니다. (예: https://www.youtube.com/watch?v=...)',
+      );
       return;
     }
 

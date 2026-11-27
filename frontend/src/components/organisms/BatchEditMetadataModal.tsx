@@ -112,10 +112,10 @@ const BatchEditMetadataForm: React.FC<BatchEditMetadataFormProps> = ({
       for (const track of trackList) {
         const payload: UpdateMusicMetadataDto = {
           title: track.title || '',
-          artist: applyArtist ? artist.trim() : (track.artist || ''),
-          album: applyAlbum ? album.trim() : (track.album || ''),
+          artist: applyArtist ? artist.trim() : track.artist || '',
+          album: applyAlbum ? album.trim() : track.album || '',
           year: applyYear ? validYear : track.year,
-          genre: applyGenre ? genre.trim() : (track.genre || ''),
+          genre: applyGenre ? genre.trim() : track.genre || '',
           trackNumber: track.trackNumber,
           lyrics: track.lyrics || '',
         };
@@ -535,12 +535,7 @@ export const BatchEditMetadataModal: React.FC<BatchEditMetadataModalProps> = ({
   }
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="음원 정보 일괄 수정"
-      maxWidth="lg"
-    >
+    <Modal isOpen={isOpen} onClose={onClose} title="음원 정보 일괄 수정" maxWidth="lg">
       <BatchEditMetadataForm tracks={tracks} onClose={onClose} onSuccess={onSuccess} />
     </Modal>
   );

@@ -54,7 +54,10 @@ export const ExtractionBatchActionBar: React.FC<ExtractionBatchActionBarProps> =
 
       {/* Action: Batch Download */}
       {onDownloadSelected ? (
-        <Tooltip content={isDownloading ? '다운로드 진행 중' : '선택한 곡 일괄 다운로드'} side="top">
+        <Tooltip
+          content={isDownloading ? '다운로드 진행 중' : '선택한 곡 일괄 다운로드'}
+          side="top"
+        >
           <button
             type="button"
             onClick={onDownloadSelected}

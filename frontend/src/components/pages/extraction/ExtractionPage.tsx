@@ -80,7 +80,7 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
       const data = query.state.data as ExtractionJobDto[] | undefined;
       const hasActive =
         data?.some((j) =>
-          ['PENDING', 'DOWNLOADING', 'CONVERTING', 'UPLOADING'].includes(j.status)
+          ['PENDING', 'DOWNLOADING', 'CONVERTING', 'UPLOADING'].includes(j.status),
         ) ?? false;
       return hasActive ? 2000 : false;
     },
@@ -89,20 +89,18 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
 
   // 2. 활성 작업 및 카드에 표시할 작업 감지
   const activeJobs = jobs.filter((j) =>
-    ['PENDING', 'DOWNLOADING', 'CONVERTING', 'UPLOADING'].includes(j.status)
+    ['PENDING', 'DOWNLOADING', 'CONVERTING', 'UPLOADING'].includes(j.status),
   );
 
   const displayedJob =
-    (focusedJobId ? jobs.find((j) => j.id === focusedJobId) : null) ||
-    activeJobs[0] ||
-    null;
+    (focusedJobId ? jobs.find((j) => j.id === focusedJobId) : null) || activeJobs[0] || null;
 
   // 3. 작업 완료 감지 시 토스트 알림 및 보관함 캐시 무효화
   useEffect(() => {
     const currentActiveIds = new Set(
       jobs
         .filter((j) => ['PENDING', 'DOWNLOADING', 'CONVERTING', 'UPLOADING'].includes(j.status))
-        .map((j) => j.id)
+        .map((j) => j.id),
     );
 
     // 이전에는 active였으나 지금은 active가 아닌 작업들 확인
@@ -112,14 +110,14 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
         if (finishedJob?.status === 'COMPLETED') {
           addToast(
             `"${finishedJob.musicFileTitle || '음원'}" 추출이 완료되었습니다. 하단 히스토리에서 [수정]을 눌러 곡 정보를 다듬을 수 있습니다.`,
-            'success'
+            'success',
           );
           queryClient.invalidateQueries({ queryKey: ['music-files'] });
           queryClient.invalidateQueries({ queryKey: ['user-me'] });
         } else if (finishedJob?.status === 'FAILED') {
           addToast(
             `음원 추출에 실패했습니다: ${finishedJob.errorMessage || '알 수 없는 오류'}`,
-            'error'
+            'error',
           );
         }
       }
@@ -157,9 +155,7 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
   }, []);
 
   const toggleSelectAll = useCallback(() => {
-    const selectableJobs = jobs.filter(
-      (j) => j.status === 'COMPLETED' && j.musicFileId !== null
-    );
+    const selectableJobs = jobs.filter((j) => j.status === 'COMPLETED' && j.musicFileId !== null);
     if (selectableJobs.length === 0) return;
 
     setSelectedJobIds((prev) => {
@@ -177,10 +173,7 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
     onSuccess: (newJob) => {
       addToast('음원 추출 작업이 등록되었습니다. 잠시 기다려주세요.', 'info');
       setFocusedJobId(newJob.id);
-      queryClient.setQueryData<ExtractionJobDto[]>(['extractions'], (old = []) => [
-        newJob,
-        ...old,
-      ]);
+      queryClient.setQueryData<ExtractionJobDto[]>(['extractions'], (old = []) => [newJob, ...old]);
       refetch();
     },
     onError: (err: unknown) => {
@@ -201,7 +194,7 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
     onSuccess: (cancelledJob) => {
       addToast('음원 추출 작업이 중단(취소)되었습니다.', 'info');
       queryClient.setQueryData<ExtractionJobDto[]>(['extractions'], (old = []) =>
-        old.map((j) => (j.id === cancelledJob.id ? cancelledJob : j))
+        old.map((j) => (j.id === cancelledJob.id ? cancelledJob : j)),
       );
       refetch();
     },
@@ -270,7 +263,7 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
 
     // 즉시 UI 캐시에서 낙관적 제거
     queryClient.setQueryData<ExtractionJobDto[]>(['extractions'], (old = []) =>
-      old.filter((j) => j.id !== jobId)
+      old.filter((j) => j.id !== jobId),
     );
 
     const key = `job-${jobId}`;
@@ -286,11 +279,11 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
         queryClient.setQueryData<ExtractionJobDto[]>(['extractions'], (old = []) => {
           if (old.some((j) => j.id === targetJob.id)) return old;
           return [...old, targetJob].sort(
-            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
           );
         });
         addToast(`"${displayTitle}" 제거가 취소되었습니다.`, 'info');
-      }
+      },
     );
   };
 
@@ -307,7 +300,7 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
 
     // 즉시 UI 캐시에서 선택된 작업 제거
     queryClient.setQueryData<ExtractionJobDto[]>(['extractions'], (old = []) =>
-      old.filter((j) => !targetIds.has(j.id))
+      old.filter((j) => !targetIds.has(j.id)),
     );
 
     const key = `batch-${Date.now()}`;
@@ -322,11 +315,11 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
           const existingIds = new Set(old.map((j) => j.id));
           const toRestore = targetJobs.filter((j) => !existingIds.has(j.id));
           return [...old, ...toRestore].sort(
-            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
           );
         });
         addToast(`${targetJobs.length}건의 제거가 취소되었습니다.`, 'info');
-      }
+      },
     );
   };
 
@@ -350,9 +343,7 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
 
   // 10. 다건 메타데이터 일괄 수정 열기 및 완료 핸들러
   const handleOpenBatchEdit = async () => {
-    const targetJobs = jobs.filter(
-      (j) => selectedJobIds.has(j.id) && j.musicFileId !== null
-    );
+    const targetJobs = jobs.filter((j) => selectedJobIds.has(j.id) && j.musicFileId !== null);
     if (targetJobs.length === 0) {
       addToast('선택된 완료 음원이 없습니다.', 'info');
       return;
@@ -361,7 +352,7 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
     setIsFetchingBatchTracks(true);
     try {
       const tracks = await Promise.all(
-        targetJobs.map((j) => musicApi.getMusicFile(j.musicFileId!))
+        targetJobs.map((j) => musicApi.getMusicFile(j.musicFileId!)),
       );
       setBatchEditTracks(tracks);
       setIsBatchEditModalOpen(true);
@@ -398,16 +389,14 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
 
   // 12. 선택한 음원 일괄 다운로드
   const handleBatchDownload = async () => {
-    const targetJobs = jobs.filter(
-      (j) => selectedJobIds.has(j.id) && j.musicFileId !== null
-    );
+    const targetJobs = jobs.filter((j) => selectedJobIds.has(j.id) && j.musicFileId !== null);
     if (targetJobs.length === 0 || isBatchDownloading) return;
 
     setIsBatchDownloading(true);
     setBatchDownloadProgress(`1/${targetJobs.length}`);
     try {
       const tracks = await Promise.all(
-        targetJobs.map((j) => musicApi.getMusicFile(j.musicFileId!))
+        targetJobs.map((j) => musicApi.getMusicFile(j.musicFileId!)),
       );
       await downloadTracksBatch(tracks, (done, total) => {
         setBatchDownloadProgress(`${done}/${total}`);

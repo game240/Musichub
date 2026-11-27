@@ -9,6 +9,7 @@ import {
   Mail,
   Lock,
   User as UserIcon,
+  ArrowLeft,
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuthStore } from '../../../stores/authStore';
@@ -18,9 +19,10 @@ import { Input } from '../../atoms/Input';
 
 interface LoginPageProps {
   onNavigateLegal?: (route: 'privacy' | 'terms') => void;
+  onBackToLanding?: () => void;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateLegal }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateLegal, onBackToLanding }) => {
   const { setAuth } = useAuthStore();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
@@ -151,8 +153,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateLegal }) => {
 
   return (
     <div className="min-h-screen bg-[#08090a] flex flex-col items-center justify-center p-4 sm:p-6 relative overflow-hidden">
-      {/* Background Glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#5e6ad2]/15 rounded-full blur-3xl pointer-events-none" />
+      {/* Top back to landing button */}
+      {onBackToLanding ? (
+        <button
+          type="button"
+          onClick={onBackToLanding}
+          className="absolute top-6 left-6 text-xs text-neutral-400 hover:text-white transition-colors flex items-center gap-1.5 z-20 py-1.5 px-3 rounded-lg border border-white/[0.08] bg-white/[0.03] backdrop-blur-md"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>서비스 소개로 돌아가기</span>
+        </button>
+      ) : null}
 
       <div className="w-full max-w-md bg-[#0f1011] border border-white/[0.1] rounded-2xl p-5 sm:p-8 shadow-2xl backdrop-blur-2xl relative z-10 flex flex-col items-center text-center">
         {/* Logo */}

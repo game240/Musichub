@@ -441,7 +441,11 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
 
                   {/* Case 2: 인증번호 발송 완료 후 입력 폼 */}
                   {setupStep === 'code_sent' ? (
-                    <form onSubmit={handlePasswordSubmit} autoComplete="off" className="flex flex-col gap-3">
+                    <form
+                      onSubmit={handlePasswordSubmit}
+                      autoComplete="off"
+                      className="flex flex-col gap-3"
+                    >
                       {/* 인증코드 입력란 (설정 및 변경 모두 사용) */}
                       <div className="p-3 bg-[#5e6ad2]/10 border border-[#5e6ad2]/20 rounded-xl mb-1">
                         <div className="flex items-center justify-between mb-2">
