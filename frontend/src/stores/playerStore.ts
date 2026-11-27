@@ -203,7 +203,10 @@ const syncMediaSessionPlaybackState = (isPlaying: boolean) => {
   navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
 };
 
-const syncMediaSessionPosition = () => {
+let lastMediaSessionSyncTime = 0;
+let lastMediaSessionSyncPosition = 0;
+
+const syncMediaSessionPosition = (force = false) => {
   if (
     typeof window === 'undefined' ||
     !('mediaSession' in navigator) ||
@@ -214,14 +217,32 @@ const syncMediaSessionPosition = () => {
 
   const dur = audioElement.duration;
   if (!isNaN(dur) && dur > 0 && isFinite(dur)) {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    const currentPos = Math.min(Math.max(0, audioElement.currentTime), dur);
+
+    // If not forced, throttle updates to once every 4 seconds,
+    // or when clock drift exceeds 1.2 seconds from the projected playback position
+    if (!force && lastMediaSessionSyncTime > 0) {
+      const elapsedSec = (now - lastMediaSessionSyncTime) / 1000;
+      const expectedPos =
+        lastMediaSessionSyncPosition + elapsedSec * (audioElement.playbackRate || 1);
+      const drift = Math.abs(currentPos - expectedPos);
+
+      if (elapsedSec < 4 && drift < 1.2) {
+        return;
+      }
+    }
+
     try {
       navigator.mediaSession.setPositionState({
         duration: dur,
-        playbackRate: audioElement.playbackRate || 1,
-        position: Math.min(Math.max(0, audioElement.currentTime), dur),
+        playbackRate: audioElement.paused ? 0 : audioElement.playbackRate || 1,
+        position: currentPos,
       });
+      lastMediaSessionSyncTime = now;
+      lastMediaSessionSyncPosition = currentPos;
     } catch {
-      // Ignore potential state race conditions during rapid skipping
+      // Ignore potential state race conditions during rapid skipping or unbuffered seek
     }
   }
 };
@@ -280,29 +301,51 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
   // Setup audio event listeners
   audioElement.addEventListener('timeupdate', () => {
     set({ currentTime: audioElement.currentTime });
+    if (!audioElement.paused) {
+      syncMediaSessionPosition(false);
+    }
+  });
+
+  audioElement.addEventListener('durationchange', () => {
+    if (!isNaN(audioElement.duration) && isFinite(audioElement.duration)) {
+      set({ duration: audioElement.duration });
+      syncMediaSessionPosition(true);
+    }
   });
 
   audioElement.addEventListener('loadedmetadata', () => {
     if (!isNaN(audioElement.duration)) {
       set({ duration: audioElement.duration, isLoading: false });
-      syncMediaSessionPosition();
+      syncMediaSessionPosition(true);
     }
+  });
+
+  audioElement.addEventListener('waiting', () => {
+    // Buffering stalled: resync current position to halt runaway OS timer
+    syncMediaSessionPosition(true);
+  });
+
+  audioElement.addEventListener('playing', () => {
+    // Playback active: resync true position after buffering recovery
+    set({ isPlaying: true, isLoading: false });
+    syncMediaSessionPlaybackState(true);
+    syncMediaSessionPosition(true);
   });
 
   audioElement.addEventListener('play', () => {
     set({ isPlaying: true });
     syncMediaSessionPlaybackState(true);
-    syncMediaSessionPosition();
+    syncMediaSessionPosition(true);
   });
 
   audioElement.addEventListener('pause', () => {
     set({ isPlaying: false });
     syncMediaSessionPlaybackState(false);
-    syncMediaSessionPosition();
+    syncMediaSessionPosition(true);
   });
 
   audioElement.addEventListener('seeked', () => {
-    syncMediaSessionPosition();
+    syncMediaSessionPosition(true);
   });
 
   audioElement.addEventListener('ended', () => {
@@ -505,7 +548,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       }
       audioElement.currentTime = timeInSeconds;
       set({ currentTime: timeInSeconds });
-      syncMediaSessionPosition();
+      syncMediaSessionPosition(true);
     },
 
     setVolume: (volume: number) => {
