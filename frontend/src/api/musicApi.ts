@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { apiClient } from './client';
 import type {
+  BatchDownloadTicketResponse,
   DirectUploadCompleteRequest,
   DirectUploadInitRequest,
   DownloadUrlResult,
@@ -81,6 +82,14 @@ export const musicApi = {
 
   async getDownloadUrl(id: number): Promise<DownloadUrlResult> {
     const response = await apiClient.get<DownloadUrlResult>(`/music-files/${id}/download`);
+    return response.data;
+  },
+
+  async createBatchDownloadTicket(musicFileIds: number[]): Promise<BatchDownloadTicketResponse> {
+    const response = await apiClient.post<BatchDownloadTicketResponse>(
+      '/music-files/batch-download/ticket',
+      { musicFileIds },
+    );
     return response.data;
   },
 

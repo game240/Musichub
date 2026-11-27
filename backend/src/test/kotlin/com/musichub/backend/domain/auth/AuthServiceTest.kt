@@ -6,6 +6,7 @@ import com.musichub.backend.domain.user.UserRole
 import com.musichub.backend.domain.user.UserIdentity
 import com.musichub.backend.domain.user.UserIdentityRepository
 import com.musichub.backend.domain.user.UserRepository
+import com.musichub.backend.global.mail.EmailService
 import com.musichub.backend.global.security.JwtProvider
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -13,6 +14,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.ArgumentMatchers.*
 import org.mockito.BDDMockito.given
+import org.mockito.BDDMockito.then
+import org.mockito.BDDMockito.willThrow
 import org.mockito.Mockito
 import org.mockito.Mockito.mock
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
@@ -25,6 +28,8 @@ class AuthServiceTest {
     private lateinit var refreshTokenRepository: RefreshTokenRepository
     private lateinit var jwtProvider: JwtProvider
     private lateinit var passwordEncoder: BCryptPasswordEncoder
+    private lateinit var signupVerificationManager: SignupVerificationManager
+    private lateinit var emailService: EmailService
     private lateinit var authService: AuthService
 
     private fun anyUser(): User {
@@ -49,6 +54,8 @@ class AuthServiceTest {
         refreshTokenRepository = mock(RefreshTokenRepository::class.java)
         jwtProvider = mock(JwtProvider::class.java)
         passwordEncoder = BCryptPasswordEncoder()
+        signupVerificationManager = mock(SignupVerificationManager::class.java)
+        emailService = mock(EmailService::class.java)
 
         given(jwtProvider.generateAccessToken(anyLong(), anyString(), nullable(UserRole::class.java))).willReturn("mock-access-token")
         given(jwtProvider.generateRefreshTokenValue()).willReturn("mock-refresh-token")
@@ -62,14 +69,49 @@ class AuthServiceTest {
             refreshTokenRepository = refreshTokenRepository,
             jwtProvider = jwtProvider,
             passwordEncoder = passwordEncoder,
+            signupVerificationManager = signupVerificationManager,
+            emailService = emailService,
             googleClientId = "dummy-client-id"
         )
+    }
+
+    @Test
+    fun `requestSignupVerification successfully generates code and sends email`() {
+        given(userIdentityRepository.findByProviderAndProviderId(AuthProvider.LOCAL, "newuser@musichub.com"))
+            .willReturn(Optional.empty())
+        given(userRepository.findByAuthProviderAndProviderId(AuthProvider.LOCAL, "newuser@musichub.com"))
+            .willReturn(Optional.empty())
+        given(signupVerificationManager.createCode("newuser@musichub.com")).willReturn("123456")
+
+        assertDoesNotThrow {
+            authService.requestSignupVerification("newuser@musichub.com")
+        }
+
+        then(emailService).should().sendSignupVerificationCode("newuser@musichub.com", "123456")
+    }
+
+    @Test
+    fun `requestSignupVerification throws when email already registered`() {
+        val existingUser = User(
+            id = 1L,
+            authProvider = AuthProvider.LOCAL,
+            providerId = "existing@musichub.com",
+            email = "existing@musichub.com"
+        )
+        given(userRepository.findByAuthProviderAndProviderId(AuthProvider.LOCAL, "existing@musichub.com"))
+            .willReturn(Optional.of(existingUser))
+
+        val ex = assertThrows<IllegalArgumentException> {
+            authService.requestSignupVerification("existing@musichub.com")
+        }
+        assertEquals("이미 가입된 이메일입니다.", ex.message)
     }
 
     @Test
     fun `register successfully creates user with hashed password and returns tokens`() {
         val request = LocalRegisterRequest(
             email = "test@musichub.com",
+            verificationCode = "123456",
             password = "password123!",
             displayName = "테스터"
         )
@@ -97,12 +139,35 @@ class AuthServiceTest {
         assertEquals("test@musichub.com", result.user.email)
         assertEquals("테스터", result.user.displayName)
         assertTrue(passwordEncoder.matches("password123!", result.user.passwordHash))
+        then(signupVerificationManager).should().verifyCode("test@musichub.com", "123456")
+    }
+
+    @Test
+    fun `register throws IllegalArgumentException when verification code is invalid`() {
+        val request = LocalRegisterRequest(
+            email = "test@musichub.com",
+            verificationCode = "000000",
+            password = "password123!",
+            displayName = "테스터"
+        )
+
+        given(userRepository.findByAuthProviderAndProviderId(AuthProvider.LOCAL, "test@musichub.com"))
+            .willReturn(Optional.empty())
+        willThrow(IllegalArgumentException("인증번호가 일치하지 않습니다."))
+            .given(signupVerificationManager).verifyCode("test@musichub.com", "000000")
+
+        val ex = assertThrows<IllegalArgumentException> {
+            authService.register(request, "TestBrowser")
+        }
+
+        assertEquals("인증번호가 일치하지 않습니다.", ex.message)
     }
 
     @Test
     fun `register throws IllegalArgumentException when email already registered`() {
         val request = LocalRegisterRequest(
             email = "existing@musichub.com",
+            verificationCode = "123456",
             password = "password123!",
             displayName = "기존유저"
         )
@@ -128,6 +193,7 @@ class AuthServiceTest {
     fun `register throws IllegalArgumentException when password does not meet complexity`() {
         val request = LocalRegisterRequest(
             email = "test@musichub.com",
+            verificationCode = "123456",
             password = "password123",
             displayName = "테스터"
         )

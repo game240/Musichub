@@ -1,15 +1,27 @@
 package com.musichub.backend.domain.music
 
 import com.musichub.backend.global.security.UserPrincipal
+import jakarta.servlet.http.HttpServletResponse
+import jakarta.validation.Valid
+import jakarta.validation.constraints.NotEmpty
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.data.web.PageableDefault
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
+import org.springframework.web.server.ResponseStatusException
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.time.Instant
+
+data class BatchDownloadTicketRequest(
+    @field:NotEmpty(message = "다운로드할 음원 ID 목록은 비어 있을 수 없습니다.")
+    val musicFileIds: List<Long>
+)
 
 data class DirectUploadInitRequest(
     val fileName: String,
@@ -87,7 +99,8 @@ data class MusicFileDto(
 @RestController
 @RequestMapping("/api/music-files")
 class MusicFileController(
-    private val musicFileService: MusicFileService
+    private val musicFileService: MusicFileService,
+    private val batchDownloadTicketManager: BatchDownloadTicketManager
 ) {
 
     @PostMapping("/upload/init")
@@ -160,6 +173,33 @@ class MusicFileController(
     ): ResponseEntity<DownloadUrlResult> {
         val result = musicFileService.getDownloadUrl(user.id, id)
         return ResponseEntity.ok(result)
+    }
+
+    @PostMapping("/batch-download/ticket")
+    fun createBatchDownloadTicket(
+        @AuthenticationPrincipal user: UserPrincipal,
+        @Valid @RequestBody request: BatchDownloadTicketRequest
+    ): ResponseEntity<BatchDownloadTicketResponse> {
+        val result = musicFileService.createBatchDownloadTicket(user.id, request.musicFileIds)
+        return ResponseEntity.ok(result)
+    }
+
+    @GetMapping("/batch-download")
+    fun streamBatchDownload(
+        @RequestParam ticket: String,
+        response: HttpServletResponse
+    ) {
+        val downloadTicket = batchDownloadTicketManager.consumeTicket(ticket)
+            ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "유효하지 않거나 만료된 다운로드 티켓입니다.")
+
+        val asciiFallback = downloadTicket.zipFilename.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+        val encodedUtf8 = URLEncoder.encode(downloadTicket.zipFilename, StandardCharsets.UTF_8.toString()).replace("+", "%20")
+        val contentDisposition = "attachment; filename=\"$asciiFallback\"; filename*=UTF-8''$encodedUtf8"
+
+        response.contentType = "application/zip"
+        response.setHeader("Content-Disposition", contentDisposition)
+
+        musicFileService.streamBatchDownloadWithTicket(downloadTicket, response.outputStream)
     }
 
     @GetMapping("/{id}/artwork")

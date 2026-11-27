@@ -12,6 +12,10 @@ export const authApi = {
     return response.data;
   },
 
+  async requestSignupCode(email: string): Promise<void> {
+    await apiClient.post('/auth/signup/request-code', { email });
+  },
+
   async register(data: LocalRegisterRequest): Promise<AuthResponse> {
     const response = await apiClient.post<AuthResponse>('/auth/register', data);
     return response.data;

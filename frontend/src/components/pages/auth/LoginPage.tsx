@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
 import {
   Disc3,
@@ -10,6 +10,8 @@ import {
   Lock,
   User as UserIcon,
   ArrowLeft,
+  KeyRound,
+  CheckCircle2,
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuthStore } from '../../../stores/authStore';
@@ -26,22 +28,64 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateLegal, onBackToL
   const { setAuth } = useAuthStore();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [isCodeSent, setIsCodeSent] = useState(false);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [expirySeconds, setExpirySeconds] = useState(300);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const resetForm = (newMode: 'login' | 'register') => {
     setMode(newMode);
     setError(null);
+    setSuccessMessage(null);
     setPassword('');
     setConfirmPassword('');
+    setVerificationCode('');
+    setIsCodeSent(false);
+    setExpirySeconds(300);
+    setResendCooldown(0);
   };
 
-  const handleLocalSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (!isCodeSent) {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setExpirySeconds((prev) => {
+        if (prev > 0) {
+          return prev - 1;
+        }
+        return 0;
+      });
+      setResendCooldown((prev) => {
+        if (prev > 0) {
+          return prev - 1;
+        }
+        return 0;
+      });
+    }, 1000);
+
+    return () => {
+      clearInterval(timer);
+    };
+  }, [isCodeSent]);
+
+  const formatTimer = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const handleRequestCode = async () => {
     setError(null);
+    setSuccessMessage(null);
 
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
@@ -53,6 +97,66 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateLegal, onBackToL
     if (!emailRegex.test(trimmedEmail)) {
       setError('올바른 이메일 형식을 입력해 주세요.');
       return;
+    }
+
+    try {
+      setIsSendingCode(true);
+      await authApi.requestSignupCode(trimmedEmail);
+      setIsCodeSent(true);
+      setExpirySeconds(300);
+      setResendCooldown(60);
+      setSuccessMessage('인증번호 6자리가 이메일로 발송되었습니다.');
+    } catch (err: unknown) {
+      let message = '인증번호 발송에 실패했습니다.';
+      if (axios.isAxiosError(err) && err.response?.data?.message) {
+        message = err.response.data.message;
+      } else if (err instanceof Error) {
+        message = err.message;
+      }
+      setError(message);
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
+  const handleLocalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccessMessage(null);
+
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setError('이메일을 입력해 주세요.');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setError('올바른 이메일 형식을 입력해 주세요.');
+      return;
+    }
+
+    if (mode === 'register') {
+      if (!isCodeSent) {
+        setError('이메일 인증번호를 먼저 발송받아 주세요.');
+        return;
+      }
+
+      const trimmedCode = verificationCode.trim();
+      if (!trimmedCode) {
+        setError('인증번호를 입력해 주세요.');
+        return;
+      }
+
+      if (trimmedCode.length !== 6) {
+        setError('인증번호는 6자리 숫자입니다.');
+        return;
+      }
+
+      if (expirySeconds <= 0) {
+        setError('인증번호 유효 시간이 만료되었습니다. 인증번호를 다시 받아주세요.');
+        return;
+      }
     }
 
     if (!password) {
@@ -90,6 +194,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateLegal, onBackToL
       } else {
         const res = await authApi.register({
           email: trimmedEmail,
+          verificationCode: verificationCode.trim(),
           password,
           displayName: displayName.trim() || undefined,
         });
@@ -225,22 +330,80 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateLegal, onBackToL
           </div>
         ) : null}
 
+        {successMessage ? (
+          <div className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs rounded-xl w-full mb-4 text-left">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+            <span>{successMessage}</span>
+          </div>
+        ) : null}
+
         {/* Local Auth Form */}
         <form onSubmit={handleLocalSubmit} className="w-full flex flex-col gap-3 mb-5 text-left">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-neutral-500">
-              <Mail className="w-4 h-4" />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-neutral-500">
+                <Mail className="w-4 h-4" />
+              </div>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="이메일 주소"
+                className="pl-9"
+                autoComplete="email"
+                disabled={isLoading || isSendingCode}
+              />
             </div>
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="이메일 주소"
-              className="pl-9"
-              autoComplete="email"
-              disabled={isLoading}
-            />
+            {mode === 'register' ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                onClick={handleRequestCode}
+                disabled={isLoading || isSendingCode || !email.trim() || resendCooldown > 0}
+                isLoading={isSendingCode}
+                className="shrink-0 text-xs px-3 min-w-[96px]"
+              >
+                {isCodeSent
+                  ? resendCooldown > 0
+                    ? `${resendCooldown}초 후`
+                    : '재발송'
+                  : '인증번호 받기'}
+              </Button>
+            ) : null}
           </div>
+
+          {mode === 'register' && isCodeSent ? (
+            <div className="p-3 bg-[#5e6ad2]/10 border border-[#5e6ad2]/20 rounded-xl flex flex-col gap-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-medium text-[#8590ea] flex items-center gap-1.5">
+                  <KeyRound className="w-3.5 h-3.5" />
+                  이메일 인증번호 6자리
+                </span>
+                <span
+                  className={`text-[11px] font-mono ${
+                    expirySeconds > 0 ? 'text-neutral-400' : 'text-red-400 font-semibold'
+                  }`}
+                >
+                  {expirySeconds > 0 ? formatTimer(expirySeconds) : '시간 만료'}
+                </span>
+              </div>
+              <Input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="6자리 숫자 입력 (예: 123456)"
+                className="tracking-widest font-mono text-center text-sm"
+                autoComplete="one-time-code"
+                disabled={isLoading}
+              />
+              <p className="text-[10px] text-neutral-400 leading-relaxed">
+                이메일로 발송된 6자리 번호를 5분 내에 입력해 주세요.
+              </p>
+            </div>
+          ) : null}
 
           {mode === 'register' ? (
             <div className="relative">

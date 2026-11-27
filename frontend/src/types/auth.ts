@@ -27,6 +27,7 @@ export interface LocalLoginRequest {
 
 export interface LocalRegisterRequest {
   email: string;
+  verificationCode: string;
   password: string;
   displayName?: string;
 }
