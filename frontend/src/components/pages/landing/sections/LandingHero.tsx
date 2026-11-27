@@ -73,7 +73,7 @@ export const LandingHero: React.FC<LandingHeroProps> = ({ onStart }) => {
           </div>
           <div className="flex items-center gap-1.5">
             <Zap className="w-3.5 h-3.5 text-[#5e6ad2]" />
-            <span>0초 즉각 탐색 Range Request</span>
+            <span>딜레이 없는 초고속 스트리밍</span>
           </div>
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-[#5e6ad2]" />
