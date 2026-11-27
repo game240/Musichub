@@ -193,6 +193,7 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
     mutationFn: (jobId: number) => extractionApi.cancelExtraction(jobId),
     onSuccess: (cancelledJob) => {
       addToast('음원 추출 작업이 중단(취소)되었습니다.', 'info');
+      setFocusedJobId(null);
       queryClient.setQueryData<ExtractionJobDto[]>(['extractions'], (old = []) =>
         old.map((j) => (j.id === cancelledJob.id ? cancelledJob : j)),
       );

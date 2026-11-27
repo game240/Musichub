@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.nio.file.Files
+import java.time.Instant
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
@@ -102,6 +103,29 @@ class ExtractionService(
         return deletedCount
     }
 
+    private fun isCancelled(jobId: Long): Boolean {
+        if (cancelledJobIds.contains(jobId)) return true
+        val status = extractionJobRepository.findStatusById(jobId)?.orElse(null)
+        return status == ExtractionJobStatus.CANCELLED
+    }
+
+    private fun rollbackUploadedArtifacts(audioKey: String?, artworkKey: String?) {
+        if (audioKey != null) {
+            try {
+                storageService.delete(audioKey)
+            } catch (e: Exception) {
+                logger.warn("취소 롤백 중 R2 오디오 파일 삭제 실패: key={}, error={}", audioKey, e.message)
+            }
+        }
+        if (artworkKey != null) {
+            try {
+                storageService.delete(artworkKey)
+            } catch (e: Exception) {
+                logger.warn("취소 롤백 중 R2 아트워크 파일 삭제 실패: key={}, error={}", artworkKey, e.message)
+            }
+        }
+    }
+
     @Async
     fun processJobAsync(jobId: Long) {
         val jobOptional = extractionJobRepository.findById(jobId)
@@ -110,7 +134,7 @@ class ExtractionService(
 
         val tempDir = Files.createTempDirectory("musichub-extract-$jobId-").toFile()
         try {
-            if (cancelledJobIds.contains(jobId) || job.status == ExtractionJobStatus.CANCELLED) {
+            if (isCancelled(jobId) || job.status == ExtractionJobStatus.CANCELLED) {
                 logger.info("작업 시작 전 취소됨: jobId={}", jobId)
                 return
             }
@@ -126,7 +150,7 @@ class ExtractionService(
                 }
             }
 
-            if (cancelledJobIds.contains(jobId)) {
+            if (isCancelled(jobId)) {
                 logger.info("추출 다운로드 중 취소 감지: jobId={}", jobId)
                 return
             }
@@ -134,16 +158,28 @@ class ExtractionService(
             val audioFile = extractResult.audioFile
             val fileSize = audioFile.length()
 
-            // 2. 메타데이터 파싱
-            job.status = ExtractionJobStatus.CONVERTING
-            extractionJobRepository.save(job)
-            if (cancelledJobIds.contains(jobId)) return
+            // 2. 메타데이터 파싱 (취소되지 않은 경우에만 CONVERTING 업데이트)
+            val updatedToConverting = extractionJobRepository.updateStatusIfActive(
+                jobId,
+                ExtractionJobStatus.CONVERTING,
+                Instant.now()
+            )
+            if (updatedToConverting == 0 || isCancelled(jobId)) {
+                logger.info("CONVERTING 단계 전 취소 감지: jobId={}", jobId)
+                return
+            }
             val metadata = metadataReader.read(audioFile)
 
-            // 3. R2 업로드
-            if (cancelledJobIds.contains(jobId)) return
-            job.status = ExtractionJobStatus.UPLOADING
-            extractionJobRepository.save(job)
+            // 3. R2 업로드 (취소되지 않은 경우에만 UPLOADING 업데이트)
+            val updatedToUploading = extractionJobRepository.updateStatusIfActive(
+                jobId,
+                ExtractionJobStatus.UPLOADING,
+                Instant.now()
+            )
+            if (updatedToUploading == 0 || isCancelled(jobId)) {
+                logger.info("UPLOADING 단계 전 취소 감지: jobId={}", jobId)
+                return
+            }
 
             val uniqueId = UUID.randomUUID().toString()
             val audioKey = "users/${job.user.id}/audio/$uniqueId.mp3"
@@ -165,12 +201,19 @@ class ExtractionService(
                 )
             }
 
-            if (cancelledJobIds.contains(jobId)) {
-                logger.info("R2 업로드 후 취소 감지: jobId={}", jobId)
+            if (isCancelled(jobId)) {
+                logger.info("R2 업로드 후 취소 감지, 업로드 파일 롤백: jobId={}", jobId)
+                rollbackUploadedArtifacts(audioKey, artworkKey)
                 return
             }
 
-            // 4. MusicFile 등록 및 용량 반영
+            // 4. MusicFile 등록 및 용량 반영 (취소 여부 최종 확인)
+            if (isCancelled(jobId)) {
+                logger.info("MusicFile 등록 직전 취소 감지: jobId={}", jobId)
+                rollbackUploadedArtifacts(audioKey, artworkKey)
+                return
+            }
+
             val musicFile = MusicFile(
                 user = job.user,
                 storageKey = audioKey,
@@ -193,20 +236,36 @@ class ExtractionService(
             job.user.addStorageUsage(fileSize)
             userRepository.save(job.user)
 
-            // 5. 작업 완료
-            job.markCompleted(savedMusicFile)
-            extractionJobRepository.save(job)
+            // 5. 작업 완료 (조건부 원자적 업데이트: 취소되지 않은 경우에만 COMPLETED)
+            val completedRows = extractionJobRepository.updateCompletedIfActive(
+                jobId,
+                savedMusicFile,
+                Instant.now()
+            )
+
+            if (completedRows == 0) {
+                logger.info("완료 저장 시점에 작업이 이미 취소되어 있음을 감지하여 롤백합니다: jobId={}", jobId)
+                musicFileRepository.delete(savedMusicFile)
+                job.user.subtractStorageUsage(fileSize)
+                userRepository.save(job.user)
+                rollbackUploadedArtifacts(audioKey, artworkKey)
+                return
+            }
+
             logger.info("추출 작업 성공 완료: jobId={}, musicFileId={}", jobId, savedMusicFile.id)
 
         } catch (e: Exception) {
-            if (cancelledJobIds.contains(jobId)) {
+            if (isCancelled(jobId)) {
                 logger.info("취소된 작업의 프로세스 중단 완료: jobId={}", jobId)
                 return
             }
             logger.error("추출 작업 실패: jobId={}, error={}", jobId, e.message, e)
             val isRetryable = isRetryableException(e)
-            job.markFailed(e.message ?: "알 수 없는 오류", isRetryable = isRetryable)
-            extractionJobRepository.save(job)
+            val currentStatus = extractionJobRepository.findStatusById(jobId)?.orElse(null)
+            if (currentStatus != ExtractionJobStatus.CANCELLED) {
+                job.markFailed(e.message ?: "알 수 없는 오류", isRetryable = isRetryable)
+                extractionJobRepository.save(job)
+            }
         } finally {
             activeProcesses.remove(jobId)
             cancelledJobIds.remove(jobId)

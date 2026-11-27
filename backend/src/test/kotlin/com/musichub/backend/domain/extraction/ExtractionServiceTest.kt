@@ -1,6 +1,8 @@
 package com.musichub.backend.domain.extraction
 
+import com.musichub.backend.domain.metadata.AudioMetadata
 import com.musichub.backend.domain.metadata.MetadataReader
+import com.musichub.backend.domain.music.MusicFile
 import com.musichub.backend.domain.music.MusicFileRepository
 import com.musichub.backend.domain.storage.StorageService
 import com.musichub.backend.domain.user.User
@@ -13,8 +15,12 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.ArgumentMatchers.any
 import org.mockito.BDDMockito.given
+import org.mockito.Mockito
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
+import java.io.File
+import java.time.Instant
 import java.util.*
 
 class ExtractionServiceTest {
@@ -26,6 +32,32 @@ class ExtractionServiceTest {
     private lateinit var metadataReader: MetadataReader
     private lateinit var mediaExtractor: MediaExtractor
     private lateinit var extractionService: ExtractionService
+
+    private fun <T> eqNonNull(value: T): T {
+        Mockito.eq(value)
+        return value
+    }
+
+    private fun anyString(): String {
+        Mockito.anyString()
+        return ""
+    }
+
+    private fun anyFile(): File {
+        Mockito.any(File::class.java)
+        return File("dummy")
+    }
+
+    private fun anyInstant(): Instant {
+        Mockito.any(Instant::class.java)
+        return Instant.now()
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun anyProcessCallback(): ((Process) -> Unit)? {
+        Mockito.nullable(Any::class.java)
+        return null
+    }
 
     private val testUser = User(
         id = 1L,
@@ -44,6 +76,8 @@ class ExtractionServiceTest {
         storageService = mock(StorageService::class.java)
         metadataReader = mock(MetadataReader::class.java)
         mediaExtractor = mock(MediaExtractor::class.java)
+
+        given(extractionJobRepository.findStatusById(Mockito.anyLong())).willReturn(Optional.empty())
 
         extractionService = ExtractionService(
             extractionJobRepository = extractionJobRepository,
@@ -149,5 +183,68 @@ class ExtractionServiceTest {
 
         assertEquals(5, deletedCount)
         verify(extractionJobRepository).deleteByUserIdAndStatusIn(1L, finishedStatuses)
+    }
+
+    @Test
+    @DisplayName("작업이 시작 전 취소된 경우 미디어 추출 프로세스를 시작하지 않고 즉시 종료")
+    fun `processJobAsync aborts before execution when job is already cancelled`() {
+        val job = ExtractionJob(id = 30L, user = testUser, sourceUrl = "https://youtube.com/watch?v=123", status = ExtractionJobStatus.CANCELLED)
+        given(extractionJobRepository.findById(30L)).willReturn(Optional.of(job))
+        given(extractionJobRepository.findStatusById(30L)).willReturn(Optional.of(ExtractionJobStatus.CANCELLED))
+
+        extractionService.processJobAsync(30L)
+
+        verify(mediaExtractor, never()).extractAudio(anyString(), anyFile(), anyProcessCallback())
+    }
+
+    @Test
+    @DisplayName("추출 완료 저장 시점에 작업이 이미 취소되어 있으면 MusicFile을 롤백하고 COMPLETED로 덮어쓰지 않는다")
+    fun `processJobAsync rolls back and leaves job cancelled when updateCompletedIfActive returns 0`() {
+        val job = ExtractionJob(id = 40L, user = testUser, sourceUrl = "https://youtube.com/watch?v=123", status = ExtractionJobStatus.DOWNLOADING)
+        given(extractionJobRepository.findById(40L)).willReturn(Optional.of(job))
+        given(extractionJobRepository.findStatusById(40L)).willReturn(Optional.of(ExtractionJobStatus.DOWNLOADING))
+
+        val dummyAudioFile = File.createTempFile("test-audio", ".mp3").apply {
+            writeBytes(ByteArray(1024))
+            deleteOnExit()
+        }
+        val mediaResult = ExtractedMediaResult(dummyAudioFile, "Test Title")
+        given(mediaExtractor.extractAudio(eqNonNull(job.sourceUrl), anyFile(), anyProcessCallback())).willReturn(mediaResult)
+
+        given(extractionJobRepository.updateStatusIfActive(eqNonNull(40L), eqNonNull(ExtractionJobStatus.CONVERTING), anyInstant())).willReturn(1)
+        val dummyMetadata = AudioMetadata(
+            title = "Test Title",
+            artist = "Test Artist",
+            album = null,
+            year = null,
+            genre = null,
+            trackNumber = null,
+            durationMs = 180000L,
+            lyrics = null,
+            artwork = null,
+            artworkMimeType = null,
+            tagVersion = "ID3v2.3"
+        )
+        given(metadataReader.read(anyFile())).willReturn(dummyMetadata)
+        given(extractionJobRepository.updateStatusIfActive(eqNonNull(40L), eqNonNull(ExtractionJobStatus.UPLOADING), anyInstant())).willReturn(1)
+
+        val savedMusicFile = MusicFile(
+            id = 500L,
+            user = testUser,
+            storageKey = "users/1/audio/dummy.mp3",
+            fileName = "Test Title.mp3",
+            fileSize = 1024L,
+            title = "Test Title"
+        )
+        given(musicFileRepository.save(any(MusicFile::class.java))).willReturn(savedMusicFile)
+
+        // 완료 시점에 취소되어 업데이트 행 수가 0인 상황 시뮬레이션
+        given(extractionJobRepository.updateCompletedIfActive(eqNonNull(40L), eqNonNull(savedMusicFile), anyInstant())).willReturn(0)
+
+        extractionService.processJobAsync(40L)
+
+        // 저장된 musicFile이 롤백(삭제)되어야 하고 R2 오디오도 삭제되어야 함
+        verify(musicFileRepository).delete(savedMusicFile)
+        verify(storageService).delete(anyString())
     }
 }
