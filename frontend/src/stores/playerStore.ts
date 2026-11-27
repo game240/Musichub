@@ -206,6 +206,11 @@ const syncMediaSessionPlaybackState = (isPlaying: boolean) => {
 let lastMediaSessionSyncTime = 0;
 let lastMediaSessionSyncPosition = 0;
 
+const resetMediaSessionSync = () => {
+  lastMediaSessionSyncTime = 0;
+  lastMediaSessionSyncPosition = 0;
+};
+
 const syncMediaSessionPosition = (force = false) => {
   if (
     typeof window === 'undefined' ||
@@ -220,12 +225,15 @@ const syncMediaSessionPosition = (force = false) => {
     const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
     const currentPos = Math.min(Math.max(0, audioElement.currentTime), dur);
 
+    // If audio is paused or buffering (not yet ready to render frames), rate must be 0 to freeze OS timeline
+    const isPlaybackActive = !audioElement.paused && audioElement.readyState >= 3;
+    const effectiveRate = isPlaybackActive ? audioElement.playbackRate || 1 : 0;
+
     // If not forced, throttle updates to once every 4 seconds,
     // or when clock drift exceeds 1.2 seconds from the projected playback position
-    if (!force && lastMediaSessionSyncTime > 0) {
+    if (!force && lastMediaSessionSyncTime > 0 && isPlaybackActive) {
       const elapsedSec = (now - lastMediaSessionSyncTime) / 1000;
-      const expectedPos =
-        lastMediaSessionSyncPosition + elapsedSec * (audioElement.playbackRate || 1);
+      const expectedPos = lastMediaSessionSyncPosition + elapsedSec * effectiveRate;
       const drift = Math.abs(currentPos - expectedPos);
 
       if (elapsedSec < 4 && drift < 1.2) {
@@ -236,7 +244,7 @@ const syncMediaSessionPosition = (force = false) => {
     try {
       navigator.mediaSession.setPositionState({
         duration: dur,
-        playbackRate: audioElement.paused ? 0 : audioElement.playbackRate || 1,
+        playbackRate: effectiveRate,
         position: currentPos,
       });
       lastMediaSessionSyncTime = now;
@@ -301,7 +309,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
   // Setup audio event listeners
   audioElement.addEventListener('timeupdate', () => {
     set({ currentTime: audioElement.currentTime });
-    if (!audioElement.paused) {
+    if (!audioElement.paused && audioElement.readyState >= 3) {
       syncMediaSessionPosition(false);
     }
   });
@@ -316,26 +324,32 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
   audioElement.addEventListener('loadedmetadata', () => {
     if (!isNaN(audioElement.duration)) {
       set({ duration: audioElement.duration, isLoading: false });
+      resetMediaSessionSync();
       syncMediaSessionPosition(true);
     }
   });
 
   audioElement.addEventListener('waiting', () => {
-    // Buffering stalled: resync current position to halt runaway OS timer
+    // Buffering stalled: freeze position state in OS with rate 0 so clock does not runaway
     syncMediaSessionPosition(true);
   });
 
   audioElement.addEventListener('playing', () => {
-    // Playback active: resync true position after buffering recovery
+    // Audio frames actively rendering into hardware: anchor OS position state with accurate timestamp
     set({ isPlaying: true, isLoading: false });
     syncMediaSessionPlaybackState(true);
+    resetMediaSessionSync();
     syncMediaSessionPosition(true);
   });
 
   audioElement.addEventListener('play', () => {
     set({ isPlaying: true });
     syncMediaSessionPlaybackState(true);
-    syncMediaSessionPosition(true);
+    // If audio is already buffered (e.g. unpausing), anchor immediately;
+    // otherwise 'playing' event will anchor once the audio buffer arrives
+    if (audioElement.readyState >= 3) {
+      syncMediaSessionPosition(true);
+    }
   });
 
   audioElement.addEventListener('pause', () => {
@@ -345,6 +359,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
   });
 
   audioElement.addEventListener('seeked', () => {
+    resetMediaSessionSync();
     syncMediaSessionPosition(true);
   });
 
@@ -390,6 +405,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       // 1. 이전 음원 즉시 일시정지 (새 곡 로딩 중 이전 곡이 계속 나오는 현상 차단)
       audioElement.pause();
       audioElement.currentTime = 0;
+      resetMediaSessionSync();
 
       const state = get();
       let playlist: MusicFileDto[] | undefined;
@@ -618,6 +634,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       });
 
       if (state.currentTrack) {
+        resetMediaSessionSync();
         syncMediaSessionMetadata(state.currentTrack, () => get().currentTrack?.id);
         musicApi
           .getPlayUrl(state.currentTrack.id)
