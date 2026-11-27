@@ -398,10 +398,14 @@ export const ExtractionPage: React.FC<ExtractionPageProps> = ({ onBack }) => {
       const tracks = await Promise.all(
         targetJobs.map((j) => musicApi.getMusicFile(j.musicFileId!)),
       );
-      await downloadTracksBatch(tracks, (done, total) => {
+      const result = await downloadTracksBatch(tracks, (done, total) => {
         setBatchDownloadProgress(`${done}/${total}`);
       });
-      addToast(`${tracks.length}개 음원 일괄 다운로드가 완료되었습니다.`, 'success');
+      if (result.isZip) {
+        addToast(`${tracks.length}개 음원을 ZIP 압축 파일로 다운로드합니다.`, 'success');
+      } else {
+        addToast(`음원 다운로드가 시작되었습니다.`, 'success');
+      }
     } catch (err) {
       console.error('Batch download failed:', err);
       addToast('일괄 다운로드 중 오류가 발생했습니다.', 'error');

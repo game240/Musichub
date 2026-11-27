@@ -45,6 +45,13 @@ export interface DownloadUrlResult {
   fileSize: number;
 }
 
+export interface BatchDownloadTicketResponse {
+  ticket: string;
+  downloadUrl: string;
+  totalCount: number;
+  totalBytes: number;
+}
+
 export interface Page<T> {
   content: T[];
   totalElements: number;

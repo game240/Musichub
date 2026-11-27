@@ -15,11 +15,20 @@ import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.support.TransactionSynchronization
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.multipart.MultipartFile
+import java.io.BufferedOutputStream
 import java.io.ByteArrayInputStream
+import java.io.OutputStream
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.time.Duration
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.concurrent.CompletableFuture
+import java.util.zip.Deflater
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 data class UploadInitResult(
     val storageKey: String,
@@ -37,6 +46,13 @@ data class DownloadUrlResult(
     val fileSize: Long
 )
 
+data class BatchDownloadTicketResponse(
+    val ticket: String,
+    val downloadUrl: String,
+    val totalCount: Int,
+    val totalBytes: Long
+)
+
 data class MetadataSuggestionsDto(
     val artists: List<String>,
     val albums: List<String>
@@ -49,6 +65,7 @@ class MusicFileService(
     private val storageService: StorageService,
     private val metadataReader: MetadataReader,
     private val metadataWriter: MetadataWriter,
+    private val batchDownloadTicketManager: BatchDownloadTicketManager = BatchDownloadTicketManager(),
     @Value("\${musichub.storage.quota.system-max-bytes}") private val systemMaxBytes: Long,
     @Value("\${musichub.storage.quota.per-user-max-bytes}") private val perUserMaxBytes: Long,
 ) {
@@ -264,6 +281,104 @@ class MusicFileService(
             fileName = downloadFilename,
             fileSize = musicFile.fileSize
         )
+    }
+
+    /**
+     * 4-2. 복수 음원 일괄 다운로드를 위한 단기 일회용 티켓 생성
+     */
+    @Transactional(readOnly = true)
+    fun createBatchDownloadTicket(userId: Long, musicFileIds: List<Long>): BatchDownloadTicketResponse {
+        if (musicFileIds.isEmpty()) {
+            throw IllegalArgumentException("다운로드할 음원 ID 목록이 비어 있습니다.")
+        }
+
+        val distinctIds = musicFileIds.distinct()
+        val musicFiles = musicFileRepository.findAllByIdInAndUserIdAndStatus(
+            distinctIds,
+            userId,
+            MusicFileStatus.ACTIVE
+        )
+
+        if (musicFiles.isEmpty()) {
+            throw NoSuchElementException("다운로드할 수 있는 유효한 음원을 찾을 수 없습니다.")
+        }
+
+        val validIds = musicFiles.map { it.id }
+        val timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmm")
+            .withZone(ZoneId.of("Asia/Seoul"))
+            .format(Instant.now())
+        val zipFilename = "MusicHub_$timestamp.zip"
+
+        val ticketId = batchDownloadTicketManager.createTicket(
+            userId = userId,
+            musicFileIds = validIds,
+            zipFilename = zipFilename
+        )
+        val totalBytes = musicFiles.sumOf { it.fileSize }
+
+        return BatchDownloadTicketResponse(
+            ticket = ticketId,
+            downloadUrl = "/api/music-files/batch-download?ticket=$ticketId",
+            totalCount = musicFiles.size,
+            totalBytes = totalBytes
+        )
+    }
+
+    /**
+     * 4-3. ZIP 아카이브 내부 파일명 중복 방지 및 경로 조작 문자 정제
+     */
+    fun getUniqueZipEntryName(baseName: String, existingNames: MutableSet<String>): String {
+        val cleanName = baseName.replace(Regex("[/\\\\]"), "_").trim()
+        if (existingNames.add(cleanName)) {
+            return cleanName
+        }
+        val dotIndex = cleanName.lastIndexOf('.')
+        val name = if (dotIndex != -1) cleanName.substring(0, dotIndex) else cleanName
+        val ext = if (dotIndex != -1) cleanName.substring(dotIndex) else ""
+        var counter = 1
+        while (true) {
+            val candidate = "$name ($counter)$ext"
+            if (existingNames.add(candidate)) {
+                return candidate
+            }
+            counter++
+        }
+    }
+
+    /**
+     * 4-4. 티켓 기반 오디오 스트리밍 ZIP 다운로드 (32KB 버퍼, Deflater.BEST_SPEED)
+     */
+    @Transactional(readOnly = true)
+    fun streamBatchDownloadWithTicket(ticket: BatchDownloadTicket, outputStream: OutputStream) {
+        val musicFiles = musicFileRepository.findAllByIdInAndUserIdAndStatus(
+            ticket.musicFileIds,
+            ticket.userId,
+            MusicFileStatus.ACTIVE
+        )
+
+        if (musicFiles.isEmpty()) {
+            throw NoSuchElementException("다운로드할 음원 파일이 존재하지 않습니다.")
+        }
+
+        val zipOut = ZipOutputStream(BufferedOutputStream(outputStream), StandardCharsets.UTF_8)
+        zipOut.setLevel(Deflater.BEST_SPEED)
+
+        val usedNames = mutableSetOf<String>()
+        for (musicFile in musicFiles) {
+            val baseFilename = resolveDownloadFilename(musicFile)
+            val entryName = getUniqueZipEntryName(baseFilename, usedNames)
+
+            val zipEntry = ZipEntry(entryName)
+            zipEntry.time = musicFile.createdAt.toEpochMilli()
+            zipOut.putNextEntry(zipEntry)
+
+            storageService.getObject(musicFile.storageKey).use { inputStream ->
+                inputStream.copyTo(zipOut, bufferSize = 32768)
+            }
+            zipOut.closeEntry()
+        }
+        zipOut.finish()
+        zipOut.flush()
     }
 
     /**
