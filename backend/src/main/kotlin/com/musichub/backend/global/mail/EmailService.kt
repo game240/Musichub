@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service
 interface EmailService {
     fun sendPasswordSetupCode(toEmail: String, code: String)
     fun sendPasswordChangeCode(toEmail: String, code: String)
+    fun sendSignupVerificationCode(toEmail: String, code: String)
 }
 
 @Service
@@ -27,10 +28,22 @@ class SmtpEmailService(
         sendVerificationMail(toEmail, code, "변경")
     }
 
+    override fun sendSignupVerificationCode(toEmail: String, code: String) {
+        sendVerificationMail(toEmail, code, "회원가입")
+    }
+
+    private fun getSubjectAndDescription(purpose: String): Pair<String, String> {
+        return when (purpose) {
+            "회원가입" -> Pair("[Music Hub] 회원가입을 위한 인증번호입니다", "회원가입을 위한 인증번호입니다.")
+            else -> Pair("[Music Hub] 비밀번호 ${purpose}을 위한 인증번호입니다", "비밀번호 ${purpose}을 위한 인증번호입니다.")
+        }
+    }
+
     private fun sendVerificationMail(toEmail: String, code: String, purpose: String) {
+        val (subject, description) = getSubjectAndDescription(purpose)
         if (mailUsername.isBlank()) {
             logger.warn("SMTP 발신 계정(spring.mail.username)이 설정되지 않아 콘솔 로그로 대체합니다.")
-            logVerificationCode(toEmail, code, purpose)
+            logVerificationCode(toEmail, code, purpose, subject)
             return
         }
 
@@ -40,7 +53,7 @@ class SmtpEmailService(
 
             helper.setFrom(mailUsername, "Music Hub")
             helper.setTo(toEmail)
-            helper.setSubject("[Music Hub] 비밀번호 ${purpose}을 위한 인증번호입니다")
+            helper.setSubject(subject)
 
             val htmlContent = """
                 <div style="max-width: 500px; margin: 0 auto; padding: 32px 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0f1011; color: #f5f5f5; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1);">
@@ -49,7 +62,7 @@ class SmtpEmailService(
                         <p style="color: #888888; font-size: 13px; margin-top: 6px;">클라우드 음원 스트리밍 보관함</p>
                     </div>
                     <div style="background-color: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 20px;">
-                        <p style="color: #d1d5db; font-size: 14px; margin: 0 0 16px 0;">비밀번호 ${purpose}을 위한 인증번호입니다.</p>
+                        <p style="color: #d1d5db; font-size: 14px; margin: 0 0 16px 0;">$description</p>
                         <div style="display: inline-block; padding: 12px 28px; background-color: rgba(94, 106, 210, 0.15); border: 1px solid rgba(94, 106, 210, 0.4); border-radius: 10px; font-size: 28px; font-weight: 700; letter-spacing: 6px; color: #8590ea;">
                             $code
                         </div>
@@ -68,25 +81,26 @@ class SmtpEmailService(
             logger.info("성공적으로 인증 메일을 발송했습니다: to={}, purpose={}", toEmail, purpose)
         } catch (e: Exception) {
             logger.error("SMTP 이메일 발송 실패: to={}, purpose={}, error={}", toEmail, purpose, e.message, e)
-            logVerificationCode(toEmail, code, purpose)
+            logVerificationCode(toEmail, code, purpose, subject)
             throw IllegalStateException("인증 메일 발송에 실패했습니다: ${e.message}")
         }
     }
 
-    private fun logVerificationCode(toEmail: String, code: String, purpose: String) {
+    private fun logVerificationCode(toEmail: String, code: String, purpose: String, subject: String) {
         logger.info(
             """
             
             ======================================================================
             [Music Hub Email Verification]
             To: {}
-            Subject: [Music Hub] 비밀번호 ${purpose}을 위한 인증번호입니다.
+            Subject: {}
             ----------------------------------------------------------------------
-            귀하의 비밀번호 ${purpose}을 위한 인증번호는 [{}] 입니다.
+            귀하의 ${purpose}을(를) 위한 인증번호는 [{}] 입니다.
             이 인증번호는 5분간 유효합니다.
             ======================================================================
             """.trimIndent(),
             toEmail,
+            subject,
             code
         )
     }

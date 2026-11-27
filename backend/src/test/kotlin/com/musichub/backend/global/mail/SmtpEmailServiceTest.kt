@@ -66,4 +66,17 @@ class SmtpEmailServiceTest {
 
         then(mailSender).should().send(mimeMessage)
     }
+
+    @Test
+    fun `sendSignupVerificationCode creates and sends MimeMessage with signup purpose`() {
+        val service = SmtpEmailService(mailSender, "sender@example.com")
+        val mimeMessage = MimeMessage(Session.getInstance(Properties()))
+        given(mailSender.createMimeMessage()).willReturn(mimeMessage)
+
+        assertDoesNotThrow {
+            service.sendSignupVerificationCode("recipient@example.com", "123456")
+        }
+
+        then(mailSender).should().send(mimeMessage)
+    }
 }
