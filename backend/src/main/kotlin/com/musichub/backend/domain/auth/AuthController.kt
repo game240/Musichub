@@ -17,10 +17,20 @@ data class GoogleLoginRequest(
     val idToken: String
 )
 
+data class SignupVerificationRequest(
+    @field:NotBlank(message = "이메일은 필수 입력값입니다.")
+    @field:Email(message = "올바른 이메일 형식이 아닙니다.")
+    val email: String
+)
+
 data class LocalRegisterRequest(
     @field:NotBlank(message = "이메일은 필수 입력값입니다.")
     @field:Email(message = "올바른 이메일 형식이 아닙니다.")
     val email: String,
+
+    @field:NotBlank(message = "인증번호는 필수 입력값입니다.")
+    @field:Size(min = 6, max = 6, message = "인증번호는 6자리 숫자여야 합니다.")
+    val verificationCode: String,
 
     @field:NotBlank(message = "비밀번호는 필수 입력값입니다.")
     @field:Pattern(
@@ -62,6 +72,14 @@ class AuthController(
     private val authService: AuthService,
     @Value("\${musichub.auth.cookie-secure:false}") private val cookieSecure: Boolean
 ) {
+
+    @PostMapping("/signup/request-code")
+    fun requestSignupCode(
+        @Valid @RequestBody request: SignupVerificationRequest
+    ): ResponseEntity<Void> {
+        authService.requestSignupVerification(request.email)
+        return ResponseEntity.ok().build()
+    }
 
     @PostMapping("/register")
     fun register(

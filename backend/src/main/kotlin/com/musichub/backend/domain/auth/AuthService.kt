@@ -8,6 +8,7 @@ import com.musichub.backend.domain.user.User
 import com.musichub.backend.domain.user.UserIdentity
 import com.musichub.backend.domain.user.UserIdentityRepository
 import com.musichub.backend.domain.user.UserRepository
+import com.musichub.backend.global.mail.EmailService
 import com.musichub.backend.global.security.JwtProvider
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -30,6 +31,8 @@ class AuthService(
     private val refreshTokenRepository: RefreshTokenRepository,
     private val jwtProvider: JwtProvider,
     private val passwordEncoder: PasswordEncoder,
+    private val signupVerificationManager: SignupVerificationManager,
+    private val emailService: EmailService,
     @Value("\${musichub.auth.google.client-id}") private val googleClientId: String
 ) {
     companion object {
@@ -40,6 +43,20 @@ class AuthService(
         GoogleIdTokenVerifier.Builder(NetHttpTransport(), GsonFactory.getDefaultInstance())
             .setAudience(Collections.singletonList(googleClientId))
             .build()
+    }
+
+    @Transactional(readOnly = true)
+    fun requestSignupVerification(email: String) {
+        val normalizedEmail = email.trim().lowercase()
+
+        val existingIdentity = userIdentityRepository.findByProviderAndProviderId(AuthProvider.LOCAL, normalizedEmail)
+        val existingUser = userRepository.findByAuthProviderAndProviderId(AuthProvider.LOCAL, normalizedEmail)
+        if (existingIdentity.isPresent || existingUser.isPresent) {
+            throw IllegalArgumentException("이미 가입된 이메일입니다.")
+        }
+
+        val code = signupVerificationManager.createCode(normalizedEmail)
+        emailService.sendSignupVerificationCode(normalizedEmail, code)
     }
 
     @Transactional
@@ -53,6 +70,8 @@ class AuthService(
         if (existingIdentity.isPresent || existingUser.isPresent) {
             throw IllegalArgumentException("이미 가입된 이메일입니다.")
         }
+
+        signupVerificationManager.verifyCode(normalizedEmail, request.verificationCode)
 
         val hashedPassword = passwordEncoder.encode(request.password)
         val defaultDisplayName = request.displayName?.trim()?.ifBlank { null }
