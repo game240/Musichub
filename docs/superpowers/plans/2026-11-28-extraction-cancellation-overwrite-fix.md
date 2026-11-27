@@ -16,5 +16,5 @@
   - [x] Verify atomic update behavior when job is cancelled
 - [x] Run backend tests (`./gradlew test`)
 - [x] Run frontend build (`pnpm run build`)
-- [ ] Commit changes with `fix: prevent cancelled extraction jobs from overwriting to completed`
-- [ ] Merge `feat/fix-extraction-cancellation-overwrite` into `dev` with `--no-ff`
+- [x] Commit changes with `fix: prevent cancelled extraction jobs from overwriting to completed`
+- [x] Merge `feat/fix-extraction-cancellation-overwrite` into `dev` with `--no-ff`
