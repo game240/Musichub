@@ -6,43 +6,54 @@ export interface BatchDownloadResult {
   total: number;
   successful: number;
   failed: number;
+  isZip?: boolean;
 }
 
 /**
- * Downloads multiple audio files sequentially with a gentle delay between triggers.
- * Staggering (400ms) is essential to prevent browser multi-file download blocks and popup suppression.
+ * Downloads audio files efficiently:
+ * - Single track: directly downloads via presigned R2 GET URL (zero server egress, instant).
+ * - Multiple tracks: bundles into a single streaming ZIP download via temporary ticket
+ *   to completely avoid browser multi-file download popup/block suppression.
  */
 export async function downloadTracksBatch(
   tracks: MusicFileDto[],
   onProgress?: (done: number, total: number) => void,
 ): Promise<BatchDownloadResult> {
   const total = tracks.length;
-  let successful = 0;
-  let failed = 0;
+  if (total === 0) {
+    return { total: 0, successful: 0, failed: 0 };
+  }
 
-  for (let i = 0; i < total; i++) {
-    const track = tracks[i];
+  // Case 1: Single track selection -> direct presigned download
+  if (total === 1) {
+    const track = tracks[0];
     try {
       const { downloadUrl, fileName } = await musicApi.getDownloadUrl(track.id);
       triggerBrowserDownload(downloadUrl, fileName);
-      successful++;
+      onProgress?.(1, 1);
+      return { total: 1, successful: 1, failed: 0, isZip: false };
     } catch (err) {
       console.error(
         `Failed to download track id ${track.id} (${track.title || track.fileName}):`,
         err,
       );
-      failed++;
-    }
-
-    if (onProgress) {
-      onProgress(i + 1, total);
-    }
-
-    // Insert stagger delay between downloads if not the last item
-    if (i < total - 1) {
-      await new Promise((resolve) => setTimeout(resolve, 400));
+      return { total: 1, successful: 0, failed: 1, isZip: false };
     }
   }
 
-  return { total, successful, failed };
+  // Case 2: Multiple tracks -> Single streaming ZIP archive download via ticket
+  try {
+    onProgress?.(0, total);
+    const musicFileIds = tracks.map((t) => t.id);
+    const { downloadUrl } = await musicApi.createBatchDownloadTicket(musicFileIds);
+
+    // Native single-file attachment download (bypasses browser multi-download blockers)
+    triggerBrowserDownload(downloadUrl);
+    onProgress?.(total, total);
+
+    return { total, successful: total, failed: 0, isZip: true };
+  } catch (err) {
+    console.error('Failed to create batch download ticket:', err);
+    throw err;
+  }
 }

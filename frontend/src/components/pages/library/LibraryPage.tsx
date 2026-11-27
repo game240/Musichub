@@ -208,11 +208,17 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({ onNavigateExtraction }
     setIsBatchDownloading(true);
     setBatchDownloadProgress(`1/${selectedTracks.length}`);
     try {
-      await downloadTracksBatch(selectedTracks, (done, total) => {
+      const result = await downloadTracksBatch(selectedTracks, (done, total) => {
         setBatchDownloadProgress(`${done}/${total}`);
       });
+      if (result.isZip) {
+        toast.success(`${selectedTracks.length}곡을 ZIP 압축 파일로 다운로드합니다.`);
+      } else {
+        toast.success(`음원 다운로드가 시작되었습니다.`);
+      }
     } catch (err) {
       console.error('Batch download failed:', err);
+      toast.error('일괄 다운로드 중 오류가 발생했습니다.');
     } finally {
       setIsBatchDownloading(false);
       setBatchDownloadProgress(null);
