@@ -4,7 +4,7 @@ import { LandingHeader } from './sections/LandingHeader';
 import { LandingHero } from './sections/LandingHero';
 import { LandingProblem } from './sections/LandingProblem';
 import { LandingSolution } from './sections/LandingSolution';
-import { LandingFeatures } from './sections/LandingFeatures';
+// import { LandingFeatures } from './sections/LandingFeatures';
 import { LandingHowItWorks } from './sections/LandingHowItWorks';
 import { LandingFaq } from './sections/LandingFaq';
 import { LandingFooter } from './sections/LandingFooter';
@@ -26,7 +26,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onNavigateLeg
         <LandingHero onStart={onLogin} />
         <LandingProblem />
         <LandingSolution />
-        <LandingFeatures />
+        {/* <LandingFeatures /> */}
         <LandingHowItWorks />
         <LandingFaq />
 

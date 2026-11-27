@@ -118,7 +118,6 @@ export const PlayerMockup: React.FC = () => {
               <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#5e6ad2]/15 text-[#8590ed] border border-[#5e6ad2]/30">
                 {currentTrack.badge}
               </span>
-              <span className="text-[11px] text-neutral-500 font-mono">Range Request • 0ms</span>
             </div>
             <h4 className="text-base md:text-lg font-semibold text-white tracking-tight line-clamp-1">
               {currentTrack.title}
