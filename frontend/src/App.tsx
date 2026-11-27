@@ -15,8 +15,9 @@ import { PrivacyPolicyPage } from './components/pages/legal/PrivacyPolicyPage';
 import { TermsOfServicePage } from './components/pages/legal/TermsOfServicePage';
 import { AdminUsersPage } from './components/pages/admin/users/AdminUsersPage';
 import { ExtractionPage } from './components/pages/extraction/ExtractionPage';
+import { LandingPage } from './components/pages/landing/LandingPage';
 
-type AppRoute = 'privacy' | 'terms' | 'admin-users' | 'extractions' | null;
+type AppRoute = 'privacy' | 'terms' | 'admin-users' | 'extractions' | 'landing' | 'login' | null;
 
 const getRouteFromPath = (): AppRoute => {
   const path = window.location.pathname.toLowerCase();
@@ -24,6 +25,8 @@ const getRouteFromPath = (): AppRoute => {
   if (path === '/terms' || path === '/terms-of-service') return 'terms';
   if (path === '/admin' || path === '/admin/users') return 'admin-users';
   if (path === '/extractions' || path === '/extraction') return 'extractions';
+  if (path === '/landing' || path === '/about') return 'landing';
+  if (path === '/login') return 'login';
   return null;
 };
 
@@ -79,6 +82,13 @@ const AppContent: React.FC = () => {
     setCurrentRoute('extractions');
   };
 
+  const navigateToLogin = () => {
+    if (window.location.pathname !== '/login') {
+      window.history.pushState({}, '', '/login');
+    }
+    setCurrentRoute('login');
+  };
+
   const navigateBack = () => {
     if (window.location.pathname !== '/') {
       window.history.pushState({}, '', '/');
@@ -103,8 +113,21 @@ const AppContent: React.FC = () => {
     );
   }
 
+  if (currentRoute === 'landing') {
+    return (
+      <LandingPage
+        onLogin={isAuthenticated ? navigateBack : navigateToLogin}
+        onNavigateLegal={navigateToLegal}
+      />
+    );
+  }
+
   if (!isAuthenticated) {
-    return <LoginPage onNavigateLegal={navigateToLegal} />;
+    if (currentRoute === 'login') {
+      return <LoginPage onNavigateLegal={navigateToLegal} onBackToLanding={navigateBack} />;
+    }
+    // Default entry point for unauthenticated visitors is the landing intro page
+    return <LandingPage onLogin={navigateToLogin} onNavigateLegal={navigateToLegal} />;
   }
 
   if (currentRoute === 'admin-users' && user?.role === 'ADMIN') {

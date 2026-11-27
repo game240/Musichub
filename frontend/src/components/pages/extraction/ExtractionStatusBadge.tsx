@@ -1,5 +1,13 @@
 import React from 'react';
-import { Clock, DownloadCloud, RefreshCw, UploadCloud, CheckCircle2, AlertCircle, Ban } from 'lucide-react';
+import {
+  Clock,
+  DownloadCloud,
+  RefreshCw,
+  UploadCloud,
+  CheckCircle2,
+  AlertCircle,
+  Ban,
+} from 'lucide-react';
 import type { ExtractionJobStatus } from '../../../types/extraction';
 
 export interface ExtractionStatusBadgeProps {

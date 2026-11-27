@@ -1,11 +1,5 @@
 export type ExtractionJobStatus =
-  | 'PENDING'
-  | 'DOWNLOADING'
-  | 'CONVERTING'
-  | 'UPLOADING'
-  | 'COMPLETED'
-  | 'FAILED'
-  | 'CANCELLED';
+  'PENDING' | 'DOWNLOADING' | 'CONVERTING' | 'UPLOADING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
 
 export interface ExtractionJobDto {
   id: number;

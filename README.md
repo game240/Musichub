@@ -1,6 +1,6 @@
 # Music Hub
 
-Music Hub is a personal cloud music locker and streaming service that allows users to securely store their own audio files in Cloudflare R2 and stream them seamlessly across web and mobile platforms.
+Music Hub is a personal cloud music locker and streaming service that allows users to securely store their own audio files in cloud storage and stream them seamlessly across web and mobile platforms.
 
 ---
 
@@ -9,7 +9,7 @@ Music Hub is a personal cloud music locker and streaming service that allows use
 - **[AGENTS.md](file:///c:/vscode/Musichub/AGENTS.md)**: ZEUS mandatory rules, frontend component structure, Git workflow, and documentation standards.
 - **[docs/superpowers/specs/2026-11-18-frontend-linear-ui-design.md](file:///c:/vscode/Musichub/docs/superpowers/specs/2026-11-18-frontend-linear-ui-design.md)**: Linear UI design specification, Pretendard typography, and Korean localization.
 - **[docs/frontend-verification-guide.md](file:///c:/vscode/Musichub/docs/frontend-verification-guide.md)**: Frontend code style, braces discipline, and ESLint / Prettier verification rules.
-- **[music-hub-project-plan.md](file:///c:/vscode/Musichub/music-hub-project-plan.md)**: Product specification, Cloudflare R2 storage architecture, and MVP roadmap.
+- **[music-hub-project-plan.md](file:///c:/vscode/Musichub/music-hub-project-plan.md)**: Product specification, Cloud storage architecture, and MVP roadmap.
 
 ---
 
@@ -26,4 +26,4 @@ Music Hub is a personal cloud music locker and streaming service that allows use
 - **Frontend**: React, TanStack Router
 - **Backend**: Spring Boot 3.x, Kotlin
 - **Database**: PostgreSQL
-- **Storage**: Cloudflare R2 (S3-compatible)
+- **Storage**: Cloud Storage (S3-compatible)

@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Users, RefreshCw, Shield, User as UserIcon, Calendar, HardDrive, Music } from 'lucide-react';
+import {
+  ArrowLeft,
+  Users,
+  RefreshCw,
+  Shield,
+  User as UserIcon,
+  Calendar,
+  HardDrive,
+  Music,
+} from 'lucide-react';
 import { adminApi, type AdminUserDto } from '../../../../api/adminApi';
 import { useAuthStore } from '../../../../stores/authStore';
 import { useToastStore } from '../../../../stores/toastStore';
@@ -50,10 +59,14 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ onBack }) => {
     onSuccess: (updatedUser, variables) => {
       queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
       const roleLabel =
-        variables.role === 'ADMIN' ? '관리자' : variables.role === 'DOWNLOADER' ? '다운로더' : '일반 사용자';
+        variables.role === 'ADMIN'
+          ? '관리자'
+          : variables.role === 'DOWNLOADER'
+            ? '다운로더'
+            : '일반 사용자';
       addToast(
         `${updatedUser.displayName || updatedUser.email}님의 권한이 [${roleLabel}]로 변경되었습니다.`,
-        'success'
+        'success',
       );
     },
     onError: (err: unknown) => {
@@ -107,7 +120,9 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ onBack }) => {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-sm font-semibold text-neutral-100 tracking-tight">사용자 관리</h1>
+                <h1 className="text-sm font-semibold text-neutral-100 tracking-tight">
+                  사용자 관리
+                </h1>
                 <span className="text-[10px] font-bold tracking-wider px-1.5 py-0.2 bg-[#5e6ad2]/20 text-[#8590ea] border border-[#5e6ad2]/30 rounded">
                   ADMIN CONSOLE
                 </span>
@@ -178,7 +193,9 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ onBack }) => {
                     <td colSpan={7} className="py-16 text-center text-neutral-400">
                       <div className="flex flex-col items-center justify-center gap-2">
                         <UserIcon className="w-8 h-8 text-neutral-600 mb-1" />
-                        <span className="font-medium text-neutral-300">검색된 사용자가 없습니다.</span>
+                        <span className="font-medium text-neutral-300">
+                          검색된 사용자가 없습니다.
+                        </span>
                         <span className="text-[11px] text-neutral-500">
                           다른 검색어를 입력해 보세요.
                         </span>

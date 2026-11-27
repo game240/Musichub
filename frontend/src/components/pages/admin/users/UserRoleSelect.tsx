@@ -44,11 +44,11 @@ export const UserRoleSelect: React.FC<UserRoleSelectProps> = ({
         onClick={() => setIsOpen((prev) => !prev)}
         className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#121315] hover:bg-[#18191c] border border-white/[0.1] hover:border-white/[0.2] text-xs font-medium text-neutral-200 rounded-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-wait"
       >
-        {isUpdating ? (
-          <Loader2 className="w-3.5 h-3.5 animate-spin text-[#5e6ad2]" />
-        ) : null}
+        {isUpdating ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#5e6ad2]" /> : null}
         <span>{selectedOption.label}</span>
-        <ChevronDown className={`w-3.5 h-3.5 text-neutral-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown
+          className={`w-3.5 h-3.5 text-neutral-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+        />
       </button>
 
       {isOpen ? (

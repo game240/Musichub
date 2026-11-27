@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { ExternalLink, Music, AlertCircle, Clock, Calendar, Pencil, ListX, Download } from 'lucide-react';
+import {
+  ExternalLink,
+  Music,
+  AlertCircle,
+  Clock,
+  Calendar,
+  Pencil,
+  ListX,
+  Download,
+} from 'lucide-react';
 import type { ExtractionJobDto } from '../../../types/extraction';
 import { ExtractionStatusBadge } from './ExtractionStatusBadge';
 import { Tooltip } from '../../atoms/Tooltip';
@@ -59,8 +68,7 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
   const selectableJobs = jobs.filter((j) => j.status === 'COMPLETED' && j.musicFileId !== null);
   const isAllSelected =
     selectableJobs.length > 0 && selectableJobs.every((j) => selectedJobIds.has(j.id));
-  const isIndeterminate =
-    !isAllSelected && selectableJobs.some((j) => selectedJobIds.has(j.id));
+  const isIndeterminate = !isAllSelected && selectableJobs.some((j) => selectedJobIds.has(j.id));
   const isSelectionMode = selectedJobIds.size > 0;
   const showMasterCheckbox = isSelectionMode || isAllSelected || isIndeterminate;
 
@@ -109,11 +117,7 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                 disabled={isBatchLoading}
                 className="h-8 inline-flex items-center gap-1.5 px-3 rounded-lg text-xs font-medium text-white bg-[#5e6ad2] hover:bg-[#6f7cf4] shadow-sm shadow-[#5e6ad2]/20 transition-colors cursor-pointer disabled:opacity-50"
               >
-                {isBatchLoading ? (
-                  <Spinner size="sm" />
-                ) : (
-                  <Pencil className="w-3.5 h-3.5" />
-                )}
+                {isBatchLoading ? <Spinner size="sm" /> : <Pencil className="w-3.5 h-3.5" />}
                 <span>음원 정보 일괄 수정</span>
               </button>
               {onDeleteSelected ? (
@@ -216,205 +220,203 @@ export const ExtractionHistoryTable: React.FC<ExtractionHistoryTableProps> = ({
                         : 'hover:bg-white/[0.02] has-[td:first-child:hover]:bg-transparent',
                     )}
                   >
-                  {/* Column 1: Checkbox only column */}
-                  <td
-                    className={cn(
-                      'w-12 py-3 px-2 text-center select-none relative transition-colors duration-150',
-                      hasMusicFile ? 'cursor-pointer hover:bg-white/[0.02]' : 'cursor-default',
-                      isSelected ? 'bg-transparent' : 'bg-[#0f1011]',
-                    )}
-                    onClick={(e) => {
-                      if (hasMusicFile) {
-                        e.stopPropagation();
-                        onToggleSelectJob(job.id);
-                      }
-                    }}
-                    onMouseEnter={() => setHoveredActionJobId(job.id)}
-                    onMouseLeave={() => setHoveredActionJobId(null)}
-                    title={hasMusicFile ? (isSelected ? '선택 해제' : '선택') : undefined}
-                  >
-                    {/* Left active indicator line for the currently focused/inspected job */}
-                    {isFocused && (
-                      <span className="absolute left-0 top-1 bottom-1 w-1 bg-[#5e6ad2] rounded-r z-20 shadow-sm shadow-[#5e6ad2]/70 animate-in fade-in duration-150" />
-                    )}
-
-                    <div className="w-7 h-7 mx-auto relative flex items-center justify-center">
-                      {hasMusicFile ? (
-                        <>
-                          <div
-                            className={cn(
-                              'absolute inset-0 flex items-center justify-center transition-opacity duration-150',
-                              isSelected || isSelectionMode
-                                ? 'opacity-100 z-10 pointer-events-auto'
-                                : 'opacity-0 group-hover:opacity-100 z-10 pointer-events-none group-hover:pointer-events-auto',
-                            )}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Checkbox
-                              checked={isSelected}
-                              onChange={() => onToggleSelectJob(job.id)}
-                              aria-label={`${displayTitle} 선택`}
-                            />
-                          </div>
-                          <span
-                            className={cn(
-                              'font-mono text-neutral-500 transition-opacity duration-150',
-                              isSelected || isSelectionMode
-                                ? 'opacity-0 pointer-events-none'
-                                : 'opacity-100 group-hover:opacity-0',
-                            )}
-                          >
-                            {job.id}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="font-mono text-neutral-500">{job.id}</span>
+                    {/* Column 1: Checkbox only column */}
+                    <td
+                      className={cn(
+                        'w-12 py-3 px-2 text-center select-none relative transition-colors duration-150',
+                        hasMusicFile ? 'cursor-pointer hover:bg-white/[0.02]' : 'cursor-default',
+                        isSelected ? 'bg-transparent' : 'bg-[#0f1011]',
                       )}
-                    </div>
-                  </td>
+                      onClick={(e) => {
+                        if (hasMusicFile) {
+                          e.stopPropagation();
+                          onToggleSelectJob(job.id);
+                        }
+                      }}
+                      onMouseEnter={() => setHoveredActionJobId(job.id)}
+                      onMouseLeave={() => setHoveredActionJobId(null)}
+                      title={hasMusicFile ? (isSelected ? '선택 해제' : '선택') : undefined}
+                    >
+                      {/* Left active indicator line for the currently focused/inspected job */}
+                      {isFocused && (
+                        <span className="absolute left-0 top-1 bottom-1 w-1 bg-[#5e6ad2] rounded-r z-20 shadow-sm shadow-[#5e6ad2]/70 animate-in fade-in duration-150" />
+                      )}
 
-                  {/* Column 2: Song Info */}
-                  <td className="py-3 px-4 w-auto overflow-hidden">
-                    <div className="flex items-start gap-2.5 min-w-0">
-                      <div className="p-1.5 rounded-lg bg-white/[0.04] text-neutral-400 shrink-0 mt-0.5">
-                        <Music className="w-4 h-4" />
-                      </div>
-                      <div className="overflow-hidden min-w-0 flex-1">
-                        <p className="font-medium text-neutral-100 truncate">
-                          {displayTitle}
-                        </p>
-                        {job.musicFileArtist ? (
-                          <p className="text-[11px] text-neutral-400 truncate">
-                            {job.musicFileArtist}
-                          </p>
-                        ) : null}
-                        <div className="flex items-center mt-0.5">
-                          <Tooltip content="YouTube 영상으로 이동" side="top">
-                            <a
-                              href={job.sourceUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                      <div className="w-7 h-7 mx-auto relative flex items-center justify-center">
+                        {hasMusicFile ? (
+                          <>
+                            <div
+                              className={cn(
+                                'absolute inset-0 flex items-center justify-center transition-opacity duration-150',
+                                isSelected || isSelectionMode
+                                  ? 'opacity-100 z-10 pointer-events-auto'
+                                  : 'opacity-0 group-hover:opacity-100 z-10 pointer-events-none group-hover:pointer-events-auto',
+                              )}
                               onClick={(e) => e.stopPropagation()}
-                              onMouseEnter={() => setHoveredActionJobId(job.id)}
-                              onMouseLeave={() => setHoveredActionJobId(null)}
-                              className="inline-flex items-center gap-1 max-w-full w-fit text-[10px] text-[#8590ea] hover:underline truncate"
                             >
-                              <ExternalLink className="w-2.5 h-2.5 shrink-0" />
-                              <span className="truncate">{job.sourceUrl}</span>
-                            </a>
-                          </Tooltip>
+                              <Checkbox
+                                checked={isSelected}
+                                onChange={() => onToggleSelectJob(job.id)}
+                                aria-label={`${displayTitle} 선택`}
+                              />
+                            </div>
+                            <span
+                              className={cn(
+                                'font-mono text-neutral-500 transition-opacity duration-150',
+                                isSelected || isSelectionMode
+                                  ? 'opacity-0 pointer-events-none'
+                                  : 'opacity-100 group-hover:opacity-0',
+                              )}
+                            >
+                              {job.id}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="font-mono text-neutral-500">{job.id}</span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Column 2: Song Info */}
+                    <td className="py-3 px-4 w-auto overflow-hidden">
+                      <div className="flex items-start gap-2.5 min-w-0">
+                        <div className="p-1.5 rounded-lg bg-white/[0.04] text-neutral-400 shrink-0 mt-0.5">
+                          <Music className="w-4 h-4" />
+                        </div>
+                        <div className="overflow-hidden min-w-0 flex-1">
+                          <p className="font-medium text-neutral-100 truncate">{displayTitle}</p>
+                          {job.musicFileArtist ? (
+                            <p className="text-[11px] text-neutral-400 truncate">
+                              {job.musicFileArtist}
+                            </p>
+                          ) : null}
+                          <div className="flex items-center mt-0.5">
+                            <Tooltip content="YouTube 영상으로 이동" side="top">
+                              <a
+                                href={job.sourceUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                onMouseEnter={() => setHoveredActionJobId(job.id)}
+                                onMouseLeave={() => setHoveredActionJobId(null)}
+                                className="inline-flex items-center gap-1 max-w-full w-fit text-[10px] text-[#8590ea] hover:underline truncate"
+                              >
+                                <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+                                <span className="truncate">{job.sourceUrl}</span>
+                              </a>
+                            </Tooltip>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
+                    </td>
 
-                  {/* Column 3: Status Badge */}
-                  <td className="py-3 px-4 w-32 sm:w-36">
-                    <div className="flex items-center gap-1.5">
-                      <ExtractionStatusBadge status={job.status} />
-                      {job.status === 'FAILED' && job.errorMessage ? (
-                        <Tooltip content={job.errorMessage}>
-                          <button
-                            type="button"
-                            className="text-red-400 hover:text-red-300 cursor-pointer"
-                          >
-                            <AlertCircle className="w-3.5 h-3.5" />
-                          </button>
-                        </Tooltip>
-                      ) : null}
-                    </div>
-                  </td>
+                    {/* Column 3: Status Badge */}
+                    <td className="py-3 px-4 w-32 sm:w-36">
+                      <div className="flex items-center gap-1.5">
+                        <ExtractionStatusBadge status={job.status} />
+                        {job.status === 'FAILED' && job.errorMessage ? (
+                          <Tooltip content={job.errorMessage}>
+                            <button
+                              type="button"
+                              className="text-red-400 hover:text-red-300 cursor-pointer"
+                            >
+                              <AlertCircle className="w-3.5 h-3.5" />
+                            </button>
+                          </Tooltip>
+                        ) : null}
+                      </div>
+                    </td>
 
-                  {/* Column 4: Requested At */}
-                  <td className="py-3 px-4 w-44 sm:w-48 text-neutral-400 text-[11px] font-mono whitespace-nowrap">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="w-3 h-3 text-neutral-500 shrink-0" />
-                      <span>{formatDate(job.createdAt)}</span>
-                    </div>
-                  </td>
+                    {/* Column 4: Requested At */}
+                    <td className="py-3 px-4 w-44 sm:w-48 text-neutral-400 text-[11px] font-mono whitespace-nowrap">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-3 h-3 text-neutral-500 shrink-0" />
+                        <span>{formatDate(job.createdAt)}</span>
+                      </div>
+                    </td>
 
-                  {/* Column 5: Action Buttons */}
-                  <td
-                    className="py-3 px-4 w-32 sm:w-36 text-right whitespace-nowrap"
-                    onMouseEnter={() => setHoveredActionJobId(job.id)}
-                    onMouseLeave={() => setHoveredActionJobId(null)}
-                  >
-                    {hasMusicFile ? (
-                      <div className="flex items-center justify-end gap-1">
-                        {onDownloadTrack && (
-                          <Tooltip content="음원 다운로드">
+                    {/* Column 5: Action Buttons */}
+                    <td
+                      className="py-3 px-4 w-32 sm:w-36 text-right whitespace-nowrap"
+                      onMouseEnter={() => setHoveredActionJobId(job.id)}
+                      onMouseLeave={() => setHoveredActionJobId(null)}
+                    >
+                      {hasMusicFile ? (
+                        <div className="flex items-center justify-end gap-1">
+                          {onDownloadTrack && (
+                            <Tooltip content="음원 다운로드">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onDownloadTrack(job.musicFileId!, displayTitle);
+                                }}
+                                disabled={downloadingMusicFileId === job.musicFileId}
+                                className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer disabled:opacity-50"
+                                title="음원 다운로드"
+                              >
+                                {downloadingMusicFileId === job.musicFileId ? (
+                                  <Spinner size="sm" className="w-4 h-4 text-[#8590ea]" />
+                                ) : (
+                                  <Download className="w-4 h-4" />
+                                )}
+                              </button>
+                            </Tooltip>
+                          )}
+
+                          <Tooltip content="정보 수정">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onDownloadTrack(job.musicFileId!, displayTitle);
+                                onEditMetadata(job.musicFileId!);
                               }}
-                              disabled={downloadingMusicFileId === job.musicFileId}
-                              className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer disabled:opacity-50"
-                              title="음원 다운로드"
+                              className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"
+                              title="정보 수정"
                             >
-                              {downloadingMusicFileId === job.musicFileId ? (
-                                <Spinner size="sm" className="w-4 h-4 text-[#8590ea]" />
-                              ) : (
-                                <Download className="w-4 h-4" />
-                              )}
+                              <Pencil className="w-4 h-4" />
                             </button>
                           </Tooltip>
-                        )}
 
-                        <Tooltip content="정보 수정">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onEditMetadata(job.musicFileId!);
-                            }}
-                            className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"
-                            title="정보 수정"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                        </Tooltip>
-
-                        <Tooltip content="목록에서 제거">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDeleteJob(job.id);
-                            }}
-                            disabled={isDeletingThis}
-                            className="p-1.5 text-neutral-400 hover:text-red-400 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer disabled:opacity-50"
-                            title="목록에서 제거"
-                          >
-                            <ListX className="w-4 h-4" />
-                          </button>
-                        </Tooltip>
-                      </div>
-                    ) : isFinished ? (
-                      <div className="flex items-center justify-end">
-                        <Tooltip content="목록에서 제거">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDeleteJob(job.id);
-                            }}
-                            disabled={isDeletingThis}
-                            className="p-1.5 text-neutral-400 hover:text-red-400 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer disabled:opacity-50"
-                            title="목록에서 제거"
-                          >
-                            <ListX className="w-4 h-4" />
-                          </button>
-                        </Tooltip>
-                      </div>
-                    ) : (
-                      <span className="text-[11px] text-neutral-500 font-mono">진행 중</span>
-                    )}
-                  </td>
-                </tr>
-              </Tooltip>
-            );
+                          <Tooltip content="목록에서 제거">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteJob(job.id);
+                              }}
+                              disabled={isDeletingThis}
+                              className="p-1.5 text-neutral-400 hover:text-red-400 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer disabled:opacity-50"
+                              title="목록에서 제거"
+                            >
+                              <ListX className="w-4 h-4" />
+                            </button>
+                          </Tooltip>
+                        </div>
+                      ) : isFinished ? (
+                        <div className="flex items-center justify-end">
+                          <Tooltip content="목록에서 제거">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteJob(job.id);
+                              }}
+                              disabled={isDeletingThis}
+                              className="p-1.5 text-neutral-400 hover:text-red-400 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer disabled:opacity-50"
+                              title="목록에서 제거"
+                            >
+                              <ListX className="w-4 h-4" />
+                            </button>
+                          </Tooltip>
+                        </div>
+                      ) : (
+                        <span className="text-[11px] text-neutral-500 font-mono">진행 중</span>
+                      )}
+                    </td>
+                  </tr>
+                </Tooltip>
+              );
             })}
           </tbody>
         </table>

@@ -72,11 +72,7 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                 }
               }}
               title={
-                tracks.length === 0
-                  ? undefined
-                  : isAllSelected
-                    ? '전체 선택 해제'
-                    : '전체 선택'
+                tracks.length === 0 ? undefined : isAllSelected ? '전체 선택 해제' : '전체 선택'
               }
             >
               <div

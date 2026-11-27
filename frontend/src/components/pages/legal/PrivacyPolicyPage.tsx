@@ -141,7 +141,7 @@ export const PrivacyPolicyPage: React.FC<PrivacyPolicyPageProps> = ({ onBack }) 
               <tr>
                 <td className="py-2.5 px-3 font-medium text-white">Cloudflare, Inc.</td>
                 <td className="py-2.5 px-3">
-                  업로드된 음원 파일의 클라우드 스토리지(R2) 저장 및 보안 스트리밍 전송
+                  업로드된 음원 파일의 클라우드 스토리지 저장 및 보안 스트리밍 전송
                 </td>
                 <td className="py-2.5 px-3">회원 탈퇴 또는 파일 삭제 시까지</td>
               </tr>

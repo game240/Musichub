@@ -57,7 +57,7 @@ const setupPolling = (
               ? {
                   ...t,
                   status: 'error' as const,
-                  errorMessage: '클라우드 오디오 파일(R2) 태그 쓰기에 실패했습니다.',
+                  errorMessage: '클라우드 오디오 파일 태그 쓰기에 실패했습니다.',
                 }
               : t,
           ),

@@ -44,7 +44,7 @@ export const FloatingTagSyncWidget: React.FC = () => {
                 {task.title || '음원 파일'}
               </p>
               <p className="text-[11px] text-neutral-400 truncate">
-                {isSyncing && 'R2 오디오 파일 태그 동기화 중...'}
+                {isSyncing && '클라우드 오디오 파일 태그 동기화 중...'}
                 {isCompleted && '클라우드 파일 태그 동기화 완료'}
                 {isError && (task.errorMessage || '동기화 중 오류 발생')}
               </p>

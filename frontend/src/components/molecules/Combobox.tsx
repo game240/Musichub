@@ -228,7 +228,9 @@ export const Combobox = React.forwardRef<HTMLInputElement, ComboboxProps>(
                       'w-full text-left px-2.5 py-1.5 rounded-lg text-xs transition-colors flex items-center justify-between cursor-pointer group',
                       isSelected && 'bg-[#5e6ad2]/20 text-[#8590ea] font-medium',
                       !isSelected && isHighlighted && 'bg-white/[0.06] text-white',
-                      !isSelected && !isHighlighted && 'text-neutral-300 hover:text-white hover:bg-white/[0.04]',
+                      !isSelected &&
+                        !isHighlighted &&
+                        'text-neutral-300 hover:text-white hover:bg-white/[0.04]',
                     )}
                   >
                     <span className="truncate flex-1">{option}</span>
@@ -237,9 +239,7 @@ export const Combobox = React.forwardRef<HTMLInputElement, ComboboxProps>(
                 );
               })
             ) : (
-              <div className="px-3 py-2 text-xs text-neutral-400">
-                일치하는 항목 없음
-              </div>
+              <div className="px-3 py-2 text-xs text-neutral-400">일치하는 항목 없음</div>
             )}
           </div>
         )}

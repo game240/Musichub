@@ -27,7 +27,10 @@ export async function downloadTracksBatch(
       triggerBrowserDownload(downloadUrl, fileName);
       successful++;
     } catch (err) {
-      console.error(`Failed to download track id ${track.id} (${track.title || track.fileName}):`, err);
+      console.error(
+        `Failed to download track id ${track.id} (${track.title || track.fileName}):`,
+        err,
+      );
       failed++;
     }
 
