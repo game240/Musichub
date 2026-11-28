@@ -9,7 +9,9 @@ import { useAuthStore } from '../../../stores/authStore';
 import { SearchInput } from '../../molecules/SearchInput';
 import { Button } from '../../atoms/Button';
 import { Tooltip } from '../../atoms/Tooltip';
+import { Skeleton } from '../../atoms/Skeleton';
 import { TrackTable } from './track/TrackTable';
+import { TrackTableSkeleton } from './track/TrackTableSkeleton';
 import { UploadModal } from './upload/UploadModal';
 import { EditMetadataModal } from '../../organisms/EditMetadataModal';
 import { BatchActionBar } from './track/BatchActionBar';
@@ -296,7 +298,11 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({ onNavigateExtraction }
         <div className="flex items-center gap-2.5 sm:gap-3 justify-between sm:justify-end shrink-0">
           <span className="text-xs text-neutral-400 border border-white/10 bg-white/[0.03] px-2.5 py-1.5 rounded-md flex items-center gap-1.5">
             <Music className="w-3.5 h-3.5 text-[#5e6ad2]" />
-            <span>총 {filteredTracks.length}곡</span>
+            {isLoading ? (
+              <Skeleton className="w-12 h-3.5 rounded bg-white/[0.08]" />
+            ) : (
+              <span>총 {filteredTracks.length}곡</span>
+            )}
           </span>
 
           {/* YouTube Extraction Button for ADMIN / DOWNLOADER */}
@@ -325,10 +331,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({ onNavigateExtraction }
 
       {/* Tracks Table */}
       {isLoading ? (
-        <div className="w-full h-64 flex flex-col items-center justify-center gap-3 bg-white/[0.015] rounded-2xl border border-white/[0.08]">
-          <div className="w-7 h-7 border-2 border-[#5e6ad2] border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs text-neutral-400">보관함 음원을 불러오는 중...</p>
-        </div>
+        <TrackTableSkeleton rowCount={8} />
       ) : (
         <TrackTable
           tracks={filteredTracks}
